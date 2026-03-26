@@ -1,0 +1,22 @@
+quarkus:
+  rest-client:
+    logging:
+      scope: request-response
+      body-limit: 1024
+    boavizta-api-url:
+      uri: "https://api.boavizta.org/v1/"
+    prometheus-api-url:
+      uri: "http://localhost:9090/api/v1"
+  log:
+    category:
+      "persistence":
+        min-level: TRACE
+        level: TRACE
+
+monitor:
+  cron: "*/30 * * * * ?" # every 30s
+  target-namespace: "export-control"
+
+persistence:
+  enable-memory-target: true
+  enable-meter-target: true
