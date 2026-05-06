@@ -43,9 +43,9 @@ public class MemoryLoadTarget implements LoadTarget {
     }
 
     @Override
-    public double computeCpuUsage() {
-        // TODO: check units
+    public double computeCpuUsage() throws NoCPUUsageException {
 
+        // TODO: check units
         return this.registry.values().stream()
             .mapToDouble(metricMap -> metricMap.values().stream()
                 .mapToDouble(metrics -> metrics.stream()
@@ -55,6 +55,6 @@ public class MemoryLoadTarget implements LoadTarget {
                 .sum()
             )
             .average()
-            .orElseThrow();
+            .orElseThrow(() -> new NoCPUUsageException("Could not compute CPU Usage"));
     }
 }

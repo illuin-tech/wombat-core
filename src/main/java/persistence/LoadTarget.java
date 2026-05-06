@@ -8,5 +8,5 @@ public interface LoadTarget {
 
     void outputToTarget(Instant instant, PodMetrics podMetrics, String namespace);
 
-    double computeCpuUsage();
+    double computeCpuUsage() throws NoCPUUsageException;
 }
