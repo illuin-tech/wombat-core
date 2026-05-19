@@ -1,0 +1,140 @@
+<script>
+  /* ── Data injected by Qute ── */
+  var serviceLabels = [{#for k in impact.serviceImpact.keySet()}"{k}"{#if k_hasNext},{/if}{/for}];
+  var gwpEmbedded   = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("gwp").embedded.value}{#if e_hasNext},{/if}{/for}];
+  var gwpUse        = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("gwp").use.value}{#if e_hasNext},{/if}{/for}];
+  var peEmbedded    = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("pe").embedded.value}{#if e_hasNext},{/if}{/for}];
+  var peUse         = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("pe").use.value}{#if e_hasNext},{/if}{/for}];
+  var adpEmbedded   = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("adp").embedded.value}{#if e_hasNext},{/if}{/for}];
+  var adpUse        = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("adp").use.value}{#if e_hasNext},{/if}{/for}];
+  var sharesLabels  = [{#for k in impact.impactShares.keySet()}"{k}"{#if k_hasNext},{/if}{/for}];
+  var sharesValues  = [{#for v in impact.impactShares.values()}{v}{#if v_hasNext},{/if}{/for}];
+  var serviceData   = [{#for e in impact.serviceImpact.entrySet()}\{gwpEmbedded:{e.value.impacts.get("gwp").embedded.value},gwpUse:{e.value.impacts.get("gwp").use.value},peEmbedded:{e.value.impacts.get("pe").embedded.value},peUse:{e.value.impacts.get("pe").use.value},adpEmbedded:{e.value.impacts.get("adp").embedded.value},adpUse:{e.value.impacts.get("adp").use.value}\}{#if e_hasNext},{/if}{/for}];
+
+  /* ── Chart defaults ── */
+  var GREEN  = '#7dff6b', ORANGE = '#ff7a2f', BLUE = '#4fc3f7';
+  var YELLOW = '#ffd166', PURPLE = '#c084fc', TEAL = '#2dd4bf';
+  var BORDER = '#2a3330', TEXT   = '#6b7d75';
+  var palette = [GREEN, ORANGE, BLUE, YELLOW, PURPLE, TEAL, '#f472b6', '#fb923c'];
+  Chart.defaults.color = TEXT; Chart.defaults.borderColor = BORDER;
+  Chart.defaults.font.family = "'Space Mono', monospace"; Chart.defaults.font.size = 10;
+
+  /* ── Overview charts ── */
+  var hbarH = Math.max(160, serviceLabels.length * 36 + 80);
+  document.querySelectorAll('.chart-wrap.hbar').forEach(function(el) \{ el.style.height = hbarH + 'px'; \});
+
+  new Chart(document.getElementById('chartSharesDonut'), \{
+    type: 'doughnut',
+    data: \{ labels: sharesLabels, datasets: [\{ data: sharesValues, backgroundColor: palette.map(function(c) \{ return c+'cc'; \}), borderColor: palette, borderWidth: 1, hoverOffset: 8 \}] \},
+    options: \{
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: \{
+        legend: \{ position: 'right', labels: \{ boxWidth: 10, padding: 14, font: \{ size: 10 \} \} \},
+        tooltip: \{ callbacks: \{ label: function(ctx) \{ return ' ' + (ctx.parsed * 100).toFixed(1) + '%'; \} \} \}
+      \}
+    \}
+  \});
+
+  function makeHBar(id, datasets, unit, color) \{
+    return new Chart(document.getElementById(id), \{
+      type: 'bar', data: \{ labels: serviceLabels, datasets: datasets \},
+      options: \{
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: \{ legend: \{ position: 'top', labels: \{ boxWidth: 10, padding: 14 \} \}, tooltip: \{ mode: 'index' \} \},
+        scales: \{ x: \{ stacked: true, grid: \{ color: BORDER \}, title: \{ display: true, text: unit, color: color \} \}, y: \{ stacked: true, grid: \{ color: BORDER \} \} \}
+      \}
+    \});
+  \}
+
+  [\{ id: 'chartGwp',  emb: gwpEmbedded, use: gwpUse, color: GREEN,  unit: 'kgCO2eq' \},
+   \{ id: 'chartPe',   emb: peEmbedded,  use: peUse,  color: BLUE,   unit: 'MJ'      \},
+   \{ id: 'chartAdp',  emb: adpEmbedded, use: adpUse, color: YELLOW, unit: 'kgSbeq'  \}
+  ].forEach(function(m) \{
+    makeHBar(m.id, [
+      \{ label: 'Embedded', data: m.emb, backgroundColor: m.color+'cc', borderColor: m.color, borderWidth: 1 \},
+      \{ label: 'Use',      data: m.use, backgroundColor: m.color+'33', borderColor: m.color, borderWidth: 1 \}
+    ], m.unit, m.color);
+  \});
+
+  /* ── Container picker ── */
+  var picker   = document.getElementById('containerPicker');
+  var trigger  = document.getElementById('containerTrigger');
+  var dropdown = document.getElementById('containerDropdown');
+  var search   = document.getElementById('containerSearch');
+
+  function updateCount() \{
+    var boxes = document.querySelectorAll('#containerList input');
+    document.getElementById('containerCount').textContent =
+      Array.from(boxes).filter(function(b) \{ return b.checked; \}).length + ' / ' + boxes.length + ' containers';
+  \}
+
+  function toggleDropdown(open) \{
+    trigger.classList.toggle('open', open);
+    dropdown.classList.toggle('open', open);
+    if (open) \{ search.value = ''; search.dispatchEvent(new Event('input')); search.focus(); \}
+  \}
+
+  trigger.addEventListener('click', function(e) \{ e.stopPropagation(); toggleDropdown(!dropdown.classList.contains('open')); \});
+  document.addEventListener('click', function(e) \{ if (!picker.contains(e.target)) toggleDropdown(false); \});
+  document.addEventListener('keydown', function(e) \{ if (e.key === 'Escape') toggleDropdown(false); \});
+
+  search.addEventListener('input', function() \{
+    var q = search.value.toLowerCase();
+    document.querySelectorAll('#containerList .container-item').forEach(function(item) \{
+      item.classList.toggle('hidden', !!q && !item.querySelector('span').textContent.toLowerCase().includes(q));
+    \});
+  \});
+
+  document.getElementById('btnSelectAll').addEventListener('click', function() \{
+    document.querySelectorAll('#containerList .container-item:not(.hidden) input').forEach(function(b) \{ b.checked = true; \}); updateCount();
+  \});
+  document.getElementById('btnSelectNone').addEventListener('click', function() \{
+    document.querySelectorAll('#containerList .container-item:not(.hidden) input').forEach(function(b) \{ b.checked = false; \}); updateCount();
+  \});
+  document.querySelectorAll('#containerList input').forEach(function(b) \{ b.addEventListener('change', updateCount); \});
+  updateCount();
+
+  /* ── Form submit ── */
+  document.getElementById('filterForm').addEventListener('submit', function(e) \{
+    e.preventDefault();
+    var p    = new URLSearchParams();
+    var from = document.getElementById('inputFrom').value;
+    var to   = document.getElementById('inputTo').value;
+    if (from) p.set('from', from.substring(0, 16));
+    if (to)   p.set('to',   to.substring(0, 16));
+    document.querySelectorAll('#containerList input:checked').forEach(function(b) \{ p.append('containers', b.value); \});
+    window.location.href = '?' + p.toString();
+  \});
+
+  /* ── Per-service collapsible detail charts ── */
+  var initializedRows = \{\};
+
+  function makeDetailChart(id, embedded, use, color, unit) \{
+    new Chart(document.getElementById(id), \{
+      type: 'bar',
+      data: \{ labels: ['Embedded', 'Use'], datasets: [\{ data: [embedded, use], backgroundColor: [color+'cc', color+'33'], borderColor: [color, color], borderWidth: 1 \}] \},
+      options: \{
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: \{ legend: \{ display: false \}, tooltip: \{ mode: 'index' \} \},
+        scales: \{ x: \{ grid: \{ color: BORDER \}, title: \{ display: true, text: unit, color: color \} \}, y: \{ grid: \{ color: BORDER \} \} \}
+      \}
+    \});
+  \}
+
+  document.querySelectorAll('.service-summary').forEach(function(row) \{
+    row.addEventListener('click', function() \{
+      var idx    = parseInt(row.dataset.idx, 10);
+      var detail = document.getElementById('detail-' + idx);
+      var open   = !detail.classList.toggle('collapsed');
+      row.querySelector('.row-chevron').classList.toggle('open', open);
+      if (open && !initializedRows[idx]) \{
+        var d = serviceData[idx - 1];
+        [\{ id: 'detailGwp-', emb: d.gwpEmbedded, use: d.gwpUse, color: GREEN,  unit: 'kgCO2eq' \},
+         \{ id: 'detailPe-',  emb: d.peEmbedded,  use: d.peUse,  color: BLUE,   unit: 'MJ'      \},
+         \{ id: 'detailAdp-', emb: d.adpEmbedded, use: d.adpUse, color: YELLOW, unit: 'kgSbeq'  \}
+        ].forEach(function(m) \{ makeDetailChart(m.id + idx, m.emb, m.use, m.color, m.unit); \});
+        initializedRows[idx] = true;
+      \}
+    \});
+  \});
+</script>

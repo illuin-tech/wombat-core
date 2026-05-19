@@ -21,6 +21,7 @@ public class Monitor {
     @Scheduled(cron = "${monitor.cron}")
     public void monitor()
     {
+        logger.info("Persisting pods usages");
         this.kubernetesResourceService.listPods(this.properties.targetNamespace());
     }
 }
