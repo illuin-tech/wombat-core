@@ -1,6 +1,0 @@
-{
-  "provider": "aws",
-  "instance_type": "a1.4xlarge",
-  "location": "FRA",
-  "lifespan": 5000
-}
