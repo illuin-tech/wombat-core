@@ -28,10 +28,11 @@ public class MemoryLoadTarget implements LoadTarget {
 
         Map<String, List<ContainerMetrics>> currentMetrics = this.registry.get(instant);
 
+        String podName = podMetrics.getMetadata().getName();
+        logger.info("Saving metrics in memory for pod {}", podName);
         podMetrics.getContainers()
             .forEach(container -> {
                 logger.trace("Saving locally {}", container.toString());
-                String podName = podMetrics.getMetadata().getName();
                 if (currentMetrics.containsKey(podName))
                     currentMetrics.get(podName).add(container);
                 else {
@@ -84,7 +85,7 @@ public class MemoryLoadTarget implements LoadTarget {
             double average = usages.stream()
                 .mapToDouble(Double::doubleValue)
                 .average()
-                .orElseThrow(() -> new NoCPUUsageException("Could not compute CPU Usage"));
+                .orElse(0.0d);
             result.put(container, average);
         }
 

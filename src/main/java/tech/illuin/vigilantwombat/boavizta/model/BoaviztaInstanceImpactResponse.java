@@ -11,9 +11,9 @@ public record BoaviztaInstanceImpactResponse(Map<String, Impact> impacts) {
         ImpactItem use
     ) {
         public record ImpactItem(
-            int value,
-            int min,
-            int max,
+            float value,
+            float min,
+            float max,
             List<String> warnings
         ) {}
     }

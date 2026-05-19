@@ -17,6 +17,6 @@ public interface ServerProfileProperties {
     @WithDefault("FRA")
     String location();
 
-    @WithDefault("5000")
+    @WithDefault("43800") // 5 years
     int lifespan();
 }

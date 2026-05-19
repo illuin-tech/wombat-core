@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Impact Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/impact.css"/>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>Environmental Impact &mdash; <span>Cloud Services</span></h1>
+</div>
+
+<!-- Filter bar -->
+<form class="filter-bar" method="get" action="" id="filterForm">
+  <div class="filter-group">
+    <span class="filter-label">From</span>
+    <input type="datetime-local" name="from" id="inputFrom" value="{from}"/>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">To</span>
+    <input type="datetime-local" name="to" id="inputTo" value="{to}"/>
+  </div>
+  <button type="submit" class="btn-apply">Apply</button>
+</form>
+
+<!-- Main -->
+<div class="main">
+  <div class="error-card">
+    <div class="error-header">
+      <div class="error-dot"></div>
+      <span class="error-label">No data</span>
+    </div>
+    <div class="error-title">No CPU usage found</div>
+    <div class="error-body">
+      No CPU metrics were recorded for the selected time range.
+      Try a wider range or check that the monitoring agent is running.
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('filterForm').addEventListener('submit', function(e) \{
+    e.preventDefault();
+    var from = document.getElementById('inputFrom').value;
+    var to   = document.getElementById('inputTo').value;
+    var params = new URLSearchParams();
+    if (from) params.set('from', from.substring(0, 16));
+    if (to)   params.set('to',   to.substring(0, 16));
+    window.location.href = '?' + params.toString();
+  \});
+</script>
+
+</body>
+</html>

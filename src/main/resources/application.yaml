@@ -14,7 +14,7 @@ quarkus:
         level: TRACE
 
 monitor:
-  cron: "*/30 * * * * ?" # every 30s
+  cron: "*/10 * * * * ?" # every 10s
   target-namespace: "export-control"
 
 persistence:
