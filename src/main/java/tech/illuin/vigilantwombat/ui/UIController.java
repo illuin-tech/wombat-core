@@ -4,10 +4,12 @@ import io.quarkus.qute.TemplateInstance;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import tech.illuin.vigilantwombat.handler.ImpactService;
+import tech.illuin.vigilantwombat.handler.model.BoaviztaKubernetesConfig;
+import tech.illuin.vigilantwombat.handler.model.ImpactRequest;
 import tech.illuin.vigilantwombat.handler.model.ImpactResponse;
+import tech.illuin.vigilantwombat.monitor.MonitorProperties;
 import tech.illuin.vigilantwombat.persistence.NoCPUUsageException;
 import tech.illuin.vigilantwombat.persistence.model.TimeRange;
-import tech.illuin.vigilantwombat.profile.ServerConfig;
 import tech.illuin.vigilantwombat.profile.ServerProfileProperties;
 
 import java.time.Instant;
@@ -21,10 +23,12 @@ public class UIController {
 
     private final ImpactService impactService;
     private final ServerProfileProperties serverProfileProperties;
+    private final MonitorProperties monitorProperties;
 
-    public UIController(ImpactService impactService, ServerProfileProperties serverProfileProperties) {
+    public UIController(ImpactService impactService, ServerProfileProperties serverProfileProperties, MonitorProperties monitorProperties) {
         this.impactService = impactService;
         this.serverProfileProperties = serverProfileProperties;
+        this.monitorProperties = monitorProperties;
     }
 
     @GET
@@ -42,14 +46,15 @@ public class UIController {
                 : Instant.now().minus(24, ChronoUnit.HOURS);
             Instant end = to != null && !to.isBlank()
                 ? fmt.parse(to, Instant::from)
-                : Instant.now();
+                : Instant.now().plus(1, ChronoUnit.HOURS);
 
+            ImpactRequest request = new ImpactRequest(
+                new TimeRange(start, end),
+                List.of(BoaviztaKubernetesConfig.fromServerProfile(this.serverProfileProperties, this.monitorProperties))
+            );
 
-            ServerConfig serverConfig = ServerConfig.fromServerProfile(this.serverProfileProperties);
-            TimeRange timeRange = new TimeRange(start, end);
-
-            ImpactResponse result = impactService.computeImpactResponse(serverConfig, timeRange, containers);
-            return Templates.impact(result);
+            List<ImpactResponse> results = this.impactService.computeImpactResponse(request, containers);
+            return Templates.impact(results.getFirst());
         }
         catch (NoCPUUsageException e) {
             return Templates.impactError(from, to);

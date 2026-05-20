@@ -1,10 +1,12 @@
 package tech.illuin.vigilantwombat.ui;
 
 import io.quarkus.qute.TemplateExtension;
-import tech.illuin.vigilantwombat.boavizta.model.BoaviztaInstanceImpactResponse;
+import tech.illuin.vigilantwombat.handler.model.BoaviztaKubernetesConfig;
+import tech.illuin.vigilantwombat.handler.model.ProviderConfig;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 
 @TemplateExtension
@@ -15,9 +17,13 @@ public class TemplateFormatters {
 
     public static String asLocalDateTime(Instant instant) {
         if (instant == null) return "";
-        // Instant.MIN / Instant.MAX → chaîne vide plutôt qu'une date absurde
         if (instant.equals(Instant.MIN) || instant.equals(Instant.MAX)) return "";
         return LOCAL_DT.format(instant);
+    }
+
+    public static String asIsoUtc(Instant instant) {
+        if (instant == null || instant.equals(Instant.MIN) || instant.equals(Instant.MAX)) return "";
+        return instant.toString();
     }
 
     public static String asPercent(Double value) {
@@ -25,9 +31,29 @@ public class TemplateFormatters {
         return String.format(Locale.US, "%.2f%%", value * 100);
     }
 
-    public static float totalValue(BoaviztaInstanceImpactResponse.Impact impact) {
-        if (impact == null) return 0f;
-        return impact.embedded().value() + impact.use().value();
+    public static String provider(ProviderConfig config) {
+        if (config instanceof BoaviztaKubernetesConfig c) return c.provider().name();
+        return "n/a";
+    }
+
+    public static String instanceType(ProviderConfig config) {
+        if (config instanceof BoaviztaKubernetesConfig c) return c.instanceType();
+        return "n/a";
+    }
+
+    public static String location(ProviderConfig config) {
+        if (config instanceof BoaviztaKubernetesConfig c) return c.location();
+        return "n/a";
+    }
+
+    public static int lifespan(ProviderConfig config) {
+        if (config instanceof BoaviztaKubernetesConfig c) return c.lifespan();
+        return 0;
+    }
+
+    public static List<String> namespaces(ProviderConfig config) {
+        if (config instanceof BoaviztaKubernetesConfig c && c.namespaces() != null) return c.namespaces();
+        return List.of();
     }
 
     public static String asDecimal(Float value) {

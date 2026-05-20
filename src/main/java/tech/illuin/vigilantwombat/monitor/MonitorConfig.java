@@ -7,8 +7,12 @@ import tech.illuin.vigilantwombat.kubernetes.KubernetesResourceService;
 @ApplicationScoped
 public class MonitorConfig {
     @Singleton
-    public Monitor provideMonitor(KubernetesResourceService kubernetesResourceService, MonitorProperties properties)
-    {
-        return new Monitor(kubernetesResourceService, properties);
+    public KubernetesResourceHandler provideKubernetesResourceHandler(KubernetesResourceService kubernetesResourceService) {
+        return new KubernetesResourceHandler(kubernetesResourceService);
+    }
+
+    @Singleton
+    public Monitor provideMonitor(KubernetesResourceHandler kubernetesResourceHandler, MonitorProperties properties) {
+        return new Monitor(kubernetesResourceHandler, properties);
     }
 }

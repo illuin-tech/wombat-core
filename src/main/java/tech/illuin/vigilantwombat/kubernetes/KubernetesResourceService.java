@@ -8,7 +8,6 @@ import java.time.Instant;
 
 public class KubernetesResourceService {
 
-
     private final KubernetesClient kubernetesClient;
     private final Instance<LoadTarget> targets;
 

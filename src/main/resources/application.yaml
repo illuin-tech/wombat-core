@@ -15,7 +15,9 @@ quarkus:
 
 monitor:
   cron: "*/10 * * * * ?" # every 10s
-  target-namespace: "export-control"
+  kubernetes-configs:
+    export-control:
+      namespace: "export-control"
 
 persistence:
   enable-memory-target: true

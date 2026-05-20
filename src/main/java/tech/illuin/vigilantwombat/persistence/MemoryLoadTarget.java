@@ -4,6 +4,8 @@ import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.illuin.vigilantwombat.persistence.model.ConfigDatapoint;
+import tech.illuin.vigilantwombat.persistence.model.KubernetesConfigDatapoint;
 import tech.illuin.vigilantwombat.persistence.model.TimeRange;
 
 import java.time.Instant;
@@ -15,7 +17,7 @@ public class MemoryLoadTarget implements LoadTarget {
 
     private static final Logger logger = LoggerFactory.getLogger(MemoryLoadTarget.class);
 
-    private final Map<Instant, Map<String, List<ContainerMetrics>>> registry;
+    private final Map<Instant, ConfigDatapoint> registry;
 
     public MemoryLoadTarget() {
         this.registry = new HashMap<>();
@@ -23,32 +25,24 @@ public class MemoryLoadTarget implements LoadTarget {
 
     @Override
     public void outputToTarget(Instant instant, PodMetrics podMetrics, String namespace) {
-        if (!this.registry.containsKey(instant))
-            this.registry.put(instant, new HashMap<>());
-
-        Map<String, List<ContainerMetrics>> currentMetrics = this.registry.get(instant);
+        KubernetesConfigDatapoint datapoint = (KubernetesConfigDatapoint) this.registry.computeIfAbsent(
+            instant,
+            k -> new KubernetesConfigDatapoint(new HashMap<>())
+        );
 
         String podName = podMetrics.getMetadata().getName();
         logger.info("Saving metrics in memory for pod {}", podName);
-        podMetrics.getContainers()
-            .forEach(container -> {
-                logger.trace("Saving locally {}", container.toString());
-                if (currentMetrics.containsKey(podName))
-                    currentMetrics.get(podName).add(container);
-                else {
-                    List<ContainerMetrics> metrics = new ArrayList<>();
-                    metrics.add(container);
-                    currentMetrics.put(podName, metrics);
-                }
-            });
+        podMetrics.getContainers().forEach(container -> {
+            logger.trace("Saving locally {}", container.toString());
+            datapoint.podMetrics().computeIfAbsent(podName, k -> new ArrayList<>()).add(container);
+        });
     }
 
     @Override
     public double computeCpuUsage(TimeRange timeRange) throws NoCPUUsageException {
         // TODO: check units
-        Map<Instant, Map<String, List<ContainerMetrics>>> filteredRegistry = filterRegistryEntries(timeRange);
-        return filteredRegistry.values().stream()
-            .mapToDouble(metricMap -> metricMap.values().stream()
+        return filterKubernetesEntries(timeRange).values().stream()
+            .mapToDouble(datapoint -> datapoint.podMetrics().values().stream()
                 .mapToDouble(metrics -> metrics.stream()
                     .mapToDouble(metric -> Double.parseDouble(metric.getUsage().get("cpu").getAmount()))
                     .sum()
@@ -60,48 +54,34 @@ public class MemoryLoadTarget implements LoadTarget {
     }
 
     @Override
-    public Map<String, Double> getContainerShares(TimeRange timeRange) throws NoCPUUsageException
-    {
-        Map<Instant, Map<String, List<ContainerMetrics>>> filteredRegistry = filterRegistryEntries(timeRange);
-        Map<Instant, List<InstantShare>> instantShares  = filteredRegistry.entrySet().stream()
+    public Map<String, Double> getContainerShares(TimeRange timeRange) throws NoCPUUsageException {
+        Map<Instant, List<InstantShare>> instantShares = filterKubernetesEntries(timeRange).entrySet().stream()
             .collect(Collectors.toMap(
                 Map.Entry::getKey,
-                entry -> computeInstantShare(entry.getValue().values().stream().flatMap(Collection::stream))
+                entry -> computeInstantShare(entry.getValue().podMetrics().values().stream().flatMap(Collection::stream))
             ));
 
         Map<String, List<Double>> containerToUsages = new HashMap<>();
         for (List<InstantShare> shares : instantShares.values()) {
             for (InstantShare share : shares) {
-                String container = share.container();
-                double usage = share.usage();
-                containerToUsages.computeIfAbsent(container, k -> new ArrayList<>()).add(usage);
+                containerToUsages.computeIfAbsent(share.container(), k -> new ArrayList<>()).add(share.usage());
             }
         }
 
-        Map<String, Double> result = new HashMap<>();
-        for (Map.Entry<String, List<Double>> entry : containerToUsages.entrySet()) {
-            String container = entry.getKey();
-            List<Double> usages = entry.getValue();
-            double average = usages.stream()
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0d);
-            result.put(container, average);
-        }
-
-        return result;
+        return containerToUsages.entrySet().stream().collect(Collectors.toMap(
+            Map.Entry::getKey,
+            entry -> entry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(0.0d)
+        ));
     }
 
-    private Map<Instant, Map<String, List<ContainerMetrics>>> filterRegistryEntries(TimeRange timeRange)
-    {
-        return this.registry.entrySet()
-            .stream()
+    private Map<Instant, KubernetesConfigDatapoint> filterKubernetesEntries(TimeRange timeRange) {
+        return this.registry.entrySet().stream()
             .filter(entry -> !entry.getKey().isBefore(timeRange.start()) && !entry.getKey().isAfter(timeRange.end()))
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            .filter(entry -> entry.getValue() instanceof KubernetesConfigDatapoint)
+            .collect(Collectors.toMap(Map.Entry::getKey, entry -> (KubernetesConfigDatapoint) entry.getValue()));
     }
 
-    private static List<InstantShare> computeInstantShare(Stream<ContainerMetrics> metricStream)
-    {
+    private static List<InstantShare> computeInstantShare(Stream<ContainerMetrics> metricStream) {
         List<ContainerMetrics> metrics = metricStream.toList();
         double totalUsage = metrics.stream()
             .mapToDouble(metric -> Double.parseDouble(metric.getUsage().get("cpu").getAmount()))
