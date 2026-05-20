@@ -1,23 +1,50 @@
 <script>
   /* ── Data injected by Qute ── */
-  var serviceLabels = [{#for k in impact.serviceImpact.keySet()}"{k}"{#if k_hasNext},{/if}{/for}];
-  var gwpEmbedded   = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("gwp").embedded.value}{#if e_hasNext},{/if}{/for}];
-  var gwpUse        = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("gwp").use.value}{#if e_hasNext},{/if}{/for}];
-  var peEmbedded    = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("pe").embedded.value}{#if e_hasNext},{/if}{/for}];
-  var peUse         = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("pe").use.value}{#if e_hasNext},{/if}{/for}];
-  var adpEmbedded   = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("adp").embedded.value}{#if e_hasNext},{/if}{/for}];
-  var adpUse        = [{#for e in impact.serviceImpact.entrySet()}{e.value.impacts.get("adp").use.value}{#if e_hasNext},{/if}{/for}];
+  var serviceLabels = [{#for footprint in impact.serviceImpacts}"{footprint.service}"{#if footprint_hasNext},{/if}{/for}];
+  var gwpEmbedded   = [{#for footprint in impact.serviceImpacts}{footprint.gwp.embedded.value}{#if footprint_hasNext},{/if}{/for}];
+  var gwpUse        = [{#for footprint in impact.serviceImpacts}{footprint.gwp.use.value}{#if footprint_hasNext},{/if}{/for}];
+  var peEmbedded    = [{#for footprint in impact.serviceImpacts}{footprint.pe.embedded.value}{#if footprint_hasNext},{/if}{/for}];
+  var peUse         = [{#for footprint in impact.serviceImpacts}{footprint.pe.use.value}{#if footprint_hasNext},{/if}{/for}];
+  var adpEmbedded   = [{#for footprint in impact.serviceImpacts}{footprint.adp.embedded.value}{#if footprint_hasNext},{/if}{/for}];
+  var adpUse        = [{#for footprint in impact.serviceImpacts}{footprint.adp.use.value}{#if footprint_hasNext},{/if}{/for}];
   var sharesLabels  = [{#for k in impact.impactShares.keySet()}"{k}"{#if k_hasNext},{/if}{/for}];
   var sharesValues  = [{#for v in impact.impactShares.values()}{v}{#if v_hasNext},{/if}{/for}];
-  var serviceData   = [{#for e in impact.serviceImpact.entrySet()}\{gwpEmbedded:{e.value.impacts.get("gwp").embedded.value},gwpUse:{e.value.impacts.get("gwp").use.value},peEmbedded:{e.value.impacts.get("pe").embedded.value},peUse:{e.value.impacts.get("pe").use.value},adpEmbedded:{e.value.impacts.get("adp").embedded.value},adpUse:{e.value.impacts.get("adp").use.value}\}{#if e_hasNext},{/if}{/for}];
+  var serviceData   = [{#for footprint in impact.serviceImpacts}\{gwpEmbedded:{footprint.gwp.embedded.value},gwpUse:{footprint.gwp.use.value},peEmbedded:{footprint.pe.embedded.value},peUse:{footprint.pe.use.value},adpEmbedded:{footprint.adp.embedded.value},adpUse:{footprint.adp.use.value}\}{#if footprint_hasNext},{/if}{/for}];
+
+  /* ── Local time helpers ── */
+  function utcToLocalInput(iso) \{
+    if (!iso) return '';
+    var d = new Date(iso);
+    var off = d.getTimezoneOffset() * 60000;
+    return new Date(d - off).toISOString().slice(0, 16);
+  \}
+  function localInputToUtc(local) \{
+    if (!local) return '';
+    return new Date(local).toISOString().slice(0, 16);
+  \}
+  function formatLocalRange(startIso, endIso) \{
+    var opts = \{ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' \};
+    var fmt = function(iso) \{ return iso ? new Date(iso).toLocaleString(navigator.language, opts) : '—'; \};
+    return fmt(startIso) + ' → ' + fmt(endIso);
+  \}
+
+  /* ── Init datetime inputs and header from UTC data attrs ── */
+  (function() \{
+    var inFrom = document.getElementById('inputFrom');
+    var inTo   = document.getElementById('inputTo');
+    if (inFrom.dataset.utc) inFrom.value = utcToLocalInput(inFrom.dataset.utc);
+    if (inTo.dataset.utc)   inTo.value   = utcToLocalInput(inTo.dataset.utc);
+    var meta = document.getElementById('headerMeta');
+    meta.textContent = formatLocalRange(meta.dataset.start, meta.dataset.end);
+  \})();
 
   /* ── Chart defaults ── */
-  var GREEN  = '#7dff6b', ORANGE = '#ff7a2f', BLUE = '#4fc3f7';
-  var YELLOW = '#ffd166', PURPLE = '#c084fc', TEAL = '#2dd4bf';
-  var BORDER = '#2a3330', TEXT   = '#6b7d75';
-  var palette = [GREEN, ORANGE, BLUE, YELLOW, PURPLE, TEAL, '#f472b6', '#fb923c'];
+  var GREEN  = '#16a34a', ORANGE = '#ea580c', BLUE = '#2563eb';
+  var YELLOW = '#ca8a04', PURPLE = '#7c3aed', TEAL = '#0891b2';
+  var BORDER = '#e3ede8', TEXT   = '#4d7060';
+  var palette = [GREEN, BLUE, YELLOW, TEAL, PURPLE, ORANGE, '#db2777', '#0284c7'];
   Chart.defaults.color = TEXT; Chart.defaults.borderColor = BORDER;
-  Chart.defaults.font.family = "'Space Mono', monospace"; Chart.defaults.font.size = 10;
+  Chart.defaults.font.family = "'DM Sans', sans-serif"; Chart.defaults.font.size = 12; Chart.defaults.font.weight = '500';
 
   /* ── Overview charts ── */
   var hbarH = Math.max(160, serviceLabels.length * 36 + 80);
@@ -94,14 +121,19 @@
   document.querySelectorAll('#containerList input').forEach(function(b) \{ b.addEventListener('change', updateCount); \});
   updateCount();
 
+  /* ── Reset ── */
+  document.getElementById('btnReset').addEventListener('click', function() \{
+    window.location.href = window.location.pathname;
+  \});
+
   /* ── Form submit ── */
   document.getElementById('filterForm').addEventListener('submit', function(e) \{
     e.preventDefault();
     var p    = new URLSearchParams();
     var from = document.getElementById('inputFrom').value;
     var to   = document.getElementById('inputTo').value;
-    if (from) p.set('from', from.substring(0, 16));
-    if (to)   p.set('to',   to.substring(0, 16));
+    if (from) p.set('from', localInputToUtc(from));
+    if (to)   p.set('to',   localInputToUtc(to));
     document.querySelectorAll('#containerList input:checked').forEach(function(b) \{ p.append('containers', b.value); \});
     window.location.href = '?' + p.toString();
   \});
@@ -112,11 +144,14 @@
   function makeDetailChart(id, embedded, use, color, unit) \{
     new Chart(document.getElementById(id), \{
       type: 'bar',
-      data: \{ labels: ['Embedded', 'Use'], datasets: [\{ data: [embedded, use], backgroundColor: [color+'cc', color+'33'], borderColor: [color, color], borderWidth: 1 \}] \},
+      data: \{ labels: ['Embedded', 'Use'], datasets: [\{ data: [embedded, use], backgroundColor: [color+'cc', color+'55'], borderColor: [color, color], borderWidth: 1 \}] \},
       options: \{
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: \{ legend: \{ display: false \}, tooltip: \{ mode: 'index' \} \},
-        scales: \{ x: \{ grid: \{ color: BORDER \}, title: \{ display: true, text: unit, color: color \} \}, y: \{ grid: \{ color: BORDER \} \} \}
+        scales: \{
+          x: \{ grid: \{ color: BORDER \}, title: \{ display: true, text: unit, color: color \} \},
+          y: \{ grid: \{ display: false \}, ticks: \{ color: TEXT, font: \{ size: 12, weight: '600' \} \} \}
+        \}
       \}
     \});
   \}

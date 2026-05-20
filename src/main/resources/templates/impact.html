@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Impact Report</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/impact.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -12,8 +12,11 @@
 
 <!-- Header -->
 <div class="header">
-  <h1>Environmental Impact &mdash; <span>Cloud Services</span></h1>
-  <div class="header-meta">{impact.parameters.timeRange.start} &rarr; {impact.parameters.timeRange.end}</div>
+  <img src="/vigilant-wombat-large-mask.png" alt="Vigilant Wombat" class="header-logo"/>
+  <h1>Vigilant Wombat &mdash; <span>Environmental Impact</span></h1>
+  <div class="header-meta" id="headerMeta"
+       data-start="{impact.parameters.timeRange.start.asIsoUtc()}"
+       data-end="{impact.parameters.timeRange.end.asIsoUtc()}"></div>
 </div>
 
 <!-- Filter bar -->
@@ -21,12 +24,12 @@
   <div class="filter-group">
     <span class="filter-label">From</span>
     <input type="datetime-local" name="from" id="inputFrom"
-           value="{impact.parameters.timeRange.start.asLocalDateTime()}"/>
+           data-utc="{impact.parameters.timeRange.start.asIsoUtc()}"/>
   </div>
   <div class="filter-group">
     <span class="filter-label">To</span>
     <input type="datetime-local" name="to" id="inputTo"
-           value="{impact.parameters.timeRange.end.asLocalDateTime()}"/>
+           data-utc="{impact.parameters.timeRange.end.asIsoUtc()}"/>
   </div>
   <div class="filter-group">
     <span class="filter-label">Containers</span>
@@ -47,7 +50,7 @@
           {#for container in impact.containers}
           <label class="container-item">
             <input type="checkbox" name="containers" value="{container}"
-                   {#if impact.serviceImpact.keySet().contains(container)}checked{/if}/>
+                   {#if impact.impactShares.containsKey(container)}checked{/if}/>
             <span>{container}</span>
           </label>
           {/for}
@@ -56,6 +59,7 @@
     </div>
   </div>
   <button type="submit" class="btn-apply">Apply</button>
+  <button type="button" class="btn-reset" id="btnReset">Reset</button>
 </form>
 
 <!-- Main -->
@@ -65,46 +69,46 @@
   <div class="kpi-row">
     <div class="kpi-card green">
       <div class="kpi-label">Global GWP</div>
-      <div class="kpi-value">{impact.globalImpact.impacts.get("gwp").totalValue().asDecimal()}</div>
+      <div class="kpi-value">{impact.globalImpact.gwp.totalValue().asDecimal()}</div>
       <div class="kpi-unit">kgCO2eq</div>
       <div class="kpi-split">
         <div class="kpi-split-item">
           <span class="kpi-split-key">Embedded</span>
-          <span class="kpi-split-val">{impact.globalImpact.impacts.get("gwp").embedded.value.asDecimal()}</span>
+          <span class="kpi-split-val">{impact.globalImpact.gwp.embedded.value.asDecimal()}</span>
         </div>
         <div class="kpi-split-item">
           <span class="kpi-split-key">Use</span>
-          <span class="kpi-split-val">{impact.globalImpact.impacts.get("gwp").use.value.asDecimal()}</span>
+          <span class="kpi-split-val">{impact.globalImpact.gwp.use.value.asDecimal()}</span>
         </div>
       </div>
     </div>
     <div class="kpi-card blue">
       <div class="kpi-label">Primary Energy</div>
-      <div class="kpi-value">{impact.globalImpact.impacts.get("pe").totalValue().asDecimal()}</div>
+      <div class="kpi-value">{impact.globalImpact.pe.totalValue().asDecimal()}</div>
       <div class="kpi-unit">MJ</div>
       <div class="kpi-split">
         <div class="kpi-split-item">
           <span class="kpi-split-key">Embedded</span>
-          <span class="kpi-split-val">{impact.globalImpact.impacts.get("pe").embedded.value.asDecimal()}</span>
+          <span class="kpi-split-val">{impact.globalImpact.pe.embedded.value.asDecimal()}</span>
         </div>
         <div class="kpi-split-item">
           <span class="kpi-split-key">Use</span>
-          <span class="kpi-split-val">{impact.globalImpact.impacts.get("pe").use.value.asDecimal()}</span>
+          <span class="kpi-split-val">{impact.globalImpact.pe.use.value.asDecimal()}</span>
         </div>
       </div>
     </div>
     <div class="kpi-card yellow">
       <div class="kpi-label">Abiotic Resources</div>
-      <div class="kpi-value">{impact.globalImpact.impacts.get("adp").totalValue().asDecimal()}</div>
+      <div class="kpi-value">{impact.globalImpact.adp.totalValue().asDecimal()}</div>
       <div class="kpi-unit">kgSbeq</div>
       <div class="kpi-split">
         <div class="kpi-split-item">
           <span class="kpi-split-key">Embedded</span>
-          <span class="kpi-split-val">{impact.globalImpact.impacts.get("adp").embedded.value.asDecimal()}</span>
+          <span class="kpi-split-val">{impact.globalImpact.adp.embedded.value.asDecimal()}</span>
         </div>
         <div class="kpi-split-item">
           <span class="kpi-split-key">Use</span>
-          <span class="kpi-split-val">{impact.globalImpact.impacts.get("adp").use.value.asDecimal()}</span>
+          <span class="kpi-split-val">{impact.globalImpact.adp.use.value.asDecimal()}</span>
         </div>
       </div>
     </div>
@@ -118,30 +122,40 @@
     </div>
     <div class="kpi-card yellow">
       <div class="kpi-label">Containers tracked</div>
-      <div class="kpi-value">{impact.serviceImpact.size()}</div>
-      <div class="kpi-unit">services</div>
-      <div class="card-columns">
-        <div class="container-tags">
-          {#for k in impact.serviceImpact.keySet()}
-          <span class="container-tag">{k}</span>
+      <div class="kpi-value">{impact.serviceImpacts.size()}</div>
+      <div class="card-section">
+        <div class="card-section-label">Namespace</div>
+        <div class="namespace-list">
+          {#for ns in impact.parameters.providerConfig.namespaces}
+          <span class="namespace-tag">{ns}</span>
           {/for}
+        </div>
+      </div>
+      <div class="card-columns">
+        <div class="card-section">
+          <div class="card-section-label">Services</div>
+          <div class="container-tags">
+            {#for footprint in impact.serviceImpacts}
+            <span class="container-tag">{footprint.service}</span>
+            {/for}
+          </div>
         </div>
         <div class="params-inline">
           <div class="param-item">
             <span class="param-key">Provider</span>
-            <span class="param-val">{impact.parameters.serverConfig.provider}</span>
+            <span class="param-val">{impact.parameters.providerConfig.provider}</span>
           </div>
           <div class="param-item">
             <span class="param-key">Instance type</span>
-            <span class="param-val">{impact.parameters.serverConfig.instanceType}</span>
+            <span class="param-val">{impact.parameters.providerConfig.instanceType}</span>
           </div>
           <div class="param-item">
             <span class="param-key">Location</span>
-            <span class="param-val">{impact.parameters.serverConfig.location}</span>
+            <span class="param-val">{impact.parameters.providerConfig.location}</span>
           </div>
           <div class="param-item">
             <span class="param-key">Lifespan</span>
-            <span class="param-val">{impact.parameters.serverConfig.lifespan} h</span>
+            <span class="param-val">{impact.parameters.providerConfig.lifespan} h</span>
           </div>
         </div>
       </div>
@@ -150,15 +164,15 @@
 
   <!-- Metric charts -->
   <div class="metrics-row">
-    <div class="chart-card">
+    <div class="chart-card green">
       <div class="chart-title">GWP — Global Warming Potential (kgCO2eq)</div>
       <div class="chart-wrap hbar"><canvas id="chartGwp"></canvas></div>
     </div>
-    <div class="chart-card">
+    <div class="chart-card blue">
       <div class="chart-title">Primary Energy (MJ)</div>
       <div class="chart-wrap hbar"><canvas id="chartPe"></canvas></div>
     </div>
-    <div class="chart-card">
+    <div class="chart-card yellow">
       <div class="chart-title">Abiotic Resource Depletion (kgSbeq)</div>
       <div class="chart-wrap hbar"><canvas id="chartAdp"></canvas></div>
     </div>
@@ -185,43 +199,43 @@
         </tr>
       </thead>
       <tbody>
-        {#for entry in impact.serviceImpact.entrySet()}
-        <tr class="service-summary" data-idx="{entry_count}">
+        {#for footprint in impact.serviceImpacts}
+        <tr class="service-summary" data-idx="{footprint_count}">
           <td class="td-toggle"><span class="row-chevron">▶</span></td>
-          <td class="name">{entry.key}</td>
-          <td class="metric gwp bold">{entry.value.impacts.get("gwp").totalValue().asDecimal()}</td>
-          <td class="metric gwp use">{entry.value.impacts.get("gwp").embedded.value.asDecimal()}</td>
-          <td class="metric gwp use">{entry.value.impacts.get("gwp").use.value.asDecimal()}</td>
-          <td class="metric pe bold">{entry.value.impacts.get("pe").totalValue().asDecimal()}</td>
-          <td class="metric pe use">{entry.value.impacts.get("pe").embedded.value.asDecimal()}</td>
-          <td class="metric pe use">{entry.value.impacts.get("pe").use.value.asDecimal()}</td>
-          <td class="metric adp bold">{entry.value.impacts.get("adp").totalValue().asDecimal()}</td>
-          <td class="metric adp use">{entry.value.impacts.get("adp").embedded.value.asDecimal()}</td>
-          <td class="metric adp use">{entry.value.impacts.get("adp").use.value.asDecimal()}</td>
+          <td class="name">{footprint.service}</td>
+          <td class="metric gwp bold">{footprint.gwp.totalValue().asDecimal()}</td>
+          <td class="metric gwp use">{footprint.gwp.embedded.value.asDecimal()}</td>
+          <td class="metric gwp use">{footprint.gwp.use.value.asDecimal()}</td>
+          <td class="metric pe bold">{footprint.pe.totalValue().asDecimal()}</td>
+          <td class="metric pe use">{footprint.pe.embedded.value.asDecimal()}</td>
+          <td class="metric pe use">{footprint.pe.use.value.asDecimal()}</td>
+          <td class="metric adp bold">{footprint.adp.totalValue().asDecimal()}</td>
+          <td class="metric adp use">{footprint.adp.embedded.value.asDecimal()}</td>
+          <td class="metric adp use">{footprint.adp.use.value.asDecimal()}</td>
           <td>
             <span class="badge">
-              {#if impact.impactShares.containsKey(entry.key)}
-                {impact.impactShares.get(entry.key).asPercent()}
+              {#if impact.impactShares.containsKey(footprint.service)}
+                {impact.impactShares.get(footprint.service).asPercent()}
               {#else}
                 &mdash;
               {/if}
             </span>
           </td>
         </tr>
-        <tr class="service-detail collapsed" id="detail-{entry_count}">
+        <tr class="service-detail collapsed" id="detail-{footprint_count}">
           <td colspan="12">
             <div class="detail-charts">
               <div class="detail-chart-card">
                 <div class="chart-title">GWP (kgCO2eq)</div>
-                <div class="detail-chart-wrap"><canvas id="detailGwp-{entry_count}"></canvas></div>
+                <div class="detail-chart-wrap"><canvas id="detailGwp-{footprint_count}"></canvas></div>
               </div>
               <div class="detail-chart-card">
                 <div class="chart-title">Primary Energy (MJ)</div>
-                <div class="detail-chart-wrap"><canvas id="detailPe-{entry_count}"></canvas></div>
+                <div class="detail-chart-wrap"><canvas id="detailPe-{footprint_count}"></canvas></div>
               </div>
               <div class="detail-chart-card">
                 <div class="chart-title">Abiotic Resources (kgSbeq)</div>
-                <div class="detail-chart-wrap"><canvas id="detailAdp-{entry_count}"></canvas></div>
+                <div class="detail-chart-wrap"><canvas id="detailAdp-{footprint_count}"></canvas></div>
               </div>
             </div>
           </td>
