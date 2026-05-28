@@ -5,9 +5,11 @@ import jakarta.inject.Singleton;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 @ApplicationScoped
-public class PrometheusConfig {
+public class PrometheusConfig
+{
     @Singleton
-    public PrometheusService providePrometheusService(@RestClient PrometheusClient client) {
+    public PrometheusService providePrometheusService(@RestClient PrometheusClient client)
+    {
         return new PrometheusService(client);
     }
 }

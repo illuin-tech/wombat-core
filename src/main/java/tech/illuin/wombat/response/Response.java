@@ -3,7 +3,8 @@ package tech.illuin.wombat.response;
 public record Response<T>(
     Status status,
     T payload
-) {
+)
+{
     public static Response<Void> status(String message)
     {
         return new Response<>(new Status(message), null);

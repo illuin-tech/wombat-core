@@ -8,7 +8,8 @@ import tech.illuin.wombat.handler.impact_provider.ImpactProvider;
 import tech.illuin.wombat.persistence.LoadTarget;
 import tech.illuin.wombat.persistence.MemoryLoadTarget;
 
-public class BoaviztaServiceHandler implements ServiceHandler<BoaviztaInstanceImpactResponse> {
+public class BoaviztaServiceHandler implements ServiceHandler<BoaviztaInstanceImpactResponse>
+{
     private final MemoryLoadTarget loadTarget;
     private final BoaviztaImpactProvider impactProvider;
     private final BoaviztaFootprintResolver footprintResolver;
@@ -17,29 +18,34 @@ public class BoaviztaServiceHandler implements ServiceHandler<BoaviztaInstanceIm
         MemoryLoadTarget loadTarget,
         BoaviztaImpactProvider impactProvider,
         BoaviztaFootprintResolver footprintResolver
-    ) {
+    )
+    {
         this.loadTarget = loadTarget;
         this.impactProvider = impactProvider;
         this.footprintResolver = footprintResolver;
     }
 
     @Override
-    public LoadTarget loadTarget() {
+    public LoadTarget loadTarget()
+    {
         return this.loadTarget;
     }
 
     @Override
-    public ImpactProvider<BoaviztaInstanceImpactResponse> impactProvider() {
+    public ImpactProvider<BoaviztaInstanceImpactResponse> impactProvider()
+    {
         return this.impactProvider;
     }
 
     @Override
-    public FootprintResolver<BoaviztaInstanceImpactResponse> footprintResolver() {
+    public FootprintResolver<BoaviztaInstanceImpactResponse> footprintResolver()
+    {
         return this.footprintResolver;
     }
 
     @Override
-    public Class<BoaviztaInstanceImpactResponse> providerResponseType() {
+    public Class<BoaviztaInstanceImpactResponse> providerResponseType()
+    {
         return BoaviztaInstanceImpactResponse.class;
     }
 }

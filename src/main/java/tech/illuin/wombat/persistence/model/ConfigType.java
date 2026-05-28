@@ -1,5 +1,6 @@
 package tech.illuin.wombat.persistence.model;
 
-public enum ConfigType {
+public enum ConfigType
+{
     KUBERNETES
 }

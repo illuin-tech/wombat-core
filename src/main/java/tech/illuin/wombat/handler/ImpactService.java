@@ -12,21 +12,25 @@ import tech.illuin.wombat.persistence.model.TimeRange;
 
 import java.util.*;
 
-public class ImpactService {
+public class ImpactService
+{
 
     private static final Logger logger = LoggerFactory.getLogger(ImpactService.class);
     private static final String serviceGlobal = "global";
 
     private final Map<Datasource, ServiceHandler<?>> handlerSelector;
 
-    public ImpactService(Map<Datasource, ServiceHandler<?>> handlerSelector) {
+    public ImpactService(Map<Datasource, ServiceHandler<?>> handlerSelector)
+    {
         this.handlerSelector = handlerSelector;
     }
 
-    public List<ImpactResponse> computeImpactResponse(ImpactRequest input, List<String> containerIds) throws NoCPUUsageException {
+    public List<ImpactResponse> computeImpactResponse(ImpactRequest input, List<String> containerIds) throws NoCPUUsageException
+    {
         List<ProviderConfig> configs = input.configs() != null ? input.configs() : List.of();
         List<ImpactResponse> results = new ArrayList<>();
-        for (ProviderConfig config : configs) {
+        for (ProviderConfig config : configs)
+        {
             ServiceHandler<?> handler = this.handlerSelector.get(config.datasource());
             if (handler == null)
                 throw new IllegalArgumentException("No handler registered for datasource: " + config.datasource());
@@ -35,7 +39,8 @@ public class ImpactService {
         return results;
     }
 
-    public List<ImpactResponse> computeImpactResponse(ImpactRequest input) throws NoCPUUsageException {
+    public List<ImpactResponse> computeImpactResponse(ImpactRequest input) throws NoCPUUsageException
+    {
         return computeImpactResponse(input, Collections.emptyList());
     }
 
@@ -45,7 +50,8 @@ public class ImpactService {
         TimeRange timeRange,
         ImpactRequest input,
         List<String> containerIds
-    ) throws NoCPUUsageException {
+    ) throws NoCPUUsageException
+    {
         double load = handler.loadTarget().computeCpuUsage(timeRange);
         logger.info("Used CPU load {}", load);
 

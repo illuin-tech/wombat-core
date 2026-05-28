@@ -8,17 +8,20 @@ import jakarta.inject.Singleton;
 import tech.illuin.wombat.prometheus.PrometheusService;
 
 @ApplicationScoped
-public class PersistenceConfig {
+public class PersistenceConfig
+{
     // DO NOT USE FOR NOW
     @Singleton
     @IfBuildProperty(name = "persistence.enable-meter-target", stringValue = "true")
-    public MeterLoadTarget provideMeterLoadTarget(MeterRegistry registry, PrometheusService prometheusService){
+    public MeterLoadTarget provideMeterLoadTarget(MeterRegistry registry, PrometheusService prometheusService)
+    {
         return new MeterLoadTarget(registry, prometheusService);
     }
 
     @Singleton
     @IfBuildProperty(name = "persistence.enable-memory-target", stringValue = "true")
-    public MemoryLoadTarget provideMemoryLoadTarget(DatapointRepository repository, ObjectMapper mapper) {
+    public MemoryLoadTarget provideMemoryLoadTarget(DatapointRepository repository, ObjectMapper mapper)
+    {
         return new MemoryLoadTarget(repository, mapper);
     }
 }

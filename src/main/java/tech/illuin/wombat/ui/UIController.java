@@ -19,13 +19,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Path("ui")
-public class UIController {
+public class UIController
+{
 
     private final ImpactService impactService;
     private final ServerProfileProperties serverProfileProperties;
     private final MonitorProperties monitorProperties;
 
-    public UIController(ImpactService impactService, ServerProfileProperties serverProfileProperties, MonitorProperties monitorProperties) {
+    public UIController(ImpactService impactService, ServerProfileProperties serverProfileProperties, MonitorProperties monitorProperties)
+    {
         this.impactService = impactService;
         this.serverProfileProperties = serverProfileProperties;
         this.monitorProperties = monitorProperties;
@@ -37,8 +39,10 @@ public class UIController {
         @QueryParam("from") String from,
         @QueryParam("to") String to,
         @QueryParam("containers") List<String> containers
-    ) {
-        try {
+    )
+    {
+        try
+        {
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm[:ss]").withZone(ZoneOffset.UTC);
 
             Instant start = from != null && !from.isBlank()

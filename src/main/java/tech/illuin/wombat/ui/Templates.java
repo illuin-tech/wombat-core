@@ -5,7 +5,9 @@ import io.quarkus.qute.TemplateInstance;
 import tech.illuin.wombat.handler.model.ImpactResponse;
 
 @CheckedTemplate(requireTypeSafeExpressions = false)
-public class Templates {
+public class Templates
+{
     public static native TemplateInstance impact(ImpactResponse impact);
+
     public static native TemplateInstance impactError(String from, String to);
 }

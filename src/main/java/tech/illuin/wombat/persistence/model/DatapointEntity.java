@@ -5,7 +5,8 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "datapoint", indexes = @Index(columnList = "instantMs, type"))
-public class DatapointEntity extends PanacheEntityBase {
+public class DatapointEntity extends PanacheEntityBase
+{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

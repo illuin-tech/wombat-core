@@ -10,9 +10,11 @@ import tech.illuin.wombat.persistence.MemoryLoadTarget;
 import java.util.Map;
 
 @ApplicationScoped
-public class ImpactConfig {
+public class ImpactConfig
+{
     @Singleton
-    public ImpactService provideImpactService(BoaviztaServiceHandler boaviztaServiceHandler) {
+    public ImpactService provideImpactService(BoaviztaServiceHandler boaviztaServiceHandler)
+    {
         return new ImpactService(Map.of(
             Datasource.KUBERNETES, boaviztaServiceHandler
         ));
@@ -23,7 +25,8 @@ public class ImpactConfig {
         MemoryLoadTarget loadTarget,
         BoaviztaImpactProvider impactProvider,
         BoaviztaFootprintResolver footprintResolver
-    ) {
+    )
+    {
         return new BoaviztaServiceHandler(loadTarget, impactProvider, footprintResolver);
     }
 

@@ -1,5 +1,6 @@
 package tech.illuin.wombat.model;
 
-public enum ImpactProvider {
+public enum ImpactProvider
+{
     BOAVIZTA
 }

@@ -16,7 +16,8 @@ import java.time.Instant;
 import java.util.List;
 
 @Path("impact")
-public class ImpactController {
+public class ImpactController
+{
 
     private static final TimeRange defaultTimeRange = new TimeRange(Instant.MIN, Instant.MAX);
 
@@ -24,7 +25,8 @@ public class ImpactController {
     private final MonitorProperties monitorProperties;
     private final ImpactService impactService;
 
-    public ImpactController(ServerProfileProperties serverProfileProperties, MonitorProperties monitorProperties, ImpactService impactService) {
+    public ImpactController(ServerProfileProperties serverProfileProperties, MonitorProperties monitorProperties, ImpactService impactService)
+    {
         this.serverProfileProperties = serverProfileProperties;
         this.monitorProperties = monitorProperties;
         this.impactService = impactService;
@@ -33,8 +35,10 @@ public class ImpactController {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response<List<ImpactResponse>> getImpact(ImpactRequest input) {
-        try {
+    public Response<List<ImpactResponse>> getImpact(ImpactRequest input)
+    {
+        try
+        {
             List<ProviderConfig> configs = resolveConfigs(input);
             TimeRange timeRange = input == null || input.sourceTimeRange() == null ? defaultTimeRange : input.sourceTimeRange();
             List<ImpactResponse> response = this.impactService.computeImpactResponse(new ImpactRequest(timeRange, configs));
@@ -49,7 +53,8 @@ public class ImpactController {
         }
     }
 
-    private List<ProviderConfig> resolveConfigs(ImpactRequest input) {
+    private List<ProviderConfig> resolveConfigs(ImpactRequest input)
+    {
         if (input != null && input.configs() != null && !input.configs().isEmpty())
             return input.configs();
         if (!this.serverProfileProperties.enable())

@@ -15,14 +15,17 @@ public record BoaviztaKubernetesConfig(
     @JsonProperty("location") String location,
     @JsonProperty("lifespan") int lifespan,
     @JsonProperty("namespaces") List<String> namespaces
-) implements ProviderConfig {
+) implements ProviderConfig
+{
 
     @Override
-    public Datasource datasource() {
+    public Datasource datasource()
+    {
         return Datasource.KUBERNETES;
     }
 
-    public static BoaviztaKubernetesConfig fromServerProfile(ServerProfileProperties serverProps, MonitorProperties monitorProps) {
+    public static BoaviztaKubernetesConfig fromServerProfile(ServerProfileProperties serverProps, MonitorProperties monitorProps)
+    {
         List<String> namespaces = monitorProps.kubernetesConfigs().values().stream()
             .map(c -> c.namespace())
             .collect(Collectors.toList());

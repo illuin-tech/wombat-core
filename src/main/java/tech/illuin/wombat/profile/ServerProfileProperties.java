@@ -5,7 +5,8 @@ import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 
 @ConfigMapping(prefix = "profile.server")
-public interface ServerProfileProperties {
+public interface ServerProfileProperties
+{
     boolean enable();
 
     @WithDefault("aws")

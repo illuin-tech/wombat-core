@@ -8,7 +8,8 @@ import tech.illuin.wombat.prometheus.model.PrometheusResponse;
 
 @Path("/query_range")
 @RegisterRestClient(configKey = "prometheus-api-url")
-public interface PrometheusClient {
+public interface PrometheusClient
+{
 
     @GET
     PrometheusResponse query(

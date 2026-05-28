@@ -11,23 +11,26 @@ import tech.illuin.wombat.prometheus.PrometheusService;
 import java.time.Instant;
 import java.util.Map;
 
-public class MeterLoadTarget implements LoadTarget {
+public class MeterLoadTarget implements LoadTarget
+{
 
     private static final Logger logger = LoggerFactory.getLogger(MeterLoadTarget.class);
 
     private final MeterRegistry meterRegistry;
     private final PrometheusService prometheusService;
 
-    public MeterLoadTarget(MeterRegistry meterRegistry, PrometheusService prometheusService) {
+    public MeterLoadTarget(MeterRegistry meterRegistry, PrometheusService prometheusService)
+    {
         this.meterRegistry = meterRegistry;
         this.prometheusService = prometheusService;
     }
 
     @Override
-    public void outputToTarget(Instant instant, PodMetrics podMetrics, String namespace) {
+    public void outputToTarget(Instant instant, PodMetrics podMetrics, String namespace)
+    {
         String podName = podMetrics.getMetadata().getName();
         podMetrics.getContainers()
-            .forEach(container ->  {
+            .forEach(container -> {
                 logger.trace("CPU - {}: {} {}", podName, container.getUsage().get("cpu").getAmount(), container.getUsage().get("cpu").getFormat());
                 logger.trace("RAM - {}: {} {}", podName, container.getUsage().get("memory").getAmount(), container.getUsage().get("memory").getFormat());
                 this.meterRegistry.gauge(
@@ -44,12 +47,14 @@ public class MeterLoadTarget implements LoadTarget {
     }
 
     @Override
-    public double computeCpuUsage(TimeRange timeRange) {
+    public double computeCpuUsage(TimeRange timeRange)
+    {
         return 0.0;
     }
 
     @Override
-    public Map<String, Double> getContainerShares(TimeRange timeRange) throws NoCPUUsageException {
+    public Map<String, Double> getContainerShares(TimeRange timeRange) throws NoCPUUsageException
+    {
         return Map.of();
     }
 }

@@ -7,7 +7,8 @@ import jakarta.inject.Singleton;
 import tech.illuin.wombat.persistence.LoadTarget;
 
 @ApplicationScoped
-public class KubernetesConfig {
+public class KubernetesConfig
+{
     @Singleton
     public KubernetesResourceService provideKubernetesResourceService(Instance<LoadTarget> targets)
     {

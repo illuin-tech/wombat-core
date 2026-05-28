@@ -8,6 +8,7 @@ import tech.illuin.wombat.model.Datasource;
 @JsonSubTypes({
     @JsonSubTypes.Type(value = BoaviztaKubernetesConfig.class, name = "BOAVIZTA_KUBERNETES")
 })
-public sealed interface ProviderConfig permits BoaviztaKubernetesConfig {
+public sealed interface ProviderConfig permits BoaviztaKubernetesConfig
+{
     Datasource datasource();
 }

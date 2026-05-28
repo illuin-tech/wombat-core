@@ -13,7 +13,8 @@ import java.util.Set;
 
 @Path("/cloud/instance")
 @RegisterRestClient(configKey = "boavizta-api-url")
-public interface BoaviztaClient {
+public interface BoaviztaClient
+{
 
     @POST
     BoaviztaInstanceImpactResponse getInstanceImpact(

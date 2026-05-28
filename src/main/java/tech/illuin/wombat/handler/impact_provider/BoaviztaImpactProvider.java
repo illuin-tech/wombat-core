@@ -11,16 +11,19 @@ import tech.illuin.wombat.persistence.model.TimeRange;
 import java.util.List;
 import java.util.Set;
 
-public class BoaviztaImpactProvider implements ImpactProvider<BoaviztaInstanceImpactResponse> {
+public class BoaviztaImpactProvider implements ImpactProvider<BoaviztaInstanceImpactResponse>
+{
 
     private final BoaviztaClient boaviztaClient;
 
-    public BoaviztaImpactProvider(BoaviztaClient boaviztaClient) {
+    public BoaviztaImpactProvider(BoaviztaClient boaviztaClient)
+    {
         this.boaviztaClient = boaviztaClient;
     }
 
     @Override
-    public BoaviztaInstanceImpactResponse resolveImpact(ProviderConfig config, TimeRange timeRange, double load) {
+    public BoaviztaInstanceImpactResponse resolveImpact(ProviderConfig config, TimeRange timeRange, double load)
+    {
         BoaviztaKubernetesConfig k8sConfig = (BoaviztaKubernetesConfig) config;
         BoaviztaInstanceConfigResponse instanceConfig = this.getInstanceConfig(k8sConfig.provider(), k8sConfig.instanceType());
         // TODO: check units
@@ -36,11 +39,13 @@ public class BoaviztaImpactProvider implements ImpactProvider<BoaviztaInstanceIm
         );
     }
 
-    private BoaviztaInstanceImpactResponse getInstanceImpact(BoaviztaInstanceImpactRequest request, int duration) {
+    private BoaviztaInstanceImpactResponse getInstanceImpact(BoaviztaInstanceImpactRequest request, int duration)
+    {
         return this.boaviztaClient.getInstanceImpact(true, duration, Set.of("gwp", "adp", "pe"), request);
     }
 
-    private BoaviztaInstanceConfigResponse getInstanceConfig(BoaviztaInstanceImpactRequest.Provider provider, String instanceType) {
+    private BoaviztaInstanceConfigResponse getInstanceConfig(BoaviztaInstanceImpactRequest.Provider provider, String instanceType)
+    {
         return this.boaviztaClient.getInstanceConfig(provider, instanceType);
     }
 }

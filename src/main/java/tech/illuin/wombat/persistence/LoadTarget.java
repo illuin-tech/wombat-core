@@ -6,7 +6,8 @@ import tech.illuin.wombat.persistence.model.TimeRange;
 import java.time.Instant;
 import java.util.Map;
 
-public interface LoadTarget {
+public interface LoadTarget
+{
 
     void outputToTarget(Instant instant, PodMetrics podMetrics, String namespace);
 
