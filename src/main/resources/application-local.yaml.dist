@@ -1,0 +1,20 @@
+quarkus:
+  rest-client:
+    prometheus-api-url:
+      uri: "http://localhost:9090/api/v1"
+  datasource:
+    jdbc:
+      url: "jdbc:sqlite:data/db/local.db"
+
+monitor:
+  kubernetes-configs:
+    my-namespace:
+      namespace: "my-namespace"
+
+profile:
+  server:
+    enable: true
+    provider: aws
+    instance-type: "c5a.16xlarge"
+    location: "FRA"
+    lifespan: 43800
