@@ -6,6 +6,7 @@ import tech.illuin.wombat.handler.footprint_resolver.BoaviztaFootprintResolver;
 import tech.illuin.wombat.handler.impact_provider.BoaviztaImpactProvider;
 import tech.illuin.wombat.model.Datasource;
 import tech.illuin.wombat.persistence.MemoryLoadTarget;
+import tech.illuin.wombat.profile.ServerProfileProperties;
 
 import java.util.Map;
 
@@ -31,8 +32,8 @@ public class ImpactConfig
     }
 
     @Singleton
-    public BoaviztaFootprintResolver provideBoaviztaFootprintResolver()
+    public BoaviztaFootprintResolver provideBoaviztaFootprintResolver(ServerProfileProperties serverProfileProperties)
     {
-        return new BoaviztaFootprintResolver();
+        return new BoaviztaFootprintResolver(serverProfileProperties.lifespan());
     }
 }

@@ -56,7 +56,7 @@ public class ImpactService
         logger.info("Used CPU load {}", load);
 
         R providerResponse = handler.impactProvider().resolveImpact(config, timeRange, load);
-        Footprint globalFootprint = handler.footprintResolver().resolveFootprint(providerResponse, serviceGlobal, 1.0d);
+        Footprint globalFootprint = handler.footprintResolver().resolveFootprint(providerResponse, serviceGlobal, 1.0d, timeRange);
 
         Map<String, Double> containerShares = handler.loadTarget().getContainerShares(timeRange);
         List<String> allContainers = new ArrayList<>(containerShares.keySet());
@@ -72,7 +72,7 @@ public class ImpactService
         List<Footprint> serviceImpact = new LinkedList<>();
         Map<String, Double> filteredShares = new LinkedHashMap<>();
         sorted.forEach(e -> {
-            serviceImpact.add(handler.footprintResolver().resolveFootprint(providerResponse, e.getKey(), e.getValue()));
+            serviceImpact.add(handler.footprintResolver().resolveFootprint(providerResponse, e.getKey(), e.getValue(), timeRange));
             filteredShares.put(e.getKey(), e.getValue());
         });
 

@@ -13,13 +13,22 @@ import tech.illuin.wombat.profile.ServerProfileProperties;
 import tech.illuin.wombat.response.Response;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Path("impact")
 public class ImpactController
 {
 
-    private static final TimeRange defaultTimeRange = new TimeRange(Instant.MIN, Instant.MAX);
+    private static TimeRange currentMonthTimeRange()
+    {
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+        Instant start = now.withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
+        Instant end = now.plusMonths(1).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
+        return new TimeRange(start, end);
+    }
 
     private final ServerProfileProperties serverProfileProperties;
     private final MonitorProperties monitorProperties;
@@ -40,7 +49,7 @@ public class ImpactController
         try
         {
             List<ProviderConfig> configs = resolveConfigs(input);
-            TimeRange timeRange = input == null || input.sourceTimeRange() == null ? defaultTimeRange : input.sourceTimeRange();
+            TimeRange timeRange = input == null || input.sourceTimeRange() == null ? currentMonthTimeRange() : input.sourceTimeRange();
             List<ImpactResponse> response = this.impactService.computeImpactResponse(new ImpactRequest(timeRange, configs));
             return Response.success(response);
         }
