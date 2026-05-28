@@ -23,9 +23,6 @@ quarkus:
 
 monitor:
   cron: "*/10 * * * * ?" # every 10s
-  kubernetes-configs:
-    geocheck:
-      namespace: "geocheck"
 
 persistence:
   enable-memory-target: true
