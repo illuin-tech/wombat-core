@@ -12,12 +12,20 @@ quarkus:
       "persistence":
         min-level: TRACE
         level: TRACE
+  datasource:
+    db-kind: sqlite
+    jdbc:
+      url: "jdbc:sqlite:data/db/local.db"
+      min-size: 0
+  hibernate-orm:
+    database:
+      generation: none
 
 monitor:
   cron: "*/10 * * * * ?" # every 10s
   kubernetes-configs:
-    export-control:
-      namespace: "export-control"
+    geocheck:
+      namespace: "geocheck"
 
 persistence:
   enable-memory-target: true
@@ -26,3 +34,7 @@ persistence:
 profile:
   server:
     enable: true
+    provider: aws
+    instance-type: "c5a.16xlarge"
+    location: "FRA"
+    lifespan: 43800 #5 years

@@ -86,17 +86,20 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .kpi-split-item { display: flex; flex-direction: column; gap: 3px; }
 .kpi-split-key { font-size: 11px; font-weight: 500; color: var(--text-dim); }
 .kpi-split-val { font-size: 13px; color: var(--text-muted); }
-.card-columns { margin-top: 14px; display: flex; gap: 0; min-width: 0; }
-.container-tags { flex: 1 1 0; min-width: 0; max-width: 55%; display: flex; flex-wrap: wrap; gap: 6px; overflow-y: auto; max-height: 80px; align-content: flex-start; }
+.card-columns { margin-top: 14px; display: flex; flex-direction: column; gap: 14px; }
+.container-tags { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
 .card-section { padding-top: 4px; margin-top: 4px; }
 .card-section-label { font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.06em; margin-bottom: 8px; }
 .namespace-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .namespace-tag { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--accent-blue-soft); color: var(--accent-blue); white-space: nowrap; }
 .container-tag { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; background: var(--accent-yellow-soft); color: var(--accent-yellow); white-space: nowrap; }
-.params-inline { flex-shrink: 0; padding-left: 20px; margin-left: 20px; border-left: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.params-inline { display: flex; flex-wrap: wrap; gap: 8px 24px; padding-top: 14px; border-top: 1px solid var(--border); }
+.param-item { min-width: 100px; }
 
 /* ── Charts ── */
-.overview-row { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+.overview-row { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: stretch; }
+.overview-row .chart-card { display: flex; flex-direction: column; }
+.overview-row .chart-wrap { flex: 1; height: auto; min-height: 220px; }
 .metrics-row  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
 .chart-card, .kpi-card, .table-card { min-width: 0; }
 .table-card { overflow-x: auto; }

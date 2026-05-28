@@ -12,7 +12,7 @@ public interface ServerProfileProperties {
     BoaviztaInstanceImpactRequest.Provider provider();
 
     @WithDefault("a1.4xlarge")
-    String instance_type();
+    String instanceType();
 
     @WithDefault("FRA")
     String location();

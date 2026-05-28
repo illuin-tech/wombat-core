@@ -27,7 +27,7 @@ public record BoaviztaKubernetesConfig(
             .map(c -> c.namespace())
             .collect(Collectors.toList());
         return new BoaviztaKubernetesConfig(
-            serverProps.provider(), serverProps.instance_type(), serverProps.location(), serverProps.lifespan(),
+            serverProps.provider(), serverProps.instanceType(), serverProps.location(), serverProps.lifespan(),
             namespaces
         );
     }
