@@ -1,5 +1,6 @@
 package tech.illuin.vigilantwombat.persistence;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -17,8 +18,7 @@ public class PersistenceConfig {
 
     @Singleton
     @IfBuildProperty(name = "persistence.enable-memory-target", stringValue = "true")
-    public MemoryLoadTarget provideMemoryLoadTarget()
-    {
-        return new MemoryLoadTarget();
+    public MemoryLoadTarget provideMemoryLoadTarget(DatapointRepository repository, ObjectMapper mapper) {
+        return new MemoryLoadTarget(repository, mapper);
     }
 }
