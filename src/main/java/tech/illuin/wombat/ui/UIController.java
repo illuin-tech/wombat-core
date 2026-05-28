@@ -14,6 +14,7 @@ import tech.illuin.wombat.profile.ServerProfileProperties;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -45,12 +46,13 @@ public class UIController
         {
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm[:ss]").withZone(ZoneOffset.UTC);
 
+            ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
             Instant start = from != null && !from.isBlank()
                 ? fmt.parse(from, Instant::from)
-                : Instant.now().minus(24, ChronoUnit.HOURS);
+                : now.withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
             Instant end = to != null && !to.isBlank()
                 ? fmt.parse(to, Instant::from)
-                : Instant.now().plus(1, ChronoUnit.HOURS);
+                : now.plusMonths(1).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
 
             ImpactRequest request = new ImpactRequest(
                 new TimeRange(start, end),
