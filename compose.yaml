@@ -1,14 +1,19 @@
 services:
-  prometheus:
-    image: prom/prometheus:v3.10.0
-    container_name: prometheus
+  seaweedfs:
+    container_name: seaweedfs
+    image: chrislusf/seaweedfs
+    command: mini -dir=/data
     ports:
-      - "9090:9090"
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+      - "8333:8333"   # S3 endpoint
+      - "8888:8888"   # Filer UI
+      - "9333:9333"   # Master
+      - "23646:23646" # Admin UI
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: secret
+      S3_BUCKET: wombat-bucket
     volumes:
-      - ./prometheus:/etc/prometheus
-      - prom_data:/prometheus
+      - seaweedfs-data:/data
 
 volumes:
-  prom_data:
+  seaweedfs-data:
