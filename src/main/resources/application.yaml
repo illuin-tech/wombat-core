@@ -5,8 +5,6 @@ quarkus:
       body-limit: 1024
     boavizta-api-url:
       uri: "https://api.boavizta.org/v1/"
-    prometheus-api-url:
-      uri: "http://localhost:9090/api/v1"
   log:
     category:
       "persistence":
@@ -18,15 +16,19 @@ quarkus:
       url: "jdbc:sqlite:data/db/local.db"
       min-size: 0
   hibernate-orm:
-    database:
-      generation: none
+    schema-management:
+      strategy: update
+    sql-load-script: sqlite/init.sql
 
 monitor:
   cron: "*/10 * * * * ?" # every 10s
 
 persistence:
   enable-memory-target: true
-  enable-meter-target: true
+
+backup:
+  enabled: false
+  cron: "0 0 2 * * ?"
 
 profile:
   server:
@@ -34,4 +36,4 @@ profile:
     provider: aws
     instance-type: "c5a.16xlarge"
     location: "FRA"
-    lifespan: 43800 #5 years
+    lifespan: 43800 # 5 years

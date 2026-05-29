@@ -1,7 +1,4 @@
 quarkus:
-  rest-client:
-    prometheus-api-url:
-      uri: "http://localhost:9090/api/v1"
   datasource:
     jdbc:
       url: "jdbc:sqlite:data/db/local.db"
@@ -10,6 +7,16 @@ monitor:
   kubernetes-configs:
     my-namespace:
       namespace: "my-namespace"
+
+backup:
+  enabled: true
+  cron: "0 0 * * * ?"  # hourly
+  s3:
+    key-prefix: sqlite/
+    endpoint: http://localhost:8333
+    bucket: wombat-bucket
+    access-key: admin
+    secret-key: secret
 
 profile:
   server:
