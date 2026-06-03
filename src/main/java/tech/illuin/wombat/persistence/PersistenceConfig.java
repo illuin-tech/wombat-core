@@ -13,9 +13,9 @@ public class PersistenceConfig
 {
     @Singleton
     @IfBuildProperty(name = "persistence.enable-memory-target", stringValue = "true")
-    public MemoryLoadTarget provideMemoryLoadTarget(DatapointRepository repository, ObjectMapper mapper)
+    public SQLiteTarget provideSQLiteTarget(DatapointRepository repository, ObjectMapper mapper)
     {
-        return new MemoryLoadTarget(repository, mapper);
+        return new SQLiteTarget(repository, mapper);
     }
 
     @Singleton

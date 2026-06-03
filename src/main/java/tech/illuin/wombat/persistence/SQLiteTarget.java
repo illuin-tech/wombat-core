@@ -2,37 +2,40 @@ package tech.illuin.wombat.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.persistence.model.DatapointEntity;
+import tech.illuin.wombat.persistence.model.KubernetesPayload;
 import tech.illuin.wombat.persistence.model.TimeRange;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class MemoryLoadTarget implements LoadTarget
+public class SQLiteTarget implements LoadTarget
 {
 
-    private static final Logger logger = LoggerFactory.getLogger(MemoryLoadTarget.class);
+    private static final Logger logger = LoggerFactory.getLogger(SQLiteTarget.class);
     private static final String TYPE_KUBERNETES = "KUBERNETES";
-    private static final TypeReference<Map<String, Map<String, String>>> PAYLOAD_TYPE = new TypeReference<>() {};
+    private static final TypeReference<List<KubernetesPayload>> PAYLOAD_TYPE = new TypeReference<>() {};
 
     private final DatapointRepository repository;
     private final ObjectMapper mapper;
 
-    public MemoryLoadTarget(DatapointRepository repository, ObjectMapper mapper)
+    public SQLiteTarget(DatapointRepository repository, ObjectMapper mapper)
     {
         this.repository = repository;
         this.mapper = mapper;
     }
 
     @Override
-    public void outputToTarget(Instant instant, PodMetrics podMetrics, String namespace)
+    public void outputToTarget(Instant instant, PodMetrics podMetrics, String clusterId, String namespace)
     {
         long ms = instant.toEpochMilli();
         String podName = podMetrics.getMetadata().getName();
@@ -59,30 +62,38 @@ public class MemoryLoadTarget implements LoadTarget
         }
 
         this.repository.upsert(ms, TYPE_KUBERNETES, existingJson -> {
-            Map<String, Map<String, String>> payload = existingJson != null
+            List<KubernetesPayload> payloads = existingJson != null
                 ? readPayload(existingJson)
-                : new HashMap<>();
-            payload.put(podName, containerCpu);
-            logger.info("Current payload {}", payload);
-            return serializePayload(payload);
+                : new ArrayList<>();
+            KubernetesPayload entry = payloads.stream()
+                .filter(p -> p.clusterId().equals(clusterId) && p.namespace().equals(namespace))
+                .findFirst()
+                .orElseGet(() -> {
+                    KubernetesPayload newEntry = new KubernetesPayload(clusterId, namespace, new HashMap<>());
+                    payloads.add(newEntry);
+                    return newEntry;
+                });
+            entry.pods().put(podName, containerCpu);
+            logger.info("Current payload {}", payloads);
+            return serializePayload(payloads);
         });
     }
 
     @Override
-    public double computeCpuUsage(TimeRange timeRange) throws NoCPUUsageException
+    public double computeCpuUsage(TimeRange timeRange, List<String> clusterIds) throws NoCPUUsageException
     {
         List<DatapointEntity> datapoints = this.repository.findByTypeAndRange(
             TYPE_KUBERNETES, toEpochMs(timeRange.start()), toEpochMs(timeRange.end()));
         if (datapoints.isEmpty()) throw new NoCPUUsageException("Could not compute CPU Usage");
 
         return datapoints.stream()
-            .mapToDouble(dp -> totalCpu(readPayload(dp.payload)))
+            .mapToDouble(dp -> totalCpu(filterPayloads(readPayload(dp.payload), clusterIds)))
             .average()
             .orElseThrow(() -> new NoCPUUsageException("Could not compute CPU Usage"));
     }
 
     @Override
-    public Map<String, Double> getContainerShares(TimeRange timeRange) throws NoCPUUsageException
+    public Map<String, Double> getContainerShares(TimeRange timeRange, List<String> clusterIds) throws NoCPUUsageException
     {
         List<DatapointEntity> datapoints = this.repository.findByTypeAndRange(
             TYPE_KUBERNETES, toEpochMs(timeRange.start()), toEpochMs(timeRange.end()));
@@ -92,8 +103,8 @@ public class MemoryLoadTarget implements LoadTarget
         double grandTotal = 0;
         for (DatapointEntity dp : datapoints)
         {
-            Map<String, Map<String, String>> payload = readPayload(dp.payload);
-            Map<String, Double> cpuByContainer = containerCpuSums(payload);
+            List<KubernetesPayload> payloads = filterPayloads(readPayload(dp.payload), clusterIds);
+            Map<String, Double> cpuByContainer = containerCpuSums(payloads);
             cpuByContainer.forEach((container, cpu) -> totalCpuPerContainer.merge(container, cpu, Double::sum));
             grandTotal += cpuByContainer.values().stream().mapToDouble(Double::doubleValue).sum();
         }
@@ -106,41 +117,55 @@ public class MemoryLoadTarget implements LoadTarget
         ));
     }
 
-    private Map<String, Map<String, String>> readPayload(String json)
+    private static List<KubernetesPayload> filterPayloads(List<KubernetesPayload> payloads, List<String> clusterIds)
+    {
+        if (clusterIds == null || clusterIds.isEmpty()) return payloads;
+        return payloads.stream()
+            .filter(p -> clusterIds.contains(p.clusterId()))
+            .collect(Collectors.toList());
+    }
+
+    private List<KubernetesPayload> readPayload(String json)
     {
         try
         {
-            return mapper.readValue(json, PAYLOAD_TYPE);
+            JsonNode node = mapper.readTree(json);
+            if (node.isArray())
+                return mapper.readValue(json, PAYLOAD_TYPE);
+            // legacy rows stored a single object before the list format was introduced
+            return new ArrayList<>(List.of(mapper.treeToValue(node, KubernetesPayload.class)));
         }
         catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize datapoint payload", e);
         }
     }
 
-    private String serializePayload(Map<String, Map<String, String>> payload)
+    private String serializePayload(List<KubernetesPayload> payloads)
     {
         try
         {
-            return mapper.writeValueAsString(payload);
+            return mapper.writeValueAsString(payloads);
         }
         catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize payload", e);
         }
     }
 
-    private static double totalCpu(Map<String, Map<String, String>> payload)
+    private static double totalCpu(List<KubernetesPayload> payloads)
     {
-        return payload.values().stream()
+        return payloads.stream()
+            .flatMap(p -> p.pods().values().stream())
             .flatMap(containers -> containers.values().stream())
             .mapToDouble(Double::parseDouble)
             .sum();
     }
 
-    private static Map<String, Double> containerCpuSums(Map<String, Map<String, String>> payload)
+    private static Map<String, Double> containerCpuSums(List<KubernetesPayload> payloads)
     {
         Map<String, Double> result = new HashMap<>();
-        payload.values().forEach(containers ->
-            containers.forEach((name, cpu) -> result.merge(name, Double.parseDouble(cpu), Double::sum)));
+        payloads.forEach(payload ->
+            payload.pods().values().forEach(containers ->
+                containers.forEach((name, cpu) -> result.merge(name, Double.parseDouble(cpu), Double::sum))));
         return result;
     }
 

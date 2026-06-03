@@ -6,16 +6,16 @@ import tech.illuin.wombat.handler.impact_provider.BoaviztaImpactProvider;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactResponse;
 import tech.illuin.wombat.handler.impact_provider.ImpactProvider;
 import tech.illuin.wombat.persistence.LoadTarget;
-import tech.illuin.wombat.persistence.MemoryLoadTarget;
+import tech.illuin.wombat.persistence.SQLiteTarget;
 
 public class BoaviztaServiceHandler implements ServiceHandler<BoaviztaInstanceImpactResponse>
 {
-    private final MemoryLoadTarget loadTarget;
+    private final SQLiteTarget loadTarget;
     private final BoaviztaImpactProvider impactProvider;
     private final BoaviztaFootprintResolver footprintResolver;
 
     public BoaviztaServiceHandler(
-        MemoryLoadTarget loadTarget,
+        SQLiteTarget loadTarget,
         BoaviztaImpactProvider impactProvider,
         BoaviztaFootprintResolver footprintResolver
     )

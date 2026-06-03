@@ -1,0 +1,11 @@
+<script>
+  var serviceLabels = [{#for footprint in impact.serviceImpacts}"{footprint.service}"{#if footprint_hasNext},{/if}{/for}];
+  var gwpEmbedded   = [{#for footprint in impact.serviceImpacts}{footprint.gwp.embedded.value}{#if footprint_hasNext},{/if}{/for}];
+  var gwpUse        = [{#for footprint in impact.serviceImpacts}{footprint.gwp.use.value}{#if footprint_hasNext},{/if}{/for}];
+  var peEmbedded    = [{#for footprint in impact.serviceImpacts}{footprint.pe.embedded.value}{#if footprint_hasNext},{/if}{/for}];
+  var peUse         = [{#for footprint in impact.serviceImpacts}{footprint.pe.use.value}{#if footprint_hasNext},{/if}{/for}];
+  var adpEmbedded   = [{#for footprint in impact.serviceImpacts}{footprint.adp.embedded.value}{#if footprint_hasNext},{/if}{/for}];
+  var adpUse        = [{#for footprint in impact.serviceImpacts}{footprint.adp.use.value}{#if footprint_hasNext},{/if}{/for}];
+  var sharesLabels  = [{#for k in impact.impactShares.keySet()}"{k}"{#if k_hasNext},{/if}{/for}];
+  var sharesValues  = [{#for v in impact.impactShares.values()}{v}{#if v_hasNext},{/if}{/for}];
+</script>

@@ -1,7 +1,8 @@
 package tech.illuin.wombat.monitor;
 
+import java.time.Instant;
+
 public interface MonitoredResourceHandler<M>
 {
-    // TODO: name will be used later
-    void handle(String name, M config);
+    void handle(Instant instance, M config);
 }

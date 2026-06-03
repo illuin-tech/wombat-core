@@ -5,6 +5,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import tech.illuin.wombat.handler.ImpactService;
 import tech.illuin.wombat.handler.model.BoaviztaKubernetesConfig;
+import tech.illuin.wombat.handler.model.ClusterInfo;
 import tech.illuin.wombat.handler.model.ImpactRequest;
 import tech.illuin.wombat.handler.model.ImpactResponse;
 import tech.illuin.wombat.monitor.MonitorProperties;
@@ -39,7 +40,8 @@ public class UIController
     public TemplateInstance get(
         @QueryParam("from") String from,
         @QueryParam("to") String to,
-        @QueryParam("containers") List<String> containers
+        @QueryParam("containers") List<String> containers,
+        @QueryParam("clusters") List<String> clusters
     )
     {
         try
@@ -54,13 +56,21 @@ public class UIController
                 ? fmt.parse(to, Instant::from)
                 : now.plusMonths(1).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
 
+            List<ClusterInfo> allClusters = this.monitorProperties.k8sConfigs().clusters().stream()
+                .map(c -> new ClusterInfo(c.id(), c.namespace()))
+                .toList();
+
+            List<String> effectiveClusters = (clusters == null || clusters.isEmpty())
+                ? allClusters.stream().findFirst().map(c -> List.of(c.id())).orElse(List.of())
+                : clusters;
+
             ImpactRequest request = new ImpactRequest(
                 new TimeRange(start, end),
-                List.of(BoaviztaKubernetesConfig.fromServerProfile(this.serverProfileProperties, this.monitorProperties))
+                List.of(BoaviztaKubernetesConfig.fromServerProfile(this.serverProfileProperties, this.monitorProperties, effectiveClusters))
             );
 
-            List<ImpactResponse> results = this.impactService.computeImpactResponse(request, containers);
-            return Templates.impact(results.getFirst());
+            List<ImpactResponse> results = this.impactService.computeImpactResponse(request, containers, effectiveClusters);
+            return Templates.impact(results.getFirst(), allClusters, effectiveClusters);
         }
         catch (NoCPUUsageException e) {
             return Templates.impactError(from, to);

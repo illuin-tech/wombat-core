@@ -2,13 +2,12 @@ package tech.illuin.wombat.monitor;
 
 
 import io.smallrye.config.ConfigMapping;
-
-import java.util.Map;
+import tech.illuin.wombat.k8s.K8SProperties;
 
 @ConfigMapping(prefix = "monitor")
 public interface MonitorProperties
 {
     String cron();
 
-    Map<String, MonitoredKubernetesNamespace> kubernetesConfigs();
+    K8SProperties k8sConfigs();
 }
