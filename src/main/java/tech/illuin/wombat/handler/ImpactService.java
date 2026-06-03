@@ -25,7 +25,7 @@ public class ImpactService
         this.handlerSelector = handlerSelector;
     }
 
-    public List<ImpactResponse> computeImpactResponse(ImpactRequest input, List<String> containerIds) throws NoCPUUsageException
+    public List<ImpactResponse> computeImpactResponse(ImpactRequest input, List<String> containerIds, List<String> clusterIds) throws NoCPUUsageException
     {
         List<ProviderConfig> configs = input.configs() != null ? input.configs() : List.of();
         List<ImpactResponse> results = new ArrayList<>();
@@ -34,14 +34,19 @@ public class ImpactService
             ServiceHandler<?> handler = this.handlerSelector.get(config.datasource());
             if (handler == null)
                 throw new IllegalArgumentException("No handler registered for datasource: " + config.datasource());
-            results.add(computeWithHandler(handler, config, input.sourceTimeRange(), input, containerIds));
+            results.add(computeWithHandler(handler, config, input.sourceTimeRange(), input, containerIds, clusterIds));
         }
         return results;
     }
 
+    public List<ImpactResponse> computeImpactResponse(ImpactRequest input, List<String> containerIds) throws NoCPUUsageException
+    {
+        return computeImpactResponse(input, containerIds, Collections.emptyList());
+    }
+
     public List<ImpactResponse> computeImpactResponse(ImpactRequest input) throws NoCPUUsageException
     {
-        return computeImpactResponse(input, Collections.emptyList());
+        return computeImpactResponse(input, Collections.emptyList(), Collections.emptyList());
     }
 
     private <R> ImpactResponse computeWithHandler(
@@ -49,16 +54,17 @@ public class ImpactService
         ProviderConfig config,
         TimeRange timeRange,
         ImpactRequest input,
-        List<String> containerIds
+        List<String> containerIds,
+        List<String> clusterIds
     ) throws NoCPUUsageException
     {
-        double load = handler.loadTarget().computeCpuUsage(timeRange);
+        double load = handler.loadTarget().computeCpuUsage(timeRange, clusterIds);
         logger.info("Used CPU load {}", load);
 
         R providerResponse = handler.impactProvider().resolveImpact(config, timeRange, load);
         Footprint globalFootprint = handler.footprintResolver().resolveFootprint(providerResponse, serviceGlobal, 1.0d, timeRange);
 
-        Map<String, Double> containerShares = handler.loadTarget().getContainerShares(timeRange);
+        Map<String, Double> containerShares = handler.loadTarget().getContainerShares(timeRange, clusterIds);
         List<String> allContainers = new ArrayList<>(containerShares.keySet());
         Set<String> containerFilter = (containerIds == null || containerIds.isEmpty())
             ? containerShares.keySet()

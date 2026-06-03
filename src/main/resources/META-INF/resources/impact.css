@@ -54,7 +54,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .container-list { overflow-y: auto; max-height: 200px; padding: 4px 0; }
 .container-item { display: flex; align-items: center; gap: 10px; padding: 7px 14px; cursor: pointer; transition: background 0.1s; user-select: none; }
 .container-item:hover { background: var(--surface2); }
-.container-item input[type="checkbox"] { accent-color: var(--accent-green); flex-shrink: 0; cursor: pointer; }
+.container-item input[type="checkbox"],
+.container-item input[type="radio"] { accent-color: var(--accent-green); flex-shrink: 0; cursor: pointer; }
 .container-item span { font-size: 13px; color: var(--text-muted); }
 .container-item:has(input:checked) span { color: var(--text); }
 .container-item.hidden { display: none; }
@@ -169,6 +170,13 @@ tbody td.metric.bold { font-weight: 700; }
 .error-label { font-size: 12px; font-weight: 600; color: var(--accent-orange); }
 .error-title { font-size: 18px; font-weight: 700; color: var(--text); }
 .error-body { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+/* ── Shares legend ── */
+.shares-legend { overflow-y: auto; max-height: 110px; margin-top: 12px; }
+.shares-legend-item { display: flex; align-items: center; gap: 8px; padding: 3px 2px; }
+.shares-legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.shares-legend-label { font-size: 11px; color: var(--text-muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shares-legend-pct { font-size: 11px; font-weight: 600; color: var(--text); flex-shrink: 0; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

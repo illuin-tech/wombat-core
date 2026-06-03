@@ -72,6 +72,6 @@ public class ImpactController
                     .entity("Required provider config not provided")
                     .build()
             );
-        return List.of(BoaviztaKubernetesConfig.fromServerProfile(this.serverProfileProperties, this.monitorProperties));
+        return List.of(BoaviztaKubernetesConfig.fromServerProfile(this.serverProfileProperties, this.monitorProperties, List.of()));
     }
 }

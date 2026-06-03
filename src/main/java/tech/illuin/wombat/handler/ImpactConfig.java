@@ -5,7 +5,7 @@ import jakarta.inject.Singleton;
 import tech.illuin.wombat.handler.footprint_resolver.BoaviztaFootprintResolver;
 import tech.illuin.wombat.handler.impact_provider.BoaviztaImpactProvider;
 import tech.illuin.wombat.model.Datasource;
-import tech.illuin.wombat.persistence.MemoryLoadTarget;
+import tech.illuin.wombat.persistence.SQLiteTarget;
 import tech.illuin.wombat.profile.ServerProfileProperties;
 
 import java.util.Map;
@@ -23,7 +23,7 @@ public class ImpactConfig
 
     @Singleton
     public BoaviztaServiceHandler provideBoaviztaServiceHandler(
-        MemoryLoadTarget loadTarget,
+        SQLiteTarget loadTarget,
         BoaviztaImpactProvider impactProvider,
         BoaviztaFootprintResolver footprintResolver
     )

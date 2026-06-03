@@ -1,29 +1,25 @@
 package tech.illuin.wombat.monitor;
 
 import io.quarkus.scheduler.Scheduled;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import tech.illuin.wombat.k8s.K8SResourceHandler;
+
+import java.time.Instant;
 
 public class Monitor
 {
-    private final KubernetesResourceHandler kubernetesResourceHandler;
+    private final K8SResourceHandler k8sResourceHandler;
     private final MonitorProperties properties;
 
-    private static final Logger logger = LoggerFactory.getLogger(Monitor.class);
-
-    public Monitor(KubernetesResourceHandler kubernetesResourceHandler, MonitorProperties properties)
+    public Monitor(K8SResourceHandler k8sResourceHandler, MonitorProperties properties)
     {
-        this.kubernetesResourceHandler = kubernetesResourceHandler;
+        this.k8sResourceHandler = k8sResourceHandler;
         this.properties = properties;
     }
 
     @Scheduled(cron = "${monitor.cron}")
     public void monitor()
     {
-        this.properties.kubernetesConfigs()
-            .forEach((name, config) -> {
-                logger.info("Persisting pods usages for kubernetes config {}", name);
-                this.kubernetesResourceHandler.handle(name, config);
-            });
+        Instant instant = Instant.now();
+        this.k8sResourceHandler.handle(instant, this.properties.k8sConfigs().clusters());
     }
 }

@@ -2,20 +2,21 @@ package tech.illuin.wombat.monitor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Singleton;
-import tech.illuin.wombat.kubernetes.KubernetesResourceService;
+import tech.illuin.wombat.k8s.K8SResourceHandler;
+import tech.illuin.wombat.k8s.K8SResourceService;
 
 @ApplicationScoped
 public class MonitorConfig
 {
     @Singleton
-    public KubernetesResourceHandler provideKubernetesResourceHandler(KubernetesResourceService kubernetesResourceService)
+    public K8SResourceHandler provideKubernetesResourceHandler(K8SResourceService k8sResourceService)
     {
-        return new KubernetesResourceHandler(kubernetesResourceService);
+        return new K8SResourceHandler(k8sResourceService);
     }
 
     @Singleton
-    public Monitor provideMonitor(KubernetesResourceHandler kubernetesResourceHandler, MonitorProperties properties)
+    public Monitor provideMonitor(K8SResourceHandler k8sResourceHandler, MonitorProperties properties)
     {
-        return new Monitor(kubernetesResourceHandler, properties);
+        return new Monitor(k8sResourceHandler, properties);
     }
 }

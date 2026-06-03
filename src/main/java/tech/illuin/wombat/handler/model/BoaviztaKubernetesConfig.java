@@ -2,12 +2,14 @@ package tech.illuin.wombat.handler.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.k8s.K8SProperties;
 import tech.illuin.wombat.model.Datasource;
 import tech.illuin.wombat.monitor.MonitorProperties;
 import tech.illuin.wombat.profile.ServerProfileProperties;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 
 public record BoaviztaKubernetesConfig(
     @JsonProperty("provider") BoaviztaInstanceImpactRequest.Provider provider,
@@ -24,10 +26,15 @@ public record BoaviztaKubernetesConfig(
         return Datasource.KUBERNETES;
     }
 
-    public static BoaviztaKubernetesConfig fromServerProfile(ServerProfileProperties serverProps, MonitorProperties monitorProps)
+    public static BoaviztaKubernetesConfig fromServerProfile(
+        ServerProfileProperties serverProps,
+        MonitorProperties monitorProperties,
+        List<String> selectedClusterIds
+    )
     {
-        List<String> namespaces = monitorProps.kubernetesConfigs().values().stream()
-            .map(c -> c.namespace())
+        List<String> namespaces = monitorProperties.k8sConfigs().clusters().stream()
+            .filter(c -> selectedClusterIds.isEmpty() || selectedClusterIds.contains(c.id()))
+            .map(K8SProperties.ClusterProperties::namespace)
             .collect(Collectors.toList());
         return new BoaviztaKubernetesConfig(
             serverProps.provider(), serverProps.instanceType(), serverProps.location(), serverProps.lifespan(),
