@@ -17,8 +17,10 @@ quarkus:
       min-size: 0
   hibernate-orm:
     schema-management:
-      strategy: update
-    sql-load-script: sqlite/init.sql
+      strategy: none
+  flyway:
+    migrate-at-start: false
+    locations: classpath:db/migration
 
 monitor:
   cron: "*/10 * * * * ?" # every 10s
@@ -30,10 +32,24 @@ backup:
   enabled: false
   cron: "0 0 2 * * ?"
 
-profile:
-  server:
-    enable: true
-    provider: aws
-    instance-type: "c5a.16xlarge"
-    location: "FRA"
-    lifespan: 43800 # 5 years
+profiles:
+  seeds:
+    - id: "aws-c5a-16xlarge"
+      description: "AWS c5a.16xlarge FRA"
+      provider: aws
+      instance-type: "c5a.16xlarge"
+      location: "FRA"
+      lifespan: 43800
+    - id: "aws-c5a-4xlarge"
+      description: "AWS c5a.4xlarge FRA"
+      provider: aws
+      instance-type: "c5a.4xlarge"
+      location: "FRA"
+      lifespan: 43800
+    - id: "gcp-n2-highcpu-32"
+      description: "GCP n2-highcpu-32 FRA"
+      provider: gcp
+      instance-type: "n2-highcpu-32"
+      location: "FRA"
+      lifespan: 43800
+  default: "aws-c5a-4xlarge"

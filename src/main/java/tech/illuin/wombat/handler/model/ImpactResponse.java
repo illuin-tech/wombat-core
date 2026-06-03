@@ -13,7 +13,8 @@ public record ImpactResponse(
     @JsonProperty("impact_shares") Map<String, Double> impactShares,
     @JsonProperty("provided_input") ImpactRequest providedInput,
     @JsonProperty("parameters") Parameters parameters,
-    @JsonProperty("containers") List<String> containers
+    @JsonProperty("containers") List<String> containers,
+    @JsonProperty("container_locations") Map<String, List<ClusterInfo>> containerLocations
 ) {
     public record Parameters(
         @JsonProperty("provider_config") ProviderConfig providerConfig,

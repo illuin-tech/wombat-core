@@ -2,10 +2,9 @@ package tech.illuin.wombat.handler.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
-import tech.illuin.wombat.k8s.K8SProperties;
 import tech.illuin.wombat.model.Datasource;
 import tech.illuin.wombat.monitor.MonitorProperties;
-import tech.illuin.wombat.profile.ServerProfileProperties;
+import tech.illuin.wombat.profile.ServerProfileEntity;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,7 +15,7 @@ public record BoaviztaKubernetesConfig(
     @JsonProperty("instance_type") String instanceType,
     @JsonProperty("location") String location,
     @JsonProperty("lifespan") int lifespan,
-    @JsonProperty("namespaces") List<String> namespaces
+    @JsonProperty("clusters") List<ClusterInfo> clusters
 ) implements ProviderConfig
 {
 
@@ -26,19 +25,19 @@ public record BoaviztaKubernetesConfig(
         return Datasource.KUBERNETES;
     }
 
-    public static BoaviztaKubernetesConfig fromServerProfile(
-        ServerProfileProperties serverProps,
+    public static BoaviztaKubernetesConfig fromProfileEntity(
+        ServerProfileEntity profile,
         MonitorProperties monitorProperties,
         List<String> selectedClusterIds
     )
     {
-        List<String> namespaces = monitorProperties.k8sConfigs().clusters().stream()
+        List<ClusterInfo> clusters = monitorProperties.k8sConfigs().clusters().stream()
             .filter(c -> selectedClusterIds.isEmpty() || selectedClusterIds.contains(c.id()))
-            .map(K8SProperties.ClusterProperties::namespace)
+            .map(c -> new ClusterInfo(c.id(), c.namespace()))
             .collect(Collectors.toList());
         return new BoaviztaKubernetesConfig(
-            serverProps.provider(), serverProps.instanceType(), serverProps.location(), serverProps.lifespan(),
-            namespaces
+            profile.provider, profile.instanceType, profile.location, profile.lifespan,
+            clusters
         );
     }
 }

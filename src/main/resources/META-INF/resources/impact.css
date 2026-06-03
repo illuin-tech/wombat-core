@@ -94,6 +94,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .namespace-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .namespace-tag { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--accent-blue-soft); color: var(--accent-blue); white-space: nowrap; }
 .container-tag { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; background: var(--accent-yellow-soft); color: var(--accent-yellow); white-space: nowrap; }
+.container-location { font-size: 11px; font-weight: 500; padding: 2px 8px; margin-left: 6px; border-radius: 14px; background: var(--accent-blue-soft); color: var(--accent-blue); white-space: nowrap; }
 .params-inline { display: flex; flex-wrap: wrap; gap: 8px 24px; padding-top: 14px; border-top: 1px solid var(--border); }
 .param-item { min-width: 100px; }
 

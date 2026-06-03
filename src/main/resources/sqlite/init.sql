@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS idx_datapoint_instant_type ON datapoint (instantMs, type);

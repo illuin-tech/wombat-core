@@ -13,18 +13,12 @@ import java.util.List;
 
 public class BoaviztaFootprintResolver implements FootprintResolver<BoaviztaInstanceImpactResponse>
 {
+
     private static final String rebalanceWarning = "This usage has been rebalanced by the Wombat service, it does not come from the Boavizta API";
     private static final String timeProrationWarning = "This impact has been prorated to the requested time range by the Wombat service";
 
-    private final int lifespanHours;
-
-    public BoaviztaFootprintResolver(int lifespanHours)
-    {
-        this.lifespanHours = lifespanHours;
-    }
-
     @Override
-    public Footprint resolveFootprint(BoaviztaInstanceImpactResponse impact, String service, Double share, TimeRange timeRange)
+    public Footprint resolveFootprint(BoaviztaInstanceImpactResponse impact, String service, Double share, TimeRange timeRange, int lifespanHours)
     {
         double prorationFactor = Duration.between(timeRange.start(), timeRange.end()).toSeconds() / (double) (lifespanHours * 3600L);
         return new Footprint(

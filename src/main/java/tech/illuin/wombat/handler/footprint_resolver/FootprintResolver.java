@@ -5,5 +5,6 @@ import tech.illuin.wombat.persistence.model.TimeRange;
 
 public interface FootprintResolver<I>
 {
-    Footprint resolveFootprint(I impact, String service, Double share, TimeRange timeRange);
+
+    Footprint resolveFootprint(I impact, String service, Double share, TimeRange timeRange, int lifespanHours);
 }

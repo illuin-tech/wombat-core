@@ -80,6 +80,21 @@ function makeHBar(id, datasets, unit, color) {
   ], m.unit, m.color);
 });
 
+/* ── Profile picker (auto-navigates on change) ── */
+(function() {
+  document.getElementById('profileSelect').addEventListener('change', function() {
+    var p = new URLSearchParams();
+    var from = document.getElementById('inputFrom').value;
+    var to   = document.getElementById('inputTo').value;
+    if (from) p.set('from', localInputToUtc(from));
+    if (to)   p.set('to',   localInputToUtc(to));
+    var selCluster = document.querySelector('#clusterList input[name="clusters"]:checked');
+    if (selCluster) p.append('clusters', selCluster.value);
+    p.set('profileId', this.value);
+    window.location.href = '?' + p.toString();
+  });
+})();
+
 /* ── Cluster picker (single-select, auto-navigates on change) ── */
 (function() {
   var picker   = document.getElementById('clusterPicker');
@@ -106,6 +121,8 @@ function makeHBar(id, datasets, unit, color) {
       var to   = document.getElementById('inputTo').value;
       if (from) p.set('from', localInputToUtc(from));
       if (to)   p.set('to',   localInputToUtc(to));
+      var profileId = document.getElementById('profileSelect').value;
+      if (profileId) p.set('profileId', profileId);
       p.append('clusters', b.value);
       window.location.href = '?' + p.toString();
     });
@@ -167,6 +184,8 @@ document.getElementById('filterForm').addEventListener('submit', function(e) {
   var to   = document.getElementById('inputTo').value;
   if (from) p.set('from', localInputToUtc(from));
   if (to)   p.set('to',   localInputToUtc(to));
+  var profileId = document.getElementById('profileSelect').value;
+  if (profileId) p.set('profileId', profileId);
   var selCluster = document.querySelector('#clusterList input[name="clusters"]:checked');
   if (selCluster) p.append('clusters', selCluster.value);
   document.querySelectorAll('#containerList input:checked').forEach(function(b) { p.append('containers', b.value); });

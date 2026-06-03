@@ -23,6 +23,14 @@
            data-utc="{impact.parameters.timeRange.end.asIsoUtc()}"/>
   </div>
   <div class="filter-group">
+    <span class="filter-label">Server Profile</span>
+    <select id="profileSelect" name="profileId">
+      {#for profile in allProfiles}
+      <option value="{profile.id}" {#if selectedProfileId == profile.id}selected{/if}>{profile.description}</option>
+      {/for}
+    </select>
+  </div>
+  <div class="filter-group">
     <span class="filter-label">Cluster / Namespace</span>
     <div class="container-picker" id="clusterPicker">
       <button type="button" class="container-trigger" id="clusterTrigger">
@@ -139,10 +147,10 @@
       <div class="kpi-label">Containers tracked</div>
       <div class="kpi-value">{impact.serviceImpacts.size()}</div>
       <div class="card-section">
-        <div class="card-section-label">Namespace</div>
+        <div class="card-section-label">Cluster / Namespace</div>
         <div class="namespace-list">
-          {#for ns in impact.parameters.providerConfig.namespaces}
-          <span class="namespace-tag">{ns}</span>
+          {#for cluster in impact.parameters.providerConfig.clusters}
+          <span class="namespace-tag">{cluster.id} / {cluster.namespace}</span>
           {/for}
         </div>
       </div>
@@ -217,7 +225,14 @@
         {#for footprint in impact.serviceImpacts}
         <tr class="service-summary" data-idx="{footprint_count}">
           <td class="td-toggle"><span class="row-chevron">▶</span></td>
-          <td class="name">{footprint.service}</td>
+          <td class="name">
+            {footprint.service}
+            {#if impact.containerLocations.containsKey(footprint.service)}
+              {#for loc in impact.containerLocations.get(footprint.service)}
+                <span class="container-location">{loc.id} / {loc.namespace}</span>
+              {/for}
+            {/if}
+          </td>
           <td class="metric gwp bold">{footprint.gwp.totalValue().asDecimal()}</td>
           <td class="metric gwp use">{footprint.gwp.embedded.value.asDecimal()}</td>
           <td class="metric gwp use">{footprint.gwp.use.value.asDecimal()}</td>

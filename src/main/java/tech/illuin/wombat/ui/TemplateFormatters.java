@@ -2,6 +2,7 @@ package tech.illuin.wombat.ui;
 
 import io.quarkus.qute.TemplateExtension;
 import tech.illuin.wombat.handler.model.BoaviztaKubernetesConfig;
+import tech.illuin.wombat.handler.model.ClusterInfo;
 import tech.illuin.wombat.handler.model.ProviderConfig;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -59,9 +60,9 @@ public class TemplateFormatters
         return 0;
     }
 
-    public static List<String> namespaces(ProviderConfig config)
+    public static List<ClusterInfo> clusters(ProviderConfig config)
     {
-        if (config instanceof BoaviztaKubernetesConfig c && c.namespaces() != null) return c.namespaces();
+        if (config instanceof BoaviztaKubernetesConfig c && c.clusters() != null) return c.clusters();
         return List.of();
     }
 

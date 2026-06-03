@@ -1,6 +1,7 @@
 package tech.illuin.wombat.handler;
 
 import tech.illuin.wombat.handler.model.BoaviztaKubernetesConfig;
+import tech.illuin.wombat.handler.model.ClusterInfo;
 import tech.illuin.wombat.handler.model.ImpactRequest;
 import tech.illuin.wombat.handler.model.ImpactResponse;
 import tech.illuin.wombat.handler.model.ProviderConfig;
@@ -9,7 +10,9 @@ import jakarta.ws.rs.core.MediaType;
 import tech.illuin.wombat.monitor.MonitorProperties;
 import tech.illuin.wombat.persistence.NoCPUUsageException;
 import tech.illuin.wombat.persistence.model.TimeRange;
-import tech.illuin.wombat.profile.ServerProfileProperties;
+import tech.illuin.wombat.profile.ProfileSeedProperties;
+import tech.illuin.wombat.profile.ServerProfileEntity;
+import tech.illuin.wombat.profile.ServerProfileRepository;
 import tech.illuin.wombat.response.Response;
 
 import java.time.Instant;
@@ -30,13 +33,15 @@ public class ImpactController
         return new TimeRange(start, end);
     }
 
-    private final ServerProfileProperties serverProfileProperties;
+    private final ServerProfileRepository profileRepository;
+    private final ProfileSeedProperties seedProperties;
     private final MonitorProperties monitorProperties;
     private final ImpactService impactService;
 
-    public ImpactController(ServerProfileProperties serverProfileProperties, MonitorProperties monitorProperties, ImpactService impactService)
+    public ImpactController(ServerProfileRepository profileRepository, ProfileSeedProperties seedProperties, MonitorProperties monitorProperties, ImpactService impactService)
     {
-        this.serverProfileProperties = serverProfileProperties;
+        this.profileRepository = profileRepository;
+        this.seedProperties = seedProperties;
         this.monitorProperties = monitorProperties;
         this.impactService = impactService;
     }
@@ -50,7 +55,14 @@ public class ImpactController
         {
             List<ProviderConfig> configs = resolveConfigs(input);
             TimeRange timeRange = input == null || input.sourceTimeRange() == null ? currentMonthTimeRange() : input.sourceTimeRange();
-            List<ImpactResponse> response = this.impactService.computeImpactResponse(new ImpactRequest(timeRange, configs));
+            List<String> clusterIds = configs.stream()
+                .filter(BoaviztaKubernetesConfig.class::isInstance)
+                .map(BoaviztaKubernetesConfig.class::cast)
+                .flatMap(c -> c.clusters().stream())
+                .map(ClusterInfo::id)
+                .distinct()
+                .toList();
+            List<ImpactResponse> response = this.impactService.computeImpactResponse(new ImpactRequest(timeRange, configs), List.of(), clusterIds);
             return Response.success(response);
         }
         catch (NoCPUUsageException e) {
@@ -66,12 +78,13 @@ public class ImpactController
     {
         if (input != null && input.configs() != null && !input.configs().isEmpty())
             return input.configs();
-        if (!this.serverProfileProperties.enable())
-            throw new WebApplicationException(
-                jakarta.ws.rs.core.Response.status(jakarta.ws.rs.core.Response.Status.BAD_REQUEST)
-                    .entity("Required provider config not provided")
-                    .build()
-            );
-        return List.of(BoaviztaKubernetesConfig.fromServerProfile(this.serverProfileProperties, this.monitorProperties, List.of()));
+        ServerProfileEntity profile = this.profileRepository.findByIdOptional(this.seedProperties.defaultId())
+            .orElseGet(() -> this.profileRepository.listAll().stream().findFirst()
+                .orElseThrow(() -> new WebApplicationException(
+                    jakarta.ws.rs.core.Response.status(jakarta.ws.rs.core.Response.Status.BAD_REQUEST)
+                        .entity("No server profile configured")
+                        .build()
+                )));
+        return List.of(BoaviztaKubernetesConfig.fromProfileEntity(profile, this.monitorProperties, List.of()));
     }
 }
