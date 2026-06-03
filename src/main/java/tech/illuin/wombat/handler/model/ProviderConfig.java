@@ -10,5 +10,8 @@ import tech.illuin.wombat.model.Datasource;
 })
 public sealed interface ProviderConfig permits BoaviztaKubernetesConfig
 {
+
     Datasource datasource();
+
+    int lifespan();
 }

@@ -2,6 +2,7 @@ package tech.illuin.wombat.handler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.illuin.wombat.handler.model.ClusterInfo;
 import tech.illuin.wombat.handler.model.ImpactRequest;
 import tech.illuin.wombat.handler.model.ImpactResponse;
 import tech.illuin.wombat.handler.model.ProviderConfig;
@@ -11,6 +12,7 @@ import tech.illuin.wombat.persistence.NoCPUUsageException;
 import tech.illuin.wombat.persistence.model.TimeRange;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ImpactService
 {
@@ -61,8 +63,9 @@ public class ImpactService
         double load = handler.loadTarget().computeCpuUsage(timeRange, clusterIds);
         logger.info("Used CPU load {}", load);
 
+        int lifespanHours = config.lifespan();
         R providerResponse = handler.impactProvider().resolveImpact(config, timeRange, load);
-        Footprint globalFootprint = handler.footprintResolver().resolveFootprint(providerResponse, serviceGlobal, 1.0d, timeRange);
+        Footprint globalFootprint = handler.footprintResolver().resolveFootprint(providerResponse, serviceGlobal, 1.0d, timeRange, lifespanHours);
 
         Map<String, Double> containerShares = handler.loadTarget().getContainerShares(timeRange, clusterIds);
         List<String> allContainers = new ArrayList<>(containerShares.keySet());
@@ -78,10 +81,16 @@ public class ImpactService
         List<Footprint> serviceImpact = new LinkedList<>();
         Map<String, Double> filteredShares = new LinkedHashMap<>();
         sorted.forEach(e -> {
-            serviceImpact.add(handler.footprintResolver().resolveFootprint(providerResponse, e.getKey(), e.getValue(), timeRange));
+            serviceImpact.add(handler.footprintResolver().resolveFootprint(providerResponse, e.getKey(), e.getValue(), timeRange, lifespanHours));
             filteredShares.put(e.getKey(), e.getValue());
         });
 
-        return new ImpactResponse(globalFootprint, serviceImpact, filteredShares, input, new ImpactResponse.Parameters(config, timeRange), allContainers);
+        Map<String, List<ClusterInfo>> containerLocations = handler.loadTarget().getContainerLocations(timeRange, clusterIds)
+            .entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> e.getValue().stream().map(loc -> new ClusterInfo(loc.clusterId(), loc.namespace())).toList()
+            ));
+
+        return new ImpactResponse(globalFootprint, serviceImpact, filteredShares, input, new ImpactResponse.Parameters(config, timeRange), allContainers, containerLocations);
     }
 }

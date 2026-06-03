@@ -1,13 +1,10 @@
 package tech.illuin.wombat.persistence;
 
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
-import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
 import jakarta.transaction.Transactional;
 import tech.illuin.wombat.persistence.model.DatapointEntity;
 
-import java.io.File;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -15,23 +12,6 @@ import java.util.function.UnaryOperator;
 @ApplicationScoped
 public class DatapointRepository implements PanacheRepositoryBase<DatapointEntity, Long>
 {
-
-    @Transactional
-    void onStart(@Observes StartupEvent event)
-    {
-        new File("data/db").mkdirs();
-        getEntityManager().createNativeQuery("""
-            CREATE TABLE IF NOT EXISTS datapoint (
-                id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                instantMs INTEGER NOT NULL,
-                type      TEXT    NOT NULL,
-                payload   TEXT    NOT NULL
-            )
-        """).executeUpdate();
-        getEntityManager().createNativeQuery(
-            "CREATE INDEX IF NOT EXISTS idx_datapoint ON datapoint (instantMs, type)"
-        ).executeUpdate();
-    }
 
     public Optional<DatapointEntity> findByInstantAndType(long instantMs, String type)
     {

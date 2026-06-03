@@ -17,11 +17,3 @@ backup:
     bucket: wombat-bucket
     access-key: admin
     secret-key: secret
-
-profile:
-  server:
-    enable: true
-    provider: aws
-    instance-type: "c5a.16xlarge"
-    location: "FRA"
-    lifespan: 43800

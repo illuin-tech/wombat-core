@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.illuin.wombat.persistence.model.ContainerLocation;
 import tech.illuin.wombat.persistence.model.DatapointEntity;
 import tech.illuin.wombat.persistence.model.KubernetesPayload;
 import tech.illuin.wombat.persistence.model.TimeRange;
@@ -14,8 +15,10 @@ import tech.illuin.wombat.persistence.model.TimeRange;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SQLiteTarget implements LoadTarget
@@ -114,6 +117,30 @@ public class SQLiteTarget implements LoadTarget
         return totalCpuPerContainer.entrySet().stream().collect(Collectors.toMap(
             Map.Entry::getKey,
             e -> e.getValue() / total
+        ));
+    }
+
+    @Override
+    public Map<String, List<ContainerLocation>> getContainerLocations(TimeRange timeRange, List<String> clusterIds)
+    {
+        List<DatapointEntity> datapoints = this.repository.findByTypeAndRange(
+            TYPE_KUBERNETES, toEpochMs(timeRange.start()), toEpochMs(timeRange.end()));
+        if (datapoints.isEmpty()) return Map.of();
+
+        Map<String, Set<ContainerLocation>> locations = new HashMap<>();
+        for (DatapointEntity dp : datapoints)
+        {
+            for (KubernetesPayload payload : filterPayloads(readPayload(dp.payload), clusterIds))
+            {
+                ContainerLocation location = new ContainerLocation(payload.clusterId(), payload.namespace());
+                payload.pods().values().forEach(containers ->
+                    containers.keySet().forEach(name ->
+                        locations.computeIfAbsent(name, k -> new LinkedHashSet<>()).add(location)));
+            }
+        }
+        return locations.entrySet().stream().collect(Collectors.toMap(
+            Map.Entry::getKey,
+            e -> List.copyOf(e.getValue())
         ));
     }
 
