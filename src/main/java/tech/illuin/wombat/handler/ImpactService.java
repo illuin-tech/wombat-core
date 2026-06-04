@@ -8,6 +8,7 @@ import tech.illuin.wombat.handler.model.ImpactResponse;
 import tech.illuin.wombat.handler.model.ProviderConfig;
 import tech.illuin.wombat.model.Datasource;
 import tech.illuin.wombat.model.Footprint;
+import tech.illuin.wombat.persistence.LoadData;
 import tech.illuin.wombat.persistence.NoCPUUsageException;
 import tech.illuin.wombat.persistence.model.TimeRange;
 
@@ -60,14 +61,15 @@ public class ImpactService
         List<String> clusterIds
     ) throws NoCPUUsageException
     {
-        double load = handler.loadTarget().computeCpuUsage(timeRange, clusterIds);
+        LoadData loadData = handler.loadTarget().computeLoad(timeRange, clusterIds);
+        double load = loadData.cpuUsage();
         logger.info("Used CPU load {}", load);
 
         int lifespanHours = config.lifespan();
         R providerResponse = handler.impactProvider().resolveImpact(config, timeRange, load);
         Footprint globalFootprint = handler.footprintResolver().resolveFootprint(providerResponse, serviceGlobal, 1.0d, timeRange, lifespanHours);
 
-        Map<String, Double> containerShares = handler.loadTarget().getContainerShares(timeRange, clusterIds);
+        Map<String, Double> containerShares = loadData.containerShares();
         List<String> allContainers = new ArrayList<>(containerShares.keySet());
         Set<String> containerFilter = (containerIds == null || containerIds.isEmpty())
             ? containerShares.keySet()
@@ -85,7 +87,7 @@ public class ImpactService
             filteredShares.put(e.getKey(), e.getValue());
         });
 
-        Map<String, List<ClusterInfo>> containerLocations = handler.loadTarget().getContainerLocations(timeRange, clusterIds)
+        Map<String, List<ClusterInfo>> containerLocations = loadData.containerLocations()
             .entrySet().stream().collect(Collectors.toMap(
                 Map.Entry::getKey,
                 e -> e.getValue().stream().map(loc -> new ClusterInfo(loc.clusterId(), loc.namespace())).toList()

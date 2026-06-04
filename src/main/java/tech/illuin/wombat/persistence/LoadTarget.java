@@ -11,7 +11,7 @@ import java.util.Map;
 public interface LoadTarget
 {
 
-    void outputToTarget(Instant instant, PodMetrics podMetrics, String clusterId, String namespace);
+    void outputToTarget(Instant instant, List<PodMetrics> podMetricsList, String clusterId, String namespace);
 
     double computeCpuUsage(TimeRange timeRange, List<String> clusterIds) throws NoCPUUsageException;
 
@@ -27,5 +27,14 @@ public interface LoadTarget
     default Map<String, Double> getContainerShares(TimeRange timeRange) throws NoCPUUsageException
     {
         return getContainerShares(timeRange, List.of());
+    }
+
+    default LoadData computeLoad(TimeRange timeRange, List<String> clusterIds) throws NoCPUUsageException
+    {
+        return new LoadData(
+            computeCpuUsage(timeRange, clusterIds),
+            getContainerShares(timeRange, clusterIds),
+            getContainerLocations(timeRange, clusterIds)
+        );
     }
 }

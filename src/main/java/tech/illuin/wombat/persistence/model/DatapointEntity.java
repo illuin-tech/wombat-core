@@ -18,7 +18,7 @@ public class DatapointEntity extends PanacheEntityBase
     @Column(columnDefinition = "INTEGER")
     public Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "INTEGER")
     public long instantMs;
 
     @Column(nullable = false)
