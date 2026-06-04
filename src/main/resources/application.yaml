@@ -1,4 +1,6 @@
 quarkus:
+  banner:
+    path: wombat-banner.txt
   rest-client:
     logging:
       scope: request-response
@@ -10,6 +12,10 @@ quarkus:
       "persistence":
         min-level: TRACE
         level: TRACE
+      "io.quarkus.kubernetes.client.deployment.DevServicesKubernetesProcessor":
+        level: "OFF"
+      "io.quarkus.datasource.deployment.devservices.DevServicesDatasourceProcessor":
+        level: "OFF"
   datasource:
     db-kind: sqlite
     jdbc:
@@ -21,6 +27,9 @@ quarkus:
   flyway:
     migrate-at-start: false
     locations: classpath:db/migration
+  kubernetes-client:
+    devservices:
+      enabled: false
 
 monitor:
   cron: "*/10 * * * * ?" # every 10s

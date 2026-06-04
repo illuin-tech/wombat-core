@@ -45,3 +45,7 @@ src/main/resources/application-local.yaml
 # TLS Certificates
 .certs/
 /data/
+
+# local claude stuff (for graphify)
+.claude/
+graphify-out/
