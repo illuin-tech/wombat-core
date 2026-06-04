@@ -21,7 +21,7 @@
         <jacoco.version>0.8.13</jacoco.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <junit4.version>4.13.2</junit4.version>
-        <checkstyle.version>10.26.1</checkstyle.version>
+        <checkstyle.version>13.5.0</checkstyle.version>
         <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
         <checkstyle.config.location>checkstyle.xml</checkstyle.config.location>
         <aws.sdk.version>2.25.60</aws.sdk.version>
