@@ -222,11 +222,11 @@ public class SQLiteTarget implements LoadTarget
     {
         try
         {
-            JsonNode node = mapper.readTree(json);
+            JsonNode node = this.mapper.readTree(json);
             if (node.isArray())
-                return mapper.readerFor(PAYLOAD_TYPE).readValue(node);
+                return this.mapper.readerFor(PAYLOAD_TYPE).readValue(node);
             // legacy rows stored a single object before the list format was introduced
-            return new ArrayList<>(List.of(mapper.treeToValue(node, KubernetesPayload.class)));
+            return new ArrayList<>(List.of(this.mapper.treeToValue(node, KubernetesPayload.class)));
         }
         catch (IOException e) {
             throw new RuntimeException("Failed to deserialize datapoint payload", e);
@@ -237,7 +237,7 @@ public class SQLiteTarget implements LoadTarget
     {
         try
         {
-            return mapper.writeValueAsString(payloads);
+            return this.mapper.writeValueAsString(payloads);
         }
         catch (IOException e) {
             throw new RuntimeException("Failed to serialize payload", e);

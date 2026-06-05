@@ -227,11 +227,6 @@
           <td class="td-toggle"><span class="row-chevron">▶</span></td>
           <td class="name">
             {footprint.service}
-            {#if impact.containerLocations.containsKey(footprint.service)}
-              {#for loc in impact.containerLocations.get(footprint.service)}
-                <span class="container-location">{loc.id} / {loc.namespace}</span>
-              {/for}
-            {/if}
           </td>
           <td class="metric gwp bold">{footprint.gwp.totalValue().asDecimal()}</td>
           <td class="metric gwp use">{footprint.gwp.embedded.value.asDecimal()}</td>
