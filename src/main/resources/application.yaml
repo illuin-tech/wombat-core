@@ -3,7 +3,7 @@ quarkus:
     path: wombat-banner.txt
   rest-client:
     logging:
-      scope: request-response
+      scope: none
       body-limit: 1024
     boavizta-api-url:
       uri: "https://api.boavizta.org/v1/"
@@ -30,6 +30,12 @@ quarkus:
   kubernetes-client:
     devservices:
       enabled: false
+  micrometer:
+    binder:
+      netty:
+        enabled: false
+      http-client:
+        enabled: false
 
 monitor:
   cron: "*/10 * * * * ?" # every 10s
