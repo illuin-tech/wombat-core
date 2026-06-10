@@ -16,9 +16,17 @@ function formatLocalRange(startIso, endIso) {
 })();
 
 /* ── Chart defaults ── */
-var GREEN  = '#16a34a', ORANGE = '#ea580c', BLUE = '#2563eb';
-var YELLOW = '#ca8a04', PURPLE = '#7c3aed', TEAL  = '#0891b2';
-var BORDER = '#e3ede8', TEXT   = '#4d7060';
+var cssVar = function(name, fallback) {
+  var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+};
+var GREEN  = cssVar('--accent-green',  '#16a34a');
+var ORANGE = cssVar('--accent-orange', '#ea580c');
+var BLUE   = cssVar('--accent-blue',   '#2563eb');
+var YELLOW = cssVar('--accent-yellow', '#ca8a04');
+var PURPLE = '#7c3aed', TEAL  = '#0891b2';
+var BORDER = cssVar('--border',      '#e3ede8');
+var TEXT   = cssVar('--text-muted',  '#4d7060');
 var palette = [GREEN, BLUE, YELLOW, TEAL, PURPLE, ORANGE, '#db2777', '#0284c7'];
 Chart.defaults.color = TEXT; Chart.defaults.borderColor = BORDER;
 Chart.defaults.font.family = "'DM Sans', sans-serif"; Chart.defaults.font.size = 12; Chart.defaults.font.weight = '500';
