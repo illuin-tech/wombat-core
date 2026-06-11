@@ -39,6 +39,7 @@ nb-configuration.xml
 # Local environment
 .env
 src/main/resources/application-local.yaml
+src/main/resources/application-dev.yaml
 
 # Plugin directory
 /.quarkus/cli/plugins/

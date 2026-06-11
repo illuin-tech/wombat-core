@@ -4,9 +4,11 @@ quarkus:
       url: "jdbc:sqlite:data/db/local.db"
 
 monitor:
-  kubernetes-configs:
-    my-namespace:
-      namespace: "my-namespace"
+  k8s-configs:
+    clusters:
+      - id: my-cluster
+        config-path: /path/to/kubeconfig
+        namespace: my-namespace
 
 backup:
   enabled: true
