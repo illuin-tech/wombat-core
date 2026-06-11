@@ -17,7 +17,7 @@ services:
 
   prometheus:
     container_name: prometheus
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.12.0
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -31,7 +31,7 @@ services:
 
   grafana:
     container_name: grafana
-    image: grafana/grafana:11.4.0
+    image: grafana/grafana:11.6.15
     ports:
       - "3000:3000"
     environment:
