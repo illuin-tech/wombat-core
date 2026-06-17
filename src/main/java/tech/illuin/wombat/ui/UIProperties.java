@@ -1,4 +1,4 @@
-package tech.illuin.wombat.metrics;
+package tech.illuin.wombat.ui;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -7,17 +7,17 @@ import tech.illuin.wombat.model.DurationConfig;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
-@ConfigMapping(prefix = "metrics")
-public interface MetricsProperties
+@ConfigMapping(prefix = "ui")
+public interface UIProperties
 {
-    AggregationWindow aggregationWindow();
+    MaxDateRange maxDateRange();
 
-    interface AggregationWindow
+    interface MaxDateRange
     {
-        @WithDefault("5")
+        @WithDefault("31")
         long duration();
 
-        @WithDefault("MINUTES")
+        @WithDefault("DAYS")
         ChronoUnit unit();
 
         default Duration asDuration()

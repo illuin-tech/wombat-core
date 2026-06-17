@@ -45,6 +45,11 @@ metrics:
     duration: 5
     unit: MINUTES
 
+ui:
+  max-date-range:
+    duration: 1
+    unit: MONTHS
+
 persistence:
   enable-memory-target: true
 

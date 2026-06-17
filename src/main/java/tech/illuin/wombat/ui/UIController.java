@@ -15,6 +15,7 @@ import tech.illuin.wombat.persistence.NoCPUUsageException;
 import tech.illuin.wombat.persistence.model.TimeRange;
 import tech.illuin.wombat.profile.Profile;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -29,12 +30,14 @@ public class UIController
     private final ImpactService impactService;
     private final AssetService assetService;
     private final BoaviztaClient boaviztaClient;
+    private final UIProperties uiProperties;
 
-    public UIController(ImpactService impactService, AssetService assetService, @RestClient BoaviztaClient boaviztaClient)
+    public UIController(ImpactService impactService, AssetService assetService, @RestClient BoaviztaClient boaviztaClient, UIProperties uiProperties)
     {
         this.impactService = impactService;
         this.assetService = assetService;
         this.boaviztaClient = boaviztaClient;
+        this.uiProperties = uiProperties;
     }
 
     @GET
@@ -51,12 +54,16 @@ public class UIController
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm[:ss]").withZone(ZoneOffset.UTC);
 
             ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-            Instant start = from != null && !from.isBlank()
-                ? fmt.parse(from, Instant::from)
-                : now.withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
+            Duration maxSpan = this.uiProperties.maxDateRange().asDuration();
+
             Instant end = to != null && !to.isBlank()
                 ? fmt.parse(to, Instant::from)
-                : now.plusMonths(1).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
+                : now.toInstant();
+            Instant start = from != null && !from.isBlank()
+                ? fmt.parse(from, Instant::from)
+                : ZonedDateTime.ofInstant(end, ZoneOffset.UTC).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
+            if (start.isAfter(end)) start = end;
+            if (Duration.between(start, end).compareTo(maxSpan) > 0) start = end.minus(maxSpan);
 
             List<AssetConfig> allAssets = this.assetService.all();
             if (allAssets.isEmpty())
@@ -80,7 +87,9 @@ public class UIController
             ImpactResponse first = results.getFirst();
             int vcpu = instanceConfig.vcpu() != null && instanceConfig.vcpu().def() != null ? instanceConfig.vcpu().def() : 0;
             double loadPercent = vcpu > 0 ? first.cpuUsageCores() / vcpu * 100.0 : 0.0;
-            return Templates.impact(first, allAssets, effectiveAssetIds, selected, instanceConfig, loadPercent);
+            String maxSpanLabel = this.uiProperties.maxDateRange().duration() + " " + this.uiProperties.maxDateRange().unit().name().toLowerCase();
+            Templates.MaxSpan span = new Templates.MaxSpan(maxSpan.toMillis(), maxSpanLabel);
+            return Templates.impact(first, allAssets, effectiveAssetIds, selected, instanceConfig, loadPercent, span);
         }
         catch (NoCPUUsageException e) {
             return Templates.impactError(from, to);

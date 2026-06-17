@@ -199,6 +199,11 @@ tbody td.metric.bold { font-weight: 700; }
 .error-title { font-size: 18px; font-weight: 700; color: var(--text); }
 .error-body { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
 
+/* ── Date range picker ── */
+.date-range-group { flex-wrap: wrap; align-items: flex-start; }
+.date-range-picker { background: var(--surface2); border: 1.5px solid var(--border); color: var(--text); font-family: var(--sans); font-size: 13px; padding: 8px 12px; border-radius: var(--radius-sm); outline: none; cursor: pointer; min-width: 320px; transition: border-color 0.15s, box-shadow 0.15s; }
+.date-range-picker:focus, .date-range-picker.active { border-color: var(--accent-green); box-shadow: 0 0 0 3px rgba(22,163,74,0.12); }
+
 /* ── Asset load section ── */
 .asset-load-row { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 6px; }
 .asset-load-note { margin-top: 10px; font-size: 11px; color: var(--text-dim); font-style: italic; line-height: 1.4; }

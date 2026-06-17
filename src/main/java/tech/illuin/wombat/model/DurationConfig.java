@@ -21,7 +21,7 @@ public record DurationConfig(long duration, ChronoUnit unit) {
     }
 
     public Duration asDuration() {
-        return Duration.of(this.duration(), this.unit());
+        return this.unit().getDuration().multipliedBy(this.duration());
     }
 
     @JsonProperty("duration")
