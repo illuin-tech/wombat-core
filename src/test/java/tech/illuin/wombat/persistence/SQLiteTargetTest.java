@@ -5,15 +5,22 @@ import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
+import io.micrometer.core.instrument.MockClock;
+import io.micrometer.core.instrument.step.StepRegistryConfig;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.metrics.MetricRecorderService;
+import tech.illuin.wombat.metrics.SqliteStepMeterRegistry;
 import tech.illuin.wombat.persistence.model.ContainerLocation;
+import tech.illuin.wombat.persistence.model.DatapointEntity;
 import tech.illuin.wombat.persistence.model.KubernetesPayload;
 import tech.illuin.wombat.persistence.model.TimeRange;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,20 +40,63 @@ class SQLiteTargetTest
     @Inject
     ObjectMapper mapper;
 
+    private static final Duration STEP = Duration.ofMinutes(5);
+
     private SQLiteTarget target;
+    private SqliteStepMeterRegistry stepRegistry;
+    private MockClock clock;
 
     @BeforeEach
     @Transactional
     void clean() throws Exception
     {
         repository.deleteAll();
-        target = new SQLiteTarget(repository, mapper);
+        clock = new MockClock();
+        StepRegistryConfig config = new StepRegistryConfig()
+        {
+            @Override
+            public @NonNull String prefix()
+            {
+                return "test";
+            }
+
+            @Override
+            public @NonNull Duration step()
+            {
+                return STEP;
+            }
+
+            @Override
+            public String get(@NonNull String key)
+            {
+                return null;
+            }
+        };
+        stepRegistry = new SqliteStepMeterRegistry(config, clock, repository, mapper);
+        target = new SQLiteTarget(repository, mapper, new MetricRecorderService(stepRegistry));
+    }
+
+    private void flushWindow()
+    {
+        clock.add(STEP.plusSeconds(1));
+        stepRegistry.flush();
     }
 
     private void seedDatapoint(long instantMs, List<KubernetesPayload> payloads) throws Exception
     {
-        String json = mapper.writeValueAsString(payloads);
-        repository.upsert(instantMs, "KUBERNETES", existing -> json);
+        for (KubernetesPayload payload : payloads)
+        {
+            DatapointEntity row = new DatapointEntity();
+            row.instantMs = instantMs;
+            row.type = "KUBERNETES";
+            row.cluster = payload.clusterId();
+            row.namespace = payload.namespace();
+            Map<String, tech.illuin.wombat.persistence.model.PodMetrics.ContainerMetrics> podMap = payload.pods().entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey,
+                    e -> new tech.illuin.wombat.persistence.model.PodMetrics.ContainerMetrics(e.getValue())));
+            row.payload = mapper.writeValueAsString(new tech.illuin.wombat.persistence.model.PodMetrics(podMap));
+            repository.save(row);
+        }
     }
 
     @Test
@@ -141,8 +191,9 @@ class SQLiteTargetTest
         PodMetrics pod = buildPodMetrics("pod-a", Map.of("api", "500", "worker", "1500"));
 
         target.outputToTarget(Instant.ofEpochMilli(2000), List.of(pod), "c1", "ns1");
+        flushWindow();
 
-        double avg = target.computeCpuUsage(new TimeRange(Instant.ofEpochMilli(0), Instant.ofEpochMilli(5000)), List.of());
+        double avg = target.computeCpuUsage(rangeAroundFlush(), List.of());
         assertEquals(2000.0, avg, 0.001);
     }
 
@@ -153,9 +204,9 @@ class SQLiteTargetTest
             buildPodMetrics("pod-a", Map.of("api", "100")),
             buildPodMetrics("pod-b", Map.of("db", "200"))
         ), "c1", "ns1");
+        flushWindow();
 
-        Map<String, Double> shares = target.getContainerShares(
-            new TimeRange(Instant.ofEpochMilli(0), Instant.ofEpochMilli(5000)), List.of());
+        Map<String, Double> shares = target.getContainerShares(rangeAroundFlush(), List.of());
         assertEquals(2, shares.size(), "both containers should appear in shares");
         assertTrue(shares.containsKey("api"));
         assertTrue(shares.containsKey("db"));
@@ -166,9 +217,9 @@ class SQLiteTargetTest
     {
         target.outputToTarget(Instant.ofEpochMilli(4000), List.of(buildPodMetrics("pod-a", Map.of("api", "100"))), "c1", "ns1");
         target.outputToTarget(Instant.ofEpochMilli(4000), List.of(buildPodMetrics("pod-a", Map.of("api", "200"))), "c2", "ns2");
+        flushWindow();
 
-        Map<String, List<ContainerLocation>> locations = target.getContainerLocations(
-            new TimeRange(Instant.ofEpochMilli(0), Instant.ofEpochMilli(5000)), List.of());
+        Map<String, List<ContainerLocation>> locations = target.getContainerLocations(rangeAroundFlush(), List.of());
         assertEquals(2, locations.get("api").size());
     }
 
@@ -180,10 +231,16 @@ class SQLiteTargetTest
         PodMetrics pod = buildPodMetricsWithExplicitNullCpu("pod-x", usages, "missing");
 
         target.outputToTarget(Instant.ofEpochMilli(5000), List.of(pod), "c1", "ns1");
+        flushWindow();
 
-        Map<String, Double> shares = target.getContainerShares(
-            new TimeRange(Instant.ofEpochMilli(0), Instant.ofEpochMilli(10000)), List.of());
+        Map<String, Double> shares = target.getContainerShares(rangeAroundFlush(), List.of());
         assertTrue(shares.containsKey("present"));
+    }
+
+    private TimeRange rangeAroundFlush()
+    {
+        long flushMs = clock.wallTime();
+        return new TimeRange(Instant.ofEpochMilli(flushMs - 1), Instant.ofEpochMilli(flushMs + 1));
     }
 
     private PodMetrics buildPodMetrics(String podName, Map<String, String> containerCpuValues)

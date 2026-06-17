@@ -2,7 +2,7 @@ package tech.illuin.wombat.profile;
 
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
 
-public record ProfileDto(
+public record Profile(
     String id,
     String description,
     BoaviztaInstanceImpactRequest.Provider provider,
@@ -12,8 +12,8 @@ public record ProfileDto(
 )
 {
 
-    public static ProfileDto from(ServerProfileEntity entity)
+    public static Profile from(ServerProfileEntity entity)
     {
-        return new ProfileDto(entity.id, entity.description, entity.provider, entity.instanceType, entity.location, entity.lifespan);
+        return new Profile(entity.id, entity.description, entity.provider, entity.instanceType, entity.location, entity.lifespan);
     }
 }

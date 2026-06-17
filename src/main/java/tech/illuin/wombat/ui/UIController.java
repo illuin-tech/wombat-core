@@ -3,18 +3,17 @@ package tech.illuin.wombat.ui;
 import io.quarkus.qute.TemplateInstance;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
+import tech.illuin.wombat.asset.AssetConfig;
+import tech.illuin.wombat.asset.AssetService;
+import tech.illuin.wombat.boavizta.BoaviztaClient;
+import tech.illuin.wombat.boavizta.model.BoaviztaInstanceConfigResponse;
 import tech.illuin.wombat.handler.ImpactService;
-import tech.illuin.wombat.handler.model.BoaviztaKubernetesConfig;
-import tech.illuin.wombat.handler.model.ClusterInfo;
 import tech.illuin.wombat.handler.model.ImpactRequest;
 import tech.illuin.wombat.handler.model.ImpactResponse;
-import tech.illuin.wombat.monitor.MonitorProperties;
 import tech.illuin.wombat.persistence.NoCPUUsageException;
 import tech.illuin.wombat.persistence.model.TimeRange;
-import tech.illuin.wombat.profile.ProfileDto;
-import tech.illuin.wombat.profile.ProfileSeedProperties;
-import tech.illuin.wombat.profile.ServerProfileEntity;
-import tech.illuin.wombat.profile.ServerProfileRepository;
+import tech.illuin.wombat.profile.Profile;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -28,16 +27,14 @@ public class UIController
 {
 
     private final ImpactService impactService;
-    private final ServerProfileRepository profileRepository;
-    private final ProfileSeedProperties profileSeedProperties;
-    private final MonitorProperties monitorProperties;
+    private final AssetService assetService;
+    private final BoaviztaClient boaviztaClient;
 
-    public UIController(ImpactService impactService, ServerProfileRepository profileRepository, ProfileSeedProperties profileSeedProperties, MonitorProperties monitorProperties)
+    public UIController(ImpactService impactService, AssetService assetService, @RestClient BoaviztaClient boaviztaClient)
     {
         this.impactService = impactService;
-        this.profileRepository = profileRepository;
-        this.profileSeedProperties = profileSeedProperties;
-        this.monitorProperties = monitorProperties;
+        this.assetService = assetService;
+        this.boaviztaClient = boaviztaClient;
     }
 
     @GET
@@ -46,8 +43,7 @@ public class UIController
         @QueryParam("from") String from,
         @QueryParam("to") String to,
         @QueryParam("containers") List<String> containers,
-        @QueryParam("clusters") List<String> clusters,
-        @QueryParam("profileId") String profileId
+        @QueryParam("assets") List<String> assets
     )
     {
         try
@@ -62,44 +58,32 @@ public class UIController
                 ? fmt.parse(to, Instant::from)
                 : now.plusMonths(1).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
 
-            List<ClusterInfo> allClusters = this.monitorProperties.k8sConfigs().clusters().stream()
-                .map(c -> new ClusterInfo(c.id(), c.namespace()))
-                .toList();
+            List<AssetConfig> allAssets = this.assetService.all();
+            if (allAssets.isEmpty())
+                throw new IllegalStateException("No assets configured (cluster.profile-id missing or referenced profile not found)");
 
-            List<String> effectiveClusters = (clusters == null || clusters.isEmpty())
-                ? allClusters.stream().findFirst().map(c -> List.of(c.id())).orElse(List.of())
-                : clusters;
-
-            List<ServerProfileEntity> allProfileEntities = this.profileRepository.listAll();
-            ServerProfileEntity activeProfile = resolveProfile(profileId, allProfileEntities, this.profileSeedProperties.defaultId());
+            List<String> effectiveAssetIds = (assets == null || assets.isEmpty())
+                ? List.of(allAssets.getFirst().clusterProperties().id())
+                : assets;
+            List<AssetConfig> selectedAssets = this.assetService.resolve(effectiveAssetIds);
+            if (selectedAssets.isEmpty()) selectedAssets = List.of(allAssets.getFirst());
 
             ImpactRequest request = new ImpactRequest(
                 new TimeRange(start, end),
-                List.of(BoaviztaKubernetesConfig.fromProfileEntity(activeProfile, this.monitorProperties, effectiveClusters))
+                selectedAssets.stream().map(a -> a.clusterProperties().id()).toList()
             );
 
-            List<ImpactResponse> results = this.impactService.computeImpactResponse(request, containers, effectiveClusters);
-            List<ProfileDto> allProfiles = allProfileEntities.stream().map(ProfileDto::from).toList();
-            return Templates.impact(results.getFirst(), allClusters, effectiveClusters, allProfiles, activeProfile.id);
+            List<ImpactResponse> results = this.impactService.computeImpactResponse(request, containers, selectedAssets);
+            AssetConfig selected = selectedAssets.getFirst();
+            Profile profile = selected.profile();
+            BoaviztaInstanceConfigResponse instanceConfig = this.boaviztaClient.getInstanceConfig(profile.provider(), profile.instanceType());
+            ImpactResponse first = results.getFirst();
+            int vcpu = instanceConfig.vcpu() != null && instanceConfig.vcpu().def() != null ? instanceConfig.vcpu().def() : 0;
+            double loadPercent = vcpu > 0 ? first.cpuUsageCores() / vcpu * 100.0 : 0.0;
+            return Templates.impact(first, allAssets, effectiveAssetIds, selected, instanceConfig, loadPercent);
         }
         catch (NoCPUUsageException e) {
             return Templates.impactError(from, to);
         }
-    }
-
-    private static ServerProfileEntity resolveProfile(String profileId, List<ServerProfileEntity> profiles, String defaultId)
-    {
-        if (profiles.isEmpty())
-            throw new IllegalStateException("No server profiles configured");
-        if (profileId != null)
-            return profiles.stream().filter(p -> p.id.equals(profileId)).findFirst()
-                .orElseGet(() -> findByIdOrFirst(profiles, defaultId));
-        return findByIdOrFirst(profiles, defaultId);
-    }
-
-    private static ServerProfileEntity findByIdOrFirst(List<ServerProfileEntity> profiles, String defaultId)
-    {
-        return profiles.stream().filter(p -> p.id.equals(defaultId)).findFirst()
-            .orElse(profiles.getFirst());
     }
 }

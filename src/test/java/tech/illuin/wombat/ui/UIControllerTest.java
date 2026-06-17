@@ -12,9 +12,8 @@ import org.mockito.Mockito;
 import tech.illuin.wombat.boavizta.BoaviztaClient;
 import tech.illuin.wombat.boavizta.BoaviztaTestData;
 import tech.illuin.wombat.persistence.DatapointRepository;
-import tech.illuin.wombat.persistence.model.KubernetesPayload;
+import tech.illuin.wombat.persistence.model.DatapointEntity;
 
-import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
@@ -45,10 +44,14 @@ class UIControllerTest
         Mockito.when(boaviztaClient.getInstanceConfig(any(), any())).thenReturn(BoaviztaTestData.fakeInstanceConfig(8));
         Mockito.when(boaviztaClient.getInstanceImpact(anyBoolean(), anyInt(), any(), any())).thenReturn(BoaviztaTestData.fakeImpactResponse());
 
-        KubernetesPayload payload = new KubernetesPayload("test-cluster", "test-ns",
-            Map.of("podA", Map.of("api", "100", "worker", "300")));
-        String json = mapper.writeValueAsString(List.of(payload));
-        datapointRepository.upsert(System.currentTimeMillis(), "KUBERNETES", existing -> json);
+        DatapointEntity row = new DatapointEntity();
+        row.instantMs = System.currentTimeMillis();
+        row.type = "KUBERNETES";
+        row.cluster = "test-cluster";
+        row.namespace = "test-ns";
+        row.payload = mapper.writeValueAsString(new tech.illuin.wombat.persistence.model.PodMetrics(
+            Map.of("podA", new tech.illuin.wombat.persistence.model.PodMetrics.ContainerMetrics(Map.of("api", "100", "worker", "300")))));
+        datapointRepository.save(row);
     }
 
     @Test
@@ -64,14 +67,19 @@ class UIControllerTest
     }
 
     @Test
-    void get_withProfileIdParam_selectsThatProfile()
+    void get_withAssetParam_selectsThatAsset()
     {
         given()
-            .queryParam("profileId", "test-gcp-n2")
+            .queryParam("assets", "test-cluster")
             .when().get("/ui")
             .then()
             .statusCode(200)
-            .body(containsString("n2-standard-4"));
+            .body(containsString("c5.large"))
+            .body(containsString("Test Cluster"))
+            .body(containsString("vCPU"))
+            .body(containsString("Memory"))
+            .body(containsString("CPU used"))
+            .body(containsString("Load factor"));
     }
 
     @Test

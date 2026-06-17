@@ -23,30 +23,22 @@
            data-utc="{impact.parameters.timeRange.end.asIsoUtc()}"/>
   </div>
   <div class="filter-group">
-    <span class="filter-label">Server Profile</span>
-    <select id="profileSelect" name="profileId">
-      {#for profile in allProfiles}
-      <option value="{profile.id}" {#if selectedProfileId == profile.id}selected{/if}>{profile.description}</option>
-      {/for}
-    </select>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">Cluster / Namespace</span>
-    <div class="container-picker" id="clusterPicker">
-      <button type="button" class="container-trigger" id="clusterTrigger">
-        <span id="clusterCount"></span>
+    <span class="filter-label">Assets</span>
+    <div class="container-picker" id="assetPicker">
+      <button type="button" class="container-trigger" id="assetTrigger">
+        <span id="assetCount"></span>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" class="trigger-chevron">
           <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
       </button>
-      <div class="container-dropdown" id="clusterDropdown">
-        <div class="container-list" id="clusterList">
-          {#for cluster in allClusters}
+      <div class="container-dropdown" id="assetDropdown">
+        <div class="container-list" id="assetList">
+          {#for asset in allAssets}
           <label class="container-item">
-            <input type="radio" name="clusters" value="{cluster.id}"
-                   data-label="{cluster.id} / {cluster.namespace}"
-                   {#if selectedClusterIds.contains(cluster.id)}checked{/if}/>
-            <span>{cluster.id} / {cluster.namespace}</span>
+            <input type="radio" name="assets" value="{asset.clusterProperties.id}"
+                   data-label="{asset.name}"
+                   {#if selectedAssetIds.contains(asset.clusterProperties.id)}checked{/if}/>
+            <span>{asset.name} &mdash; {asset.clusterProperties.id} / {asset.clusterProperties.namespace}</span>
           </label>
           {/for}
         </div>
@@ -179,6 +171,30 @@
           <div class="param-item">
             <span class="param-key">Lifespan</span>
             <span class="param-val">{impact.parameters.providerConfig.lifespan} h</span>
+          </div>
+          <div class="param-item">
+            <span class="param-key">vCPU</span>
+            <span class="param-val">{instanceConfig.vcpu.def}</span>
+          </div>
+          <div class="param-item">
+            <span class="param-key">Memory</span>
+            <span class="param-val">{instanceConfig.memory.def} GB</span>
+          </div>
+        </div>
+        <div class="card-section asset-load">
+          <div class="card-section-label">Asset load</div>
+          <div class="asset-load-row">
+            <div class="param-item">
+              <span class="param-key">CPU used</span>
+              <span class="param-val">{impact.cpuUsageCores.asDecimal()} cores</span>
+            </div>
+            <div class="param-item">
+              <span class="param-key">Load factor</span>
+              <span class="param-val">{loadPercent.asDecimal()} %</span>
+            </div>
+          </div>
+          <div class="asset-load-note">
+            These values are computed across all containers of the asset and are not affected by the container filter above.
           </div>
         </div>
       </div>

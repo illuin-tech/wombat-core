@@ -11,6 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Singleton;
 import org.flywaydb.core.Flyway;
+import tech.illuin.wombat.metrics.MetricRecorderService;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.SqliteBackupService;
 import tech.illuin.wombat.persistence.observability.SQLiteSizeGauge;
@@ -43,9 +44,9 @@ public class PersistenceConfig
 
     @Singleton
     @IfBuildProperty(name = "persistence.enable-memory-target", stringValue = "true")
-    public SQLiteTarget provideSQLiteTarget(DatapointRepository repository, ObjectMapper mapper)
+    public SQLiteTarget provideSQLiteTarget(DatapointRepository repository, ObjectMapper mapper, MetricRecorderService recorder)
     {
-        return new SQLiteTarget(repository, mapper);
+        return new SQLiteTarget(repository, mapper, recorder);
     }
 
     @Singleton

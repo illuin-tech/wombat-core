@@ -27,18 +27,18 @@ public class ProfileController
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public List<ProfileDto> list()
+    public List<Profile> list()
     {
-        return this.repository.listAll().stream().map(ProfileDto::from).toList();
+        return this.repository.listAll().stream().map(Profile::from).toList();
     }
 
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public ProfileDto get(@PathParam("id") String id)
+    public Profile get(@PathParam("id") String id)
     {
         return this.repository.findByIdOptional(id)
-            .map(ProfileDto::from)
+            .map(Profile::from)
             .orElseThrow(NotFoundException::new);
     }
 
@@ -46,17 +46,17 @@ public class ProfileController
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public ProfileDto create(ProfileDto dto)
+    public Profile create(Profile profile)
     {
         ServerProfileEntity entity = new ServerProfileEntity();
-        entity.id = dto.id();
-        entity.description = dto.description();
-        entity.provider = dto.provider();
-        entity.instanceType = dto.instanceType();
-        entity.location = dto.location();
-        entity.lifespan = dto.lifespan();
+        entity.id = profile.id();
+        entity.description = profile.description();
+        entity.provider = profile.provider();
+        entity.instanceType = profile.instanceType();
+        entity.location = profile.location();
+        entity.lifespan = profile.lifespan();
         this.repository.persist(entity);
-        return ProfileDto.from(entity);
+        return Profile.from(entity);
     }
 
     @PUT
@@ -64,7 +64,7 @@ public class ProfileController
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public ProfileDto update(@PathParam("id") String id, ProfileDto dto)
+    public Profile update(@PathParam("id") String id, Profile dto)
     {
         ServerProfileEntity entity = this.repository.findByIdOptional(id)
             .orElseThrow(NotFoundException::new);
@@ -73,7 +73,7 @@ public class ProfileController
         entity.instanceType = dto.instanceType();
         entity.location = dto.location();
         entity.lifespan = dto.lifespan();
-        return ProfileDto.from(entity);
+        return Profile.from(entity);
     }
 
     @DELETE
