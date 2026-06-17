@@ -1,5 +1,7 @@
 package tech.illuin.wombat.handler.impact_provider;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.boavizta.BoaviztaClient;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceConfigResponse;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
@@ -13,6 +15,7 @@ import java.util.Set;
 
 public class BoaviztaImpactProvider implements ImpactProvider<BoaviztaInstanceImpactResponse>
 {
+    private static final Logger logger = LoggerFactory.getLogger(BoaviztaImpactProvider.class);
 
     private final BoaviztaClient boaviztaClient;
 
@@ -27,7 +30,9 @@ public class BoaviztaImpactProvider implements ImpactProvider<BoaviztaInstanceIm
         BoaviztaKubernetesConfig k8sConfig = (BoaviztaKubernetesConfig) config;
         BoaviztaInstanceConfigResponse instanceConfig = this.getInstanceConfig(k8sConfig.provider(), k8sConfig.instanceType());
         // TODO: check units
+        logger.info("Boavizta instance CPU count {}", instanceConfig.vcpu().def());
         double loadPercentage = (load / 1000 / 1000 / 1000) / instanceConfig.vcpu().def() * 100;
+        logger.info("Effective used Boavizta load {}%", loadPercentage);
 
         return this.getInstanceImpact(
             new BoaviztaInstanceImpactRequest(

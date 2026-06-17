@@ -12,9 +12,13 @@ public interface K8SProperties
     {
         String id();
 
+        String name();
+
         String configPath();
 
         String namespace();
+
+        String profileId();
 
         Optional<String> context();
 

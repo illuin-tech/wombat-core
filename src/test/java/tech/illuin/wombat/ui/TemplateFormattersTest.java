@@ -68,7 +68,8 @@ class TemplateFormattersTest
     @Test
     void asDecimal_null_returnsDash()
     {
-        assertEquals("—", TemplateFormatters.asDecimal(null));
+        assertEquals("—", TemplateFormatters.asDecimal((Float) null));
+        assertEquals("—", TemplateFormatters.asDecimal((Double) null));
     }
 
     @Test

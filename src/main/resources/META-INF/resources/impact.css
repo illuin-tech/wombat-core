@@ -199,6 +199,10 @@ tbody td.metric.bold { font-weight: 700; }
 .error-title { font-size: 18px; font-weight: 700; color: var(--text); }
 .error-body { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
 
+/* ── Asset load section ── */
+.asset-load-row { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 6px; }
+.asset-load-note { margin-top: 10px; font-size: 11px; color: var(--text-dim); font-style: italic; line-height: 1.4; }
+
 /* ── Shares legend ── */
 .shares-legend { overflow-y: auto; max-height: 110px; margin-top: 12px; }
 .shares-legend-item { display: flex; align-items: center; gap: 8px; padding: 3px 2px; }

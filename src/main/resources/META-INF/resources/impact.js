@@ -88,30 +88,15 @@ function makeHBar(id, datasets, unit, color) {
   ], m.unit, m.color);
 });
 
-/* ── Profile picker (auto-navigates on change) ── */
+/* ── Asset picker (single-select, auto-navigates on change) ── */
 (function() {
-  document.getElementById('profileSelect').addEventListener('change', function() {
-    var p = new URLSearchParams();
-    var from = document.getElementById('inputFrom').value;
-    var to   = document.getElementById('inputTo').value;
-    if (from) p.set('from', localInputToUtc(from));
-    if (to)   p.set('to',   localInputToUtc(to));
-    var selCluster = document.querySelector('#clusterList input[name="clusters"]:checked');
-    if (selCluster) p.append('clusters', selCluster.value);
-    p.set('profileId', this.value);
-    window.location.href = '?' + p.toString();
-  });
-})();
-
-/* ── Cluster picker (single-select, auto-navigates on change) ── */
-(function() {
-  var picker   = document.getElementById('clusterPicker');
-  var trigger  = document.getElementById('clusterTrigger');
-  var dropdown = document.getElementById('clusterDropdown');
+  var picker   = document.getElementById('assetPicker');
+  var trigger  = document.getElementById('assetTrigger');
+  var dropdown = document.getElementById('assetDropdown');
 
   function updateLabel() {
-    var sel = document.querySelector('#clusterList input[name="clusters"]:checked');
-    document.getElementById('clusterCount').textContent = sel ? (sel.dataset.label || sel.value) : '';
+    var sel = document.querySelector('#assetList input[name="assets"]:checked');
+    document.getElementById('assetCount').textContent = sel ? (sel.dataset.label || sel.value) : '';
   }
   function toggleDropdown(open) {
     trigger.classList.toggle('open', open);
@@ -122,16 +107,14 @@ function makeHBar(id, datasets, unit, color) {
   document.addEventListener('click', function(e) { if (!picker.contains(e.target)) toggleDropdown(false); });
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') toggleDropdown(false); });
 
-  document.querySelectorAll('#clusterList input[name="clusters"]').forEach(function(b) {
+  document.querySelectorAll('#assetList input[name="assets"]').forEach(function(b) {
     b.addEventListener('change', function() {
       var p = new URLSearchParams();
       var from = document.getElementById('inputFrom').value;
       var to   = document.getElementById('inputTo').value;
       if (from) p.set('from', localInputToUtc(from));
       if (to)   p.set('to',   localInputToUtc(to));
-      var profileId = document.getElementById('profileSelect').value;
-      if (profileId) p.set('profileId', profileId);
-      p.append('clusters', b.value);
+      p.set('assets', b.value);
       window.location.href = '?' + p.toString();
     });
   });
@@ -192,10 +175,7 @@ document.getElementById('filterForm').addEventListener('submit', function(e) {
   var to   = document.getElementById('inputTo').value;
   if (from) p.set('from', localInputToUtc(from));
   if (to)   p.set('to',   localInputToUtc(to));
-  var profileId = document.getElementById('profileSelect').value;
-  if (profileId) p.set('profileId', profileId);
-  var selCluster = document.querySelector('#clusterList input[name="clusters"]:checked');
-  if (selCluster) p.append('clusters', selCluster.value);
+  document.querySelectorAll('#assetList input[name="assets"]:checked').forEach(function(b) { p.append('assets', b.value); });
   document.querySelectorAll('#containerList input:checked').forEach(function(b) { p.append('containers', b.value); });
   window.location.href = '?' + p.toString();
 });

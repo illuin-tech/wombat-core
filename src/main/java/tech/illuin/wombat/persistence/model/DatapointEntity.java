@@ -24,6 +24,12 @@ public class DatapointEntity extends PanacheEntityBase
     @Column(nullable = false)
     public String type;
 
+    @Column
+    public String cluster;
+
+    @Column
+    public String namespace;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     public String payload;
 }

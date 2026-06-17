@@ -7,8 +7,10 @@ monitor:
   k8s-configs:
     clusters:
       - id: my-cluster
+        name: My cluster (preprod)
         config-path: /path/to/kubeconfig
         namespace: my-namespace
+        profile-id: aws-c5a-4xlarge
 
 backup:
   enabled: true

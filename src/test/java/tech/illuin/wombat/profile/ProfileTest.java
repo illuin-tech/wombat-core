@@ -5,7 +5,7 @@ import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class ProfileDtoTest
+class ProfileTest
 {
 
     @Test
@@ -19,7 +19,7 @@ class ProfileDtoTest
         entity.location = "FRA";
         entity.lifespan = 43800;
 
-        ProfileDto dto = ProfileDto.from(entity);
+        Profile dto = Profile.from(entity);
 
         assertEquals("aws-c5-large", dto.id());
         assertEquals("AWS c5.large FRA", dto.description());

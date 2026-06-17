@@ -40,6 +40,11 @@ quarkus:
 monitor:
   cron: "*/10 * * * * ?" # every 10s
 
+metrics:
+  aggregation-window:
+    duration: 5
+    unit: MINUTES
+
 persistence:
   enable-memory-target: true
 

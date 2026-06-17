@@ -69,7 +69,13 @@ public class TemplateFormatters
     public static String asDecimal(Float value)
     {
         if (value == null) return "—";
-        if (value != 0f && Math.abs(value) < 0.005f)
+        return asDecimal(value.doubleValue());
+    }
+
+    public static String asDecimal(Double value)
+    {
+        if (value == null) return "—";
+        if (value != 0.0 && Math.abs(value) < 0.005)
         {
             return String.format(Locale.US, "%.2E", value)
                 .replaceAll("\\.?0+(E)", "$1")

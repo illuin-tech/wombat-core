@@ -12,9 +12,8 @@ import org.mockito.Mockito;
 import tech.illuin.wombat.boavizta.BoaviztaClient;
 import tech.illuin.wombat.boavizta.BoaviztaTestData;
 import tech.illuin.wombat.persistence.DatapointRepository;
-import tech.illuin.wombat.persistence.model.KubernetesPayload;
+import tech.illuin.wombat.persistence.model.DatapointEntity;
 
-import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
@@ -47,26 +46,23 @@ class ImpactControllerTest
         Mockito.when(boaviztaClient.getInstanceConfig(any(), any())).thenReturn(BoaviztaTestData.fakeInstanceConfig(8));
         Mockito.when(boaviztaClient.getInstanceImpact(anyBoolean(), anyInt(), any(), any())).thenReturn(BoaviztaTestData.fakeImpactResponse());
 
-        KubernetesPayload payload = new KubernetesPayload("test-cluster", "test-ns",
-            Map.of("podA", Map.of("api", "100", "worker", "300")));
-        String json = mapper.writeValueAsString(List.of(payload));
-        datapointRepository.upsert(1_000L, "KUBERNETES", existing -> json);
+        DatapointEntity row = new DatapointEntity();
+        row.instantMs = 1_000L;
+        row.type = "KUBERNETES";
+        row.cluster = "test-cluster";
+        row.namespace = "test-ns";
+        row.payload = mapper.writeValueAsString(new tech.illuin.wombat.persistence.model.PodMetrics(
+            Map.of("podA", new tech.illuin.wombat.persistence.model.PodMetrics.ContainerMetrics(Map.of("api", "100", "worker", "300")))));
+        datapointRepository.save(row);
     }
 
     @Test
-    void getImpact_withExplicitConfig_returnsFootprintForFirstResponse()
+    void getImpact_withExplicitAssetId_returnsFootprintForThatAsset()
     {
         String body = """
             {
               "source_time_range": { "start": "1970-01-01T00:00:00Z", "end": "1970-01-01T00:00:10Z" },
-              "configs": [{
-                "type": "BOAVIZTA_KUBERNETES",
-                "provider": "aws",
-                "instance_type": "c5.large",
-                "location": "FRA",
-                "lifespan": 43800,
-                "clusters": [{ "id": "test-cluster", "namespace": "test-ns" }]
-              }]
+              "asset_ids": ["test-cluster"]
             }
             """;
 
@@ -77,11 +73,12 @@ class ImpactControllerTest
             .statusCode(200)
             .body("payload.size()", is(1))
             .body("payload[0].global_impact", notNullValue())
-            .body("payload[0].service_impacts.size()", greaterThan(0));
+            .body("payload[0].service_impacts.size()", greaterThan(0))
+            .body("payload[0].parameters.provider_config.clusters[0].id", is("test-cluster"));
     }
 
     @Test
-    void getImpact_withoutConfig_fallsBackToDefaultProfile()
+    void getImpact_withoutAssetIds_defaultsToAllConfiguredAssets()
     {
         String body = """
             {

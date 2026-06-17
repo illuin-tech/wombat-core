@@ -38,8 +38,10 @@ monitor:
   k8s-configs:
     clusters:
       - id: "test-cluster"
+        name: "Test Cluster"
         config-path: "src/test/resources/test-kubeconfig.yaml"
         namespace: "test-ns"
+        profile-id: "test-aws-c5"
 
 persistence:
   enable-memory-target: true
