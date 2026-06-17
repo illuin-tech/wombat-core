@@ -2,12 +2,15 @@ package tech.illuin.wombat.monitor;
 
 
 import io.smallrye.config.ConfigMapping;
-import tech.illuin.wombat.k8s.K8SProperties;
+import io.smallrye.config.WithDefault;
+import io.smallrye.config.WithName;
 
 @ConfigMapping(prefix = "monitor")
 public interface MonitorProperties
 {
     String cron();
 
-    K8SProperties k8sConfigs();
+    @WithName("resources-file")
+    @WithDefault("monitored-resources.yaml")
+    String resourcesFile();
 }

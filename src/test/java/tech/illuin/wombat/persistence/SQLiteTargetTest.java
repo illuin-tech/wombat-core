@@ -1,6 +1,5 @@
 package tech.illuin.wombat.persistence;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
@@ -16,8 +15,7 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.metrics.MetricRecorderService;
 import tech.illuin.wombat.metrics.SqliteStepMeterRegistry;
 import tech.illuin.wombat.persistence.model.ContainerLocation;
-import tech.illuin.wombat.persistence.model.DatapointEntity;
-import tech.illuin.wombat.persistence.model.KubernetesPayload;
+import tech.illuin.wombat.persistence.model.KubernetesMetricEntity;
 import tech.illuin.wombat.persistence.model.TimeRange;
 
 import java.time.Duration;
@@ -35,10 +33,7 @@ class SQLiteTargetTest
 {
 
     @Inject
-    DatapointRepository repository;
-
-    @Inject
-    ObjectMapper mapper;
+    KubernetesMetricRepository repository;
 
     private static final Duration STEP = Duration.ofMinutes(5);
 
@@ -72,8 +67,8 @@ class SQLiteTargetTest
                 return null;
             }
         };
-        stepRegistry = new SqliteStepMeterRegistry(config, clock, repository, mapper);
-        target = new SQLiteTarget(repository, mapper, new MetricRecorderService(stepRegistry));
+        stepRegistry = new SqliteStepMeterRegistry(config, clock, repository);
+        target = new SQLiteTarget(repository, new MetricRecorderService(stepRegistry));
     }
 
     private void flushWindow()
@@ -82,20 +77,24 @@ class SQLiteTargetTest
         stepRegistry.flush();
     }
 
-    private void seedDatapoint(long instantMs, List<KubernetesPayload> payloads) throws Exception
+    private void seedDatapoint(long instantMs, List<Seed> seeds)
     {
-        for (KubernetesPayload payload : payloads)
+        for (Seed seed : seeds)
         {
-            DatapointEntity row = new DatapointEntity();
-            row.instantMs = instantMs;
-            row.type = "KUBERNETES";
-            row.cluster = payload.clusterId();
-            row.namespace = payload.namespace();
-            Map<String, tech.illuin.wombat.persistence.model.PodMetrics.ContainerMetrics> podMap = payload.pods().entrySet().stream()
-                .collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey,
-                    e -> new tech.illuin.wombat.persistence.model.PodMetrics.ContainerMetrics(e.getValue())));
-            row.payload = mapper.writeValueAsString(new tech.illuin.wombat.persistence.model.PodMetrics(podMap));
-            repository.save(row);
+            for (Map.Entry<String, Map<String, String>> pod : seed.pods().entrySet())
+            {
+                for (Map.Entry<String, String> container : pod.getValue().entrySet())
+                {
+                    KubernetesMetricEntity row = new KubernetesMetricEntity();
+                    row.instantMs = instantMs;
+                    row.cluster = seed.clusterId();
+                    row.namespace = seed.namespace();
+                    row.pod = pod.getKey();
+                    row.container = container.getKey();
+                    row.cpu = Double.parseDouble(container.getValue());
+                    repository.save(row);
+                }
+            }
         }
     }
 
@@ -122,8 +121,7 @@ class SQLiteTargetTest
     }
 
     @Test
-    void getContainerShares_returnsNormalizedShares() throws Exception
-    {
+    void getContainerShares_returnsNormalizedShares() {
         seedDatapoint(1000L, List.of(payload("c1", "ns", Map.of(
             "podA", Map.of("ctr1", "100", "ctr2", "300")
         ))));
@@ -150,8 +148,7 @@ class SQLiteTargetTest
     }
 
     @Test
-    void getContainerLocations_reportsAllClustersForEachContainer() throws Exception
-    {
+    void getContainerLocations_reportsAllClustersForEachContainer() {
         seedDatapoint(1000L, List.of(
             payload("c1", "ns1", Map.of("pod", Map.of("api", "10"))),
             payload("c2", "ns2", Map.of("pod", Map.of("api", "20", "worker", "30")))
@@ -167,8 +164,7 @@ class SQLiteTargetTest
     }
 
     @Test
-    void getContainerLocations_clusterFilter_excludesOthers() throws Exception
-    {
+    void getContainerLocations_clusterFilter_excludesOthers() {
         seedDatapoint(1000L, List.of(
             payload("c1", "ns1", Map.of("pod", Map.of("api", "10"))),
             payload("c2", "ns2", Map.of("pod", Map.of("api", "20")))
@@ -180,10 +176,12 @@ class SQLiteTargetTest
         assertEquals(List.of(new ContainerLocation("c1", "ns1")), locations.get("api"));
     }
 
-    private KubernetesPayload payload(String cluster, String namespace, Map<String, Map<String, String>> pods)
+    private Seed payload(String cluster, String namespace, Map<String, Map<String, String>> pods)
     {
-        return new KubernetesPayload(cluster, namespace, pods);
+        return new Seed(cluster, namespace, pods);
     }
+
+    private record Seed(String clusterId, String namespace, Map<String, Map<String, String>> pods) {}
 
     @Test
     void outputToTarget_writesPodMetricsToDb() throws Exception
@@ -198,8 +196,7 @@ class SQLiteTargetTest
     }
 
     @Test
-    void outputToTarget_multiplePodsSameCluster_mergesIntoSamePayload() throws Exception
-    {
+    void outputToTarget_multiplePodsSameCluster_mergesIntoSamePayload() {
         target.outputToTarget(Instant.ofEpochMilli(3000), List.of(
             buildPodMetrics("pod-a", Map.of("api", "100")),
             buildPodMetrics("pod-b", Map.of("db", "200"))
@@ -213,8 +210,7 @@ class SQLiteTargetTest
     }
 
     @Test
-    void outputToTarget_secondCallDifferentCluster_appendsNewPayload() throws Exception
-    {
+    void outputToTarget_secondCallDifferentCluster_appendsNewPayload() {
         target.outputToTarget(Instant.ofEpochMilli(4000), List.of(buildPodMetrics("pod-a", Map.of("api", "100"))), "c1", "ns1");
         target.outputToTarget(Instant.ofEpochMilli(4000), List.of(buildPodMetrics("pod-a", Map.of("api", "200"))), "c2", "ns2");
         flushWindow();
@@ -224,8 +220,7 @@ class SQLiteTargetTest
     }
 
     @Test
-    void outputToTarget_containerWithNullUsage_stillRecordsZero() throws Exception
-    {
+    void outputToTarget_containerWithNullUsage_stillRecordsZero() {
         Map<String, String> usages = new LinkedHashMap<>();
         usages.put("present", "42");
         PodMetrics pod = buildPodMetricsWithExplicitNullCpu("pod-x", usages, "missing");

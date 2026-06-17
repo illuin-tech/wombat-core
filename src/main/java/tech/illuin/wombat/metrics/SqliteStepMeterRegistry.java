@@ -1,7 +1,5 @@
 package tech.illuin.wombat.metrics;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Meter;
@@ -9,15 +7,10 @@ import io.micrometer.core.instrument.step.StepMeterRegistry;
 import io.micrometer.core.instrument.step.StepRegistryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.persistence.DatapointRepository;
-import tech.illuin.wombat.persistence.model.DatapointEntity;
-import tech.illuin.wombat.persistence.model.PodMetrics;
+import tech.illuin.wombat.persistence.KubernetesMetricRepository;
+import tech.illuin.wombat.persistence.model.KubernetesMetricEntity;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class SqliteStepMeterRegistry extends StepMeterRegistry
 {
@@ -29,22 +22,18 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
     public static final String TAG_CONTAINER = "container";
 
     private static final Logger logger = LoggerFactory.getLogger(SqliteStepMeterRegistry.class);
-    private static final String TYPE_KUBERNETES = "KUBERNETES";
 
-    private final DatapointRepository repository;
-    private final ObjectMapper mapper;
+    private final KubernetesMetricRepository repository;
     private final Clock clock;
 
     public SqliteStepMeterRegistry(
         StepRegistryConfig config,
         Clock clock,
-        DatapointRepository repository,
-        ObjectMapper mapper
+        KubernetesMetricRepository repository
     )
     {
         super(config, clock);
         this.repository = repository;
-        this.mapper = mapper;
         this.clock = clock;
     }
 
@@ -58,7 +47,8 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
     protected void publish()
     {
         logger.info("publish() invoked at wallTime={}", this.clock.wallTime());
-        Map<NamespaceKey, Map<String, Map<String, String>>> grouped = new HashMap<>();
+        long ms = this.clock.wallTime();
+        int written = 0;
         for (Meter meter : this.getMeters())
         {
             if (!METRIC_NAME.equals(meter.getId().getName())) continue;
@@ -79,57 +69,28 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
                 continue;
             }
 
-            NamespaceKey key = new NamespaceKey(cluster, namespace);
-            grouped.computeIfAbsent(key, k -> new HashMap<>())
-                .computeIfAbsent(pod, p -> new HashMap<>())
-                .put(container, Double.toString(mean));
+            KubernetesMetricEntity row = new KubernetesMetricEntity();
+            row.instantMs = ms;
+            row.cluster = cluster;
+            row.namespace = namespace;
+            row.pod = pod;
+            row.container = container;
+            row.cpu = mean;
+            this.repository.save(row);
+            written++;
+            logger.debug("Persisted row {}", row);
         }
 
-        if (grouped.isEmpty())
+        if (written == 0)
         {
             logger.info("No CPU samples in the last window; skipping write");
             return;
         }
-
-        long ms = this.clock.wallTime();
-        for (Map.Entry<NamespaceKey, Map<String, Map<String, String>>> entry : grouped.entrySet())
-        {
-            DatapointEntity row = new DatapointEntity();
-            row.instantMs = ms;
-            row.type = TYPE_KUBERNETES;
-            row.cluster = entry.getKey().cluster();
-            row.namespace = entry.getKey().namespace();
-            Map<String, PodMetrics.ContainerMetrics> pods = entry.getValue().entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> new PodMetrics.ContainerMetrics(e.getValue())));
-            row.payload = serialize(new PodMetrics(pods));
-            this.repository.save(row);
-            logger.debug("Persisted row {} from entry {}", row, entry);
-        }
-        logger.info("Persisted {} cluster/namespace row(s) at {}", grouped.size(), ms);
+        logger.info("Persisted {} container row(s) at {}", written, ms);
     }
 
     public void flush()
     {
         this.publish();
-    }
-
-    private String serialize(PodMetrics podMetrics)
-    {
-        try
-        {
-            return this.mapper.writeValueAsString(podMetrics);
-        }
-        catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize payload", e);
-        }
-    }
-
-    private record NamespaceKey(String cluster, String namespace)
-    {
-        NamespaceKey
-        {
-            Objects.requireNonNull(cluster);
-            Objects.requireNonNull(namespace);
-        }
     }
 }

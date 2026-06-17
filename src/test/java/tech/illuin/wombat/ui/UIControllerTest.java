@@ -1,6 +1,5 @@
 package tech.illuin.wombat.ui;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -11,10 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import tech.illuin.wombat.boavizta.BoaviztaClient;
 import tech.illuin.wombat.boavizta.BoaviztaTestData;
-import tech.illuin.wombat.persistence.DatapointRepository;
-import tech.illuin.wombat.persistence.model.DatapointEntity;
+import tech.illuin.wombat.persistence.KubernetesMetricRepository;
+import tech.illuin.wombat.persistence.model.KubernetesMetricEntity;
 
-import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
@@ -31,27 +29,31 @@ class UIControllerTest
     BoaviztaClient boaviztaClient;
 
     @Inject
-    DatapointRepository datapointRepository;
-
-    @Inject
-    ObjectMapper mapper;
+    KubernetesMetricRepository datapointRepository;
 
     @BeforeEach
     @Transactional
-    void seed() throws Exception
+    void seed()
     {
         datapointRepository.deleteAll();
         Mockito.when(boaviztaClient.getInstanceConfig(any(), any())).thenReturn(BoaviztaTestData.fakeInstanceConfig(8));
         Mockito.when(boaviztaClient.getInstanceImpact(anyBoolean(), anyInt(), any(), any())).thenReturn(BoaviztaTestData.fakeImpactResponse());
 
-        DatapointEntity row = new DatapointEntity();
-        row.instantMs = System.currentTimeMillis();
-        row.type = "KUBERNETES";
+        long now = System.currentTimeMillis();
+        datapointRepository.save(metricRow(now, "podA", "api", 100.0));
+        datapointRepository.save(metricRow(now, "podA", "worker", 300.0));
+    }
+
+    private static KubernetesMetricEntity metricRow(long instantMs, String pod, String container, double cpu)
+    {
+        KubernetesMetricEntity row = new KubernetesMetricEntity();
+        row.instantMs = instantMs;
         row.cluster = "test-cluster";
         row.namespace = "test-ns";
-        row.payload = mapper.writeValueAsString(new tech.illuin.wombat.persistence.model.PodMetrics(
-            Map.of("podA", new tech.illuin.wombat.persistence.model.PodMetrics.ContainerMetrics(Map.of("api", "100", "worker", "300")))));
-        datapointRepository.save(row);
+        row.pod = pod;
+        row.container = container;
+        row.cpu = cpu;
+        return row;
     }
 
     @Test

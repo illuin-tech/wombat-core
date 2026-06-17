@@ -1,6 +1,5 @@
 package tech.illuin.wombat.persistence;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agroal.api.AgroalDataSource;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -44,9 +43,9 @@ public class PersistenceConfig
 
     @Singleton
     @IfBuildProperty(name = "persistence.enable-memory-target", stringValue = "true")
-    public SQLiteTarget provideSQLiteTarget(DatapointRepository repository, ObjectMapper mapper, MetricRecorderService recorder)
+    public SQLiteTarget provideSQLiteTarget(KubernetesMetricRepository repository, MetricRecorderService recorder)
     {
-        return new SQLiteTarget(repository, mapper, recorder);
+        return new SQLiteTarget(repository, recorder);
     }
 
     @Singleton

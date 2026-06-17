@@ -35,13 +35,7 @@ quarkus:
 
 monitor:
   cron: "0 0 0 ? * MON#5 2099"
-  k8s-configs:
-    clusters:
-      - id: "test-cluster"
-        name: "Test Cluster"
-        config-path: "src/test/resources/test-kubeconfig.yaml"
-        namespace: "test-ns"
-        profile-id: "test-aws-c5"
+  resources-file: monitored-resources-test.yaml
 
 persistence:
   enable-memory-target: true

@@ -1,6 +1,5 @@
 package tech.illuin.wombat.metrics;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -10,9 +9,10 @@ import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Singleton;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.persistence.DatapointRepository;
+import tech.illuin.wombat.persistence.KubernetesMetricRepository;
 
 import java.time.Duration;
 import java.util.concurrent.Executors;
@@ -26,8 +26,7 @@ public class MetricsConfig
     @Singleton
     public SqliteStepMeterRegistry provideStepRegistry(
         MetricsProperties properties,
-        DatapointRepository repository,
-        ObjectMapper mapper
+        KubernetesMetricRepository repository
     )
     {
         Duration window = properties.aggregationWindow().asDuration();
@@ -46,12 +45,12 @@ public class MetricsConfig
             }
 
             @Override
-            public String get(String key)
+            public String get(@NonNull String key)
             {
                 return null;
             }
         };
-        return new SqliteStepMeterRegistry(stepConfig, Clock.SYSTEM, repository, mapper);
+        return new SqliteStepMeterRegistry(stepConfig, Clock.SYSTEM, repository);
     }
 
     @Singleton

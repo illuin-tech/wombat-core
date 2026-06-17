@@ -22,7 +22,7 @@ public class K8SResourceService
         this.targets = targets;
     }
 
-    public void listPods(Instant instant, List<K8SProperties.ClusterProperties> clusterConfigs)
+    public void listPods(Instant instant, List<ClusterProperties> clusterConfigs)
     {
         clusterConfigs.forEach(clusterConfig -> {
             String clusterId = clusterConfig.id();
