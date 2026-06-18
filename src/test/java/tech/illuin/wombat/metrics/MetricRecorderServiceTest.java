@@ -75,7 +75,7 @@ class MetricRecorderServiceTest
         assertEquals("ns", row.namespace);
         assertEquals("podA", row.pod);
         assertEquals("api", row.container);
-        assertEquals(200.0, row.cpu, 0.001);
+        assertEquals(200.0, row.cpuNanocores, 0.001);
     }
 
     @Test
@@ -108,8 +108,8 @@ class MetricRecorderServiceTest
         KubernetesMetricEntity second = rows.stream().filter(r -> "c2".equals(r.cluster)).findFirst().orElseThrow();
         assertEquals("ns1", first.namespace);
         assertEquals("ns2", second.namespace);
-        assertEquals(100.0, first.cpu, 0.001);
-        assertEquals(400.0, second.cpu, 0.001);
+        assertEquals(100.0, first.cpuNanocores, 0.001);
+        assertEquals(400.0, second.cpuNanocores, 0.001);
     }
 
     @Test
@@ -162,6 +162,23 @@ class MetricRecorderServiceTest
             "quiet second window must not re-persist any value from window 1");
     }
 
+    @Test
+    void publish_persistsCpuAndMemoryForSameContainerInOneRow()
+    {
+        this.recorder.recordContainerCpu("c1", "ns", "podA", "api", 100.0);
+        this.recorder.recordContainerCpu("c1", "ns", "podA", "api", 200.0);
+        this.recorder.recordContainerMemory("c1", "ns", "podA", "api", 1000.0);
+        this.recorder.recordContainerMemory("c1", "ns", "podA", "api", 3000.0);
+
+        long flushMs = advanceAndFlush();
+
+        List<KubernetesMetricEntity> rows = rowsAt(flushMs);
+        assertEquals(1, rows.size(), "cpu and memory of the same container share one row");
+        KubernetesMetricEntity row = rows.getFirst();
+        assertEquals(150.0, row.cpuNanocores, 0.001);
+        assertEquals(2000.0, row.ramBytes, 0.001);
+    }
+
     private long advanceAndFlush()
     {
         this.clock.add(STEP.plusSeconds(1));
@@ -180,6 +197,6 @@ class MetricRecorderServiceTest
             .filter(r -> pod.equals(r.pod) && container.equals(r.container))
             .findFirst()
             .orElseThrow()
-            .cpu;
+            .cpuNanocores;
     }
 }

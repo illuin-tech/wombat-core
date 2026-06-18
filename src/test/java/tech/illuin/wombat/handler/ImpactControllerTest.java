@@ -53,7 +53,7 @@ class ImpactControllerTest
         row.namespace = "test-ns";
         row.pod = pod;
         row.container = container;
-        row.cpu = cpu;
+        row.cpuNanocores = cpu;
         return row;
     }
 

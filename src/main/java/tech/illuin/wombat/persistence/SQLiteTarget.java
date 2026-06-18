@@ -1,5 +1,6 @@
 package tech.illuin.wombat.persistence;
 
+import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,25 +36,45 @@ public class SQLiteTarget implements LoadTarget
             for (ContainerMetrics cm : podMetrics.getContainers())
             {
                 logger.trace("Current metrics {}", cm);
-                var usage = cm.getUsage();
-                if (usage == null || usage.get("cpu") == null)
-                {
-                    logger.warn("No CPU metric for container {} in pod {}, recording 0", cm.getName(), podName);
-                    this.recorder.recordContainerCpu(clusterId, namespace, podName, cm.getName(), 0.0);
-                    continue;
-                }
-                String amount = usage.get("cpu").getAmount();
-                double cpu;
-                try
-                {
-                    cpu = Double.parseDouble(amount);
-                }
-                catch (NumberFormatException e) {
-                    logger.warn("CPU value {} for container {} in pod {} is not a parseable double, recording 0", amount, cm.getName(), podName);
-                    cpu = 0.0;
-                }
-                this.recorder.recordContainerCpu(clusterId, namespace, podName, cm.getName(), cpu);
+                Map<String, Quantity> usage = cm.getUsage();
+                this.recorder.recordContainerCpu(clusterId, namespace, podName, cm.getName(), readCpu(usage, podName, cm.getName()));
+                this.recorder.recordContainerMemory(clusterId, namespace, podName, cm.getName(), readMemory(usage, podName, cm.getName()));
             }
+        }
+    }
+
+    private static double readCpu(Map<String, Quantity> usage, String pod, String container)
+    {
+        if (usage == null || usage.get("cpu") == null)
+        {
+            logger.warn("No CPU metric for container {} in pod {}, recording 0", container, pod);
+            return 0.0;
+        }
+        String amount = usage.get("cpu").getAmount();
+        try
+        {
+            return Double.parseDouble(amount);
+        }
+        catch (NumberFormatException e) {
+            logger.warn("CPU value {} for container {} in pod {} is not a parseable double, recording 0", amount, container, pod);
+            return 0.0;
+        }
+    }
+
+    private static double readMemory(Map<String, Quantity> usage, String pod, String container)
+    {
+        if (usage == null || usage.get("memory") == null)
+        {
+            logger.warn("No memory metric for container {} in pod {}, recording 0", container, pod);
+            return 0.0;
+        }
+        try
+        {
+            return Quantity.getAmountInBytes(usage.get("memory")).doubleValue();
+        }
+        catch (IllegalArgumentException e) {
+            logger.warn("Memory value {} for container {} in pod {} is not parseable, recording 0", usage.get("memory"), container, pod);
+            return 0.0;
         }
     }
 

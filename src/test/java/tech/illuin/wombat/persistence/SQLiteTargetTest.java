@@ -91,7 +91,7 @@ class SQLiteTargetTest
                     row.namespace = seed.namespace();
                     row.pod = pod.getKey();
                     row.container = container.getKey();
-                    row.cpu = Double.parseDouble(container.getValue());
+                    row.cpuNanocores = Double.parseDouble(container.getValue());
                     repository.save(row);
                 }
             }

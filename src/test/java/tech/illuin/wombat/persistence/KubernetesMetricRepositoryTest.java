@@ -101,7 +101,7 @@ class KubernetesMetricRepositoryTest
         row.namespace = namespace;
         row.pod = "pod";
         row.container = container;
-        row.cpu = 1.0;
+        row.cpuNanocores = 1.0;
         return row;
     }
 }

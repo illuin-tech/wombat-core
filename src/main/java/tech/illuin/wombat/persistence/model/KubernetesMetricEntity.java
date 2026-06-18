@@ -33,6 +33,9 @@ public class KubernetesMetricEntity extends PanacheEntityBase
     @Column(nullable = false)
     public String container;
 
-    @Column(nullable = false, columnDefinition = "REAL")
-    public double cpu;
+    @Column(name = "cpu_nanocores", nullable = false, columnDefinition = "REAL")
+    public double cpuNanocores;
+
+    @Column(name = "ram_bytes", nullable = false, columnDefinition = "REAL")
+    public double ramBytes;
 }

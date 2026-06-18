@@ -43,7 +43,7 @@ public class KubernetesMetricRepository implements PanacheRepositoryBase<Kuberne
     {
         StringBuilder sql = new StringBuilder(
             "SELECT AVG(perInstant) FROM ("
-            + " SELECT SUM(cpu) AS perInstant FROM kubernetes_metrics"
+            + " SELECT SUM(cpu_nanocores) AS perInstant FROM kubernetes_metrics"
             + " WHERE instantMs >= :start AND instantMs <= :end");
         appendClusterFilter(sql, clusterIds);
         sql.append(" GROUP BY instantMs)");
@@ -60,7 +60,7 @@ public class KubernetesMetricRepository implements PanacheRepositoryBase<Kuberne
     public Map<String, Double> containerShares(long startMs, long endMs, List<String> clusterIds)
     {
         StringBuilder sql = new StringBuilder(
-            "SELECT container, SUM(cpu) * 1.0 / SUM(SUM(cpu)) OVER () AS share FROM kubernetes_metrics"
+            "SELECT container, SUM(cpu_nanocores) * 1.0 / SUM(SUM(cpu_nanocores)) OVER () AS share FROM kubernetes_metrics"
             + " WHERE instantMs >= :start AND instantMs <= :end");
         appendClusterFilter(sql, clusterIds);
         sql.append(" GROUP BY container");
