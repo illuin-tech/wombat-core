@@ -5,14 +5,92 @@ function formatLocalRange(startIso, endIso) {
   return fmt(startIso) + ' → ' + fmt(endIso);
 }
 
-/* ── Init datetime inputs and header from UTC data attrs ── */
+/* ── Init date range picker and header from UTC data attrs ── */
 (function() {
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function localInputFmt(d) {
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function isoToDate(iso) { return iso ? new Date(iso) : null; }
+
+  var picker = document.getElementById('dateRangePicker');
   var inFrom = document.getElementById('inputFrom');
   var inTo   = document.getElementById('inputTo');
-  if (inFrom.dataset.utc) inFrom.value = utcToLocalInput(inFrom.dataset.utc);
-  if (inTo.dataset.utc)   inTo.value   = utcToLocalInput(inTo.dataset.utc);
+
+  if (picker && window.easepick) {
+    var fromDate = isoToDate(picker.dataset.fromUtc);
+    var toDate   = isoToDate(picker.dataset.toUtc);
+    var maxSpanMs = parseInt(picker.dataset.maxSpanMs, 10) || 0;
+    var maxDays = maxSpanMs ? Math.max(1, Math.ceil(maxSpanMs / 86400000)) : 0;
+
+    function nowMinus(hours) { return new Date(Date.now() - hours * 3600000); }
+    var presets = {
+      'Last hour':    [nowMinus(1),   new Date()],
+      'Last 24h':     [nowMinus(24),  new Date()],
+      'Last 7 days':  [nowMinus(168), new Date()],
+      'Last 30 days': [nowMinus(720), new Date()]
+    };
+
+    var ep = new easepick.create({
+      element: picker,
+      css: [
+        'https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.css',
+        '/easepick-theme.css'
+      ],
+      zIndex: 10,
+      grid: window.matchMedia('(max-width: 720px)').matches ? 1 : 2,
+      calendars: window.matchMedia('(max-width: 720px)').matches ? 1 : 2,
+      format: 'YYYY-MM-DD HH:mm',
+      plugins: ['RangePlugin', 'TimePlugin', 'PresetPlugin', 'LockPlugin'],
+      RangePlugin: {
+        tooltip: true,
+        startDate: fromDate || undefined,
+        endDate: toDate || undefined,
+        repick: true,
+        delimiter: ' → '
+      },
+      TimePlugin: { format: 'HH:mm', stepMinutes: 5 },
+      PresetPlugin: { customPreset: presets, position: 'bottom' },
+      LockPlugin: {
+        filter: function(date, picked) {
+          if (!maxSpanMs || !picked || picked.length !== 1) return false;
+          var anchorMs = picked[0].toJSDate().getTime();
+          var dMs = date.toJSDate().getTime();
+          return Math.abs(dMs - anchorMs) > maxSpanMs;
+        }
+      },
+      setup: function(p) {
+        var clamping = false;
+        p.on('select', function(e) {
+          var start = e.detail.start;
+          var end = e.detail.end;
+          if (clamping) {
+            clamping = false;
+            if (start) inFrom.value = localInputFmt(start);
+            if (end)   inTo.value   = localInputFmt(end);
+            return;
+          }
+          if (start && end && maxSpanMs && (end.getTime() - start.getTime()) > maxSpanMs) {
+            var clampedStart = new Date(end.getTime() - maxSpanMs);
+            inFrom.value = localInputFmt(clampedStart);
+            inTo.value   = localInputFmt(end);
+            clamping = true;
+            setTimeout(function() { ep.setDateRange(clampedStart, end); }, 0);
+            return;
+          }
+          if (start) inFrom.value = localInputFmt(start);
+          if (end)   inTo.value   = localInputFmt(end);
+        });
+      }
+    });
+
+    if (fromDate) inFrom.value = localInputFmt(fromDate);
+    if (toDate)   inTo.value   = localInputFmt(toDate);
+  }
+
   var meta = document.getElementById('headerMeta');
-  meta.textContent = formatLocalRange(meta.dataset.start, meta.dataset.end);
+  if (meta) meta.textContent = formatLocalRange(meta.dataset.start, meta.dataset.end);
 })();
 
 /* ── Chart defaults ── */
@@ -173,6 +251,19 @@ document.getElementById('filterForm').addEventListener('submit', function(e) {
   var p = new URLSearchParams();
   var from = document.getElementById('inputFrom').value;
   var to   = document.getElementById('inputTo').value;
+  var picker = document.getElementById('dateRangePicker');
+  var maxSpanMs = picker ? parseInt(picker.dataset.maxSpanMs, 10) : 0;
+  if (from && to && maxSpanMs) {
+    var fromMs = new Date(from).getTime();
+    var toMs   = new Date(to).getTime();
+    if (toMs - fromMs > maxSpanMs) {
+      from = (function(d) {
+        function pad(n) { return (n < 10 ? '0' : '') + n; }
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+          + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      })(new Date(toMs - maxSpanMs));
+    }
+  }
   if (from) p.set('from', localInputToUtc(from));
   if (to)   p.set('to',   localInputToUtc(to));
   document.querySelectorAll('#assetList input[name="assets"]:checked').forEach(function(b) { p.append('assets', b.value); });

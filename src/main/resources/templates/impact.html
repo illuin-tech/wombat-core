@@ -2,6 +2,7 @@
 
 {#headScripts}
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.umd.min.js"></script>
 {/headScripts}
 
 {#headerExtra}
@@ -12,15 +13,16 @@
 
 <!-- Filter bar -->
 <form class="filter-bar" method="get" action="" id="filterForm">
-  <div class="filter-group">
-    <span class="filter-label">From</span>
-    <input type="datetime-local" name="from" id="inputFrom"
-           data-utc="{impact.parameters.timeRange.start.asIsoUtc()}"/>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">To</span>
-    <input type="datetime-local" name="to" id="inputTo"
-           data-utc="{impact.parameters.timeRange.end.asIsoUtc()}"/>
+  <div class="filter-group date-range-group">
+    <span class="filter-label">Date range</span>
+    <input type="text" id="dateRangePicker" class="date-range-picker"
+           placeholder="Pick range…"
+           data-from-utc="{impact.parameters.timeRange.start.asIsoUtc()}"
+           data-to-utc="{impact.parameters.timeRange.end.asIsoUtc()}"
+           data-max-span-ms="{maxSpan.millis}"
+           readonly/>
+    <input type="hidden" name="from" id="inputFrom"/>
+    <input type="hidden" name="to" id="inputTo"/>
   </div>
   <div class="filter-group">
     <span class="filter-label">Assets</span>

@@ -18,8 +18,11 @@ public class Templates
         List<String> selectedAssetIds,
         AssetConfig selectedAsset,
         BoaviztaInstanceConfigResponse instanceConfig,
-        double loadPercent
+        double loadPercent,
+        MaxSpan maxSpan
     );
 
     public static native TemplateInstance impactError(String from, String to);
+
+    public record MaxSpan(long millis, String label) {}
 }
