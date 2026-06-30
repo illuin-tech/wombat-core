@@ -28,7 +28,7 @@ public final class BoaviztaTestData
         BoaviztaInstanceImpactResponse.Impact gwp = impact("kgCO2eq", "Global warming potential", 100f, 200f);
         BoaviztaInstanceImpactResponse.Impact pe = impact("MJ", "Primary energy", 300f, 400f);
         BoaviztaInstanceImpactResponse.Impact adp = impact("kgSbeq", "Abiotic resource depletion", 0.001f, 0.002f);
-        return new BoaviztaInstanceImpactResponse(Map.of("gwp", gwp, "pe", pe, "adp", adp));
+        return new BoaviztaInstanceImpactResponse(Map.of("gwp", gwp, "pe", pe, "adp", adp), 1);
     }
 
     private static BoaviztaInstanceImpactResponse.Impact impact(String unit, String description, float embedded, float use)

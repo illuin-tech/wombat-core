@@ -3,8 +3,9 @@ package tech.illuin.wombat.asset;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.k8s.K8SProperties;
-import tech.illuin.wombat.monitor.MonitorProperties;
+import tech.illuin.wombat.k8s.ClusterProperties;
+import tech.illuin.wombat.monitor.MonitoredResourceProperties;
+import tech.illuin.wombat.monitor.MonitoredResources;
 import tech.illuin.wombat.profile.Profile;
 import tech.illuin.wombat.profile.ServerProfileEntity;
 import tech.illuin.wombat.profile.ServerProfileRepository;
@@ -21,20 +22,21 @@ public class AssetService
 
     private static final Logger logger = LoggerFactory.getLogger(AssetService.class);
 
-    private final MonitorProperties monitorProperties;
+    private final MonitoredResources resources;
     private final ServerProfileRepository profileRepository;
 
-    public AssetService(MonitorProperties monitorProperties, ServerProfileRepository profileRepository)
+    public AssetService(MonitoredResources resources, ServerProfileRepository profileRepository)
     {
-        this.monitorProperties = monitorProperties;
+        this.resources = resources;
         this.profileRepository = profileRepository;
     }
 
     public List<AssetConfig> all()
     {
         List<AssetConfig> result = new ArrayList<>();
-        for (K8SProperties.ClusterProperties cluster : this.monitorProperties.k8sConfigs().clusters())
+        for (MonitoredResourceProperties resource : this.resources.resources())
         {
+            if (!(resource instanceof ClusterProperties cluster)) continue;
             Optional<ServerProfileEntity> profile = this.profileRepository.findByIdOptional(cluster.profileId());
             if (profile.isEmpty())
             {

@@ -9,8 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "datapoint")
-public class DatapointEntity extends PanacheEntityBase
+@Table(name = "kubernetes_metrics")
+public class KubernetesMetricEntity extends PanacheEntityBase
 {
 
     @Id
@@ -21,15 +21,21 @@ public class DatapointEntity extends PanacheEntityBase
     @Column(nullable = false, columnDefinition = "INTEGER")
     public long instantMs;
 
-    @Column(nullable = false)
-    public String type;
-
     @Column
     public String cluster;
 
     @Column
     public String namespace;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    public String payload;
+    @Column(nullable = false)
+    public String pod;
+
+    @Column(nullable = false)
+    public String container;
+
+    @Column(name = "cpu_nanocores", nullable = false, columnDefinition = "REAL")
+    public double cpuNanocores;
+
+    @Column(name = "ram_bytes", nullable = false, columnDefinition = "REAL")
+    public double ramBytes;
 }

@@ -1,7 +1,5 @@
 package tech.illuin.wombat.metrics;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Meter;
@@ -9,42 +7,36 @@ import io.micrometer.core.instrument.step.StepMeterRegistry;
 import io.micrometer.core.instrument.step.StepRegistryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.persistence.DatapointRepository;
-import tech.illuin.wombat.persistence.model.DatapointEntity;
-import tech.illuin.wombat.persistence.model.PodMetrics;
+import tech.illuin.wombat.persistence.KubernetesMetricRepository;
+import tech.illuin.wombat.persistence.model.KubernetesMetricEntity;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class SqliteStepMeterRegistry extends StepMeterRegistry
 {
 
-    public static final String METRIC_NAME = "wombat.k8s.container.cpu";
+    public static final String CPU_METRIC = "wombat.k8s.container.cpu";
+    public static final String RAM_METRIC = "wombat.k8s.container.ram";
     public static final String TAG_CLUSTER = "cluster";
     public static final String TAG_NAMESPACE = "namespace";
     public static final String TAG_POD = "pod";
     public static final String TAG_CONTAINER = "container";
 
     private static final Logger logger = LoggerFactory.getLogger(SqliteStepMeterRegistry.class);
-    private static final String TYPE_KUBERNETES = "KUBERNETES";
 
-    private final DatapointRepository repository;
-    private final ObjectMapper mapper;
+    private final KubernetesMetricRepository repository;
     private final Clock clock;
 
     public SqliteStepMeterRegistry(
         StepRegistryConfig config,
         Clock clock,
-        DatapointRepository repository,
-        ObjectMapper mapper
+        KubernetesMetricRepository repository
     )
     {
         super(config, clock);
         this.repository = repository;
-        this.mapper = mapper;
         this.clock = clock;
     }
 
@@ -58,17 +50,20 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
     protected void publish()
     {
         logger.info("publish() invoked at wallTime={}", this.clock.wallTime());
-        Map<NamespaceKey, Map<String, Map<String, String>>> grouped = new HashMap<>();
+        long ms = this.clock.wallTime();
+
+        Map<ContainerKey, ContainerUsage> grouped = new LinkedHashMap<>();
         for (Meter meter : this.getMeters())
         {
-            if (!METRIC_NAME.equals(meter.getId().getName())) continue;
+            Meter.Id id = meter.getId();
+            boolean isCpu = CPU_METRIC.equals(id.getName());
+            boolean isRam = RAM_METRIC.equals(id.getName());
+            if (!isCpu && !isRam) continue;
             if (!(meter instanceof DistributionSummary summary)) continue;
 
             long count = summary.count();
             if (count == 0) continue;
 
-            double mean = summary.totalAmount() / count;
-            Meter.Id id = meter.getId();
             String cluster = id.getTag(TAG_CLUSTER);
             String namespace = id.getTag(TAG_NAMESPACE);
             String pod = id.getTag(TAG_POD);
@@ -79,33 +74,34 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
                 continue;
             }
 
-            NamespaceKey key = new NamespaceKey(cluster, namespace);
-            grouped.computeIfAbsent(key, k -> new HashMap<>())
-                .computeIfAbsent(pod, p -> new HashMap<>())
-                .put(container, Double.toString(mean));
+            double mean = summary.totalAmount() / count;
+            ContainerUsage usage = grouped.computeIfAbsent(new ContainerKey(cluster, namespace, pod, container), k -> new ContainerUsage());
+            if (isCpu) usage.cpu = mean;
+            else usage.ram = mean;
         }
 
         if (grouped.isEmpty())
         {
-            logger.info("No CPU samples in the last window; skipping write");
+            logger.info("No CPU/RAM samples in the last window; skipping write");
             return;
         }
 
-        long ms = this.clock.wallTime();
-        for (Map.Entry<NamespaceKey, Map<String, Map<String, String>>> entry : grouped.entrySet())
+        for (Map.Entry<ContainerKey, ContainerUsage> entry : grouped.entrySet())
         {
-            DatapointEntity row = new DatapointEntity();
+            ContainerKey key = entry.getKey();
+            ContainerUsage usage = entry.getValue();
+            KubernetesMetricEntity row = new KubernetesMetricEntity();
             row.instantMs = ms;
-            row.type = TYPE_KUBERNETES;
-            row.cluster = entry.getKey().cluster();
-            row.namespace = entry.getKey().namespace();
-            Map<String, PodMetrics.ContainerMetrics> pods = entry.getValue().entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> new PodMetrics.ContainerMetrics(e.getValue())));
-            row.payload = serialize(new PodMetrics(pods));
+            row.cluster = key.cluster();
+            row.namespace = key.namespace();
+            row.pod = key.pod();
+            row.container = key.container();
+            row.cpuNanocores = usage.cpu;
+            row.ramBytes = usage.ram;
             this.repository.save(row);
-            logger.debug("Persisted row {} from entry {}", row, entry);
+            logger.debug("Persisted row {}", row);
         }
-        logger.info("Persisted {} cluster/namespace row(s) at {}", grouped.size(), ms);
+        logger.info("Persisted {} container row(s) at {}", grouped.size(), ms);
     }
 
     public void flush()
@@ -113,23 +109,13 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
         this.publish();
     }
 
-    private String serialize(PodMetrics podMetrics)
+    private record ContainerKey(String cluster, String namespace, String pod, String container)
     {
-        try
-        {
-            return this.mapper.writeValueAsString(podMetrics);
-        }
-        catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize payload", e);
-        }
     }
 
-    private record NamespaceKey(String cluster, String namespace)
+    private static final class ContainerUsage
     {
-        NamespaceKey
-        {
-            Objects.requireNonNull(cluster);
-            Objects.requireNonNull(namespace);
-        }
+        private double cpu;
+        private double ram;
     }
 }

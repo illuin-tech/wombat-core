@@ -1,0 +1,7 @@
+resources:
+  - type: KUBERNETES
+    id: my-cluster
+    name: My cluster (preprod)
+    profile-id: aws-c5a-4xlarge
+    namespace: my-namespace
+    config-path: /path/to/kubeconfig

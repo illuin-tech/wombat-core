@@ -5,7 +5,7 @@ import tech.illuin.wombat.monitor.MonitoredResourceHandler;
 import java.time.Instant;
 import java.util.List;
 
-public class K8SResourceHandler implements MonitoredResourceHandler<List<K8SProperties.ClusterProperties>>
+public class K8SResourceHandler implements MonitoredResourceHandler<List<ClusterProperties>>
 {
     private final K8SResourceService k8SResourceService;
 
@@ -15,7 +15,7 @@ public class K8SResourceHandler implements MonitoredResourceHandler<List<K8SProp
     }
 
     @Override
-    public void handle(Instant instant, List<K8SProperties.ClusterProperties> clusterConfigs)
+    public void handle(Instant instant, List<ClusterProperties> clusterConfigs)
     {
         this.k8SResourceService.listPods(instant, clusterConfigs);
     }

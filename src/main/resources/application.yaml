@@ -71,6 +71,12 @@ profiles:
       instance-type: "c5a.4xlarge"
       location: "FRA"
       lifespan: 43800
+    - id: "aws-c5-large"
+      description: "AWS c5.large FRA"
+      provider: aws
+      instance-type: "c5.large"
+      location: "FRA"
+      lifespan: 43800
     - id: "gcp-n2-highcpu-32"
       description: "GCP n2-highcpu-32 FRA"
       provider: gcp

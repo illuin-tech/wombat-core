@@ -4,13 +4,9 @@ quarkus:
       url: "jdbc:sqlite:data/db/local.db"
 
 monitor:
-  k8s-configs:
-    clusters:
-      - id: my-cluster
-        name: My cluster (preprod)
-        config-path: /path/to/kubeconfig
-        namespace: my-namespace
-        profile-id: aws-c5a-4xlarge
+  # Path to the polymorphic monitored-resources file (filesystem first, then classpath).
+  # Copy monitored/monitored-resources-dev.yaml.dist to monitored/monitored-resources-dev.yaml and edit it.
+  resources-file: monitored/monitored-resources-dev.yaml
 
 backup:
   enabled: true
