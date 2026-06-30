@@ -2,6 +2,7 @@ package tech.illuin.wombat.profile;
 
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -16,6 +17,9 @@ class ProfileSeederTest
 
     @Inject
     ServerProfileRepository repository;
+
+    @Inject
+    ProfileSeeder seeder;
 
     @Test
     void seedsFromApplicationYamlAreInsertedAtStartup()
@@ -36,5 +40,19 @@ class ProfileSeederTest
         assertEquals("c5.large", profile.instanceType);
         assertEquals("FRA", profile.location);
         assertEquals(43800, profile.lifespan);
+    }
+
+    @Test
+    @Transactional
+    void onStart_addsMissingProfilesWithoutDuplicatingExistingOnes()
+    {
+        long initial = this.repository.count();
+        this.repository.deleteById("test-aws-c5");
+        assertEquals(initial - 1, this.repository.count());
+
+        this.seeder.onStart(null);
+
+        assertEquals(initial, this.repository.count(), "missing seed re-added, present seeds not duplicated");
+        assertTrue(this.repository.findByIdOptional("test-aws-c5").isPresent());
     }
 }

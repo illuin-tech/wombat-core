@@ -1,6 +1,5 @@
 package tech.illuin.wombat.monitor;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -28,7 +27,6 @@ public class MonitorConfig
     {
         String location = properties.resourcesFile();
         YAMLMapper mapper = YAMLMapper.builder()
-            .propertyNamingStrategy(PropertyNamingStrategies.KEBAB_CASE)
             .findAndAddModules()
             .build();
         mapper.registerSubtypes(

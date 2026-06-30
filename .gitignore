@@ -40,6 +40,7 @@ nb-configuration.xml
 .env
 src/main/resources/application-local.yaml
 src/main/resources/application-dev.yaml
+**/monitored-resources-dev.yaml
 
 # Plugin directory
 /.quarkus/cli/plugins/

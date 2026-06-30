@@ -87,9 +87,11 @@ public class UIController
             ImpactResponse first = results.getFirst();
             int vcpu = instanceConfig.vcpu() != null && instanceConfig.vcpu().def() != null ? instanceConfig.vcpu().def() : 0;
             double loadPercent = vcpu > 0 ? first.cpuUsageCores() / vcpu * 100.0 : 0.0;
+            int nodeCount = instanceConfig.nodesRequired(first.cpuUsageCores());
+            Templates.AssetLoad assetLoad = new Templates.AssetLoad(loadPercent, nodeCount);
             String maxSpanLabel = this.uiProperties.maxDateRange().duration() + " " + this.uiProperties.maxDateRange().unit().name().toLowerCase();
             Templates.MaxSpan span = new Templates.MaxSpan(maxSpan.toMillis(), maxSpanLabel);
-            return Templates.impact(first, allAssets, effectiveAssetIds, selected, instanceConfig, loadPercent, span);
+            return Templates.impact(first, allAssets, effectiveAssetIds, selected, instanceConfig, assetLoad, span);
         }
         catch (NoCPUUsageException e) {
             return Templates.impactError(from, to);

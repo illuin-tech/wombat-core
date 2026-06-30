@@ -11,6 +11,6 @@ public interface MonitorProperties
     String cron();
 
     @WithName("resources-file")
-    @WithDefault("monitored-resources.yaml")
+    @WithDefault("monitored/monitored-resources.yaml")
     String resourcesFile();
 }

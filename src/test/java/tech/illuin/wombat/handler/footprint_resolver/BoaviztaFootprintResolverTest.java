@@ -96,6 +96,6 @@ class BoaviztaFootprintResolverTest
             new BoaviztaInstanceImpactResponse.Impact.ImpactItem(embedded, embedded, embedded, List.of()),
             new BoaviztaInstanceImpactResponse.Impact.ImpactItem(use, use, use, List.of())
         );
-        return new BoaviztaInstanceImpactResponse(Map.of("gwp", impact, "pe", impact, "adp", impact));
+        return new BoaviztaInstanceImpactResponse(Map.of("gwp", impact, "pe", impact, "adp", impact), 1);
     }
 }
