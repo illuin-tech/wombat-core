@@ -24,7 +24,7 @@
         <checkstyle.version>13.7.0</checkstyle.version>
         <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
         <checkstyle.config.location>checkstyle.xml</checkstyle.config.location>
-        <aws.sdk.version>2.46.17</aws.sdk.version>
+        <aws.sdk.version>2.46.18</aws.sdk.version>
     </properties>
 
     <dependencyManagement>
