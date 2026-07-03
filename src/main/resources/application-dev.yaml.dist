@@ -2,6 +2,9 @@ quarkus:
   datasource:
     jdbc:
       url: "jdbc:sqlite:data/db/local.db"
+  rest-client:
+    boavizta-api-url:
+      uri: "http://localhost:5001/v1/"
 
 monitor:
   # Path to the polymorphic monitored-resources file (filesystem first, then classpath).
