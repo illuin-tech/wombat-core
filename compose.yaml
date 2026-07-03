@@ -1,4 +1,16 @@
 services:
+  boavizta:
+    container_name: boavizta
+    image: ghcr.io/boavizta/boaviztapi:2.3.0
+    ports:
+      - "5001:5000"
+
+  ecologits:
+    container_name: ecologits
+    image: ghcr.io/mlco2/ecologits-api:0.0.2
+    ports:
+      - "5002:80"
+
   seaweedfs:
     container_name: seaweedfs
     image: chrislusf/seaweedfs
