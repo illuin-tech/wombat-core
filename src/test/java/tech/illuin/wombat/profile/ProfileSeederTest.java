@@ -4,6 +4,9 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.profile.persistence.ProfileData;
+import tech.illuin.wombat.profile.persistence.ProfileEntity;
+import tech.illuin.wombat.profile.persistence.ProfileRepository;
 
 import java.util.List;
 
@@ -16,7 +19,7 @@ class ProfileSeederTest
 {
 
     @Inject
-    ServerProfileRepository repository;
+    ProfileRepository repository;
 
     @Inject
     ProfileSeeder seeder;
@@ -24,7 +27,7 @@ class ProfileSeederTest
     @Test
     void seedsFromApplicationYamlAreInsertedAtStartup()
     {
-        List<ServerProfileEntity> profiles = repository.listAll();
+        List<ProfileEntity> profiles = repository.listAll();
 
         assertTrue(profiles.size() >= 2, "expected at least 2 seeded profiles, found " + profiles.size());
         assertTrue(profiles.stream().anyMatch(p -> "test-aws-c5".equals(p.id)));
@@ -34,12 +37,12 @@ class ProfileSeederTest
     @Test
     void seededAwsProfile_hasExpectedFields()
     {
-        ServerProfileEntity profile = repository.findByIdOptional("test-aws-c5").orElse(null);
+        ProfileEntity profile = repository.findByIdOptional("test-aws-c5").orElse(null);
         assertNotNull(profile);
+        assertNotNull(profile.uuid);
         assertEquals("Test AWS c5.large FRA", profile.description);
-        assertEquals("c5.large", profile.instanceType);
         assertEquals("FRA", profile.location);
-        assertEquals(43800, profile.lifespan);
+        assertEquals(new ProfileData.InfrastructureData("c5.large", 43800), profile.data);
     }
 
     @Test

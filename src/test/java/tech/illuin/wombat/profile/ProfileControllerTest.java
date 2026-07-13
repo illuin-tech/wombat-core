@@ -52,6 +52,7 @@ class ProfileControllerTest
     {
         String body = """
             {
+              "type": "INFRASTRUCTURE",
               "id": "ct-aws-m5",
               "description": "CRUD test m5",
               "provider": "aws",
@@ -76,6 +77,7 @@ class ProfileControllerTest
 
         String updated = """
             {
+              "type": "INFRASTRUCTURE",
               "id": "ct-aws-m5",
               "description": "Renamed",
               "provider": "aws",
@@ -119,6 +121,7 @@ class ProfileControllerTest
     {
         String body = """
             {
+              "type": "INFRASTRUCTURE",
               "id": "smoke-1",
               "description": "Smoke",
               "provider": "gcp",

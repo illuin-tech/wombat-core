@@ -8,8 +8,9 @@ import jakarta.transaction.Transactional;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.persistence.KubernetesMetricRepository;
-import tech.illuin.wombat.persistence.model.KubernetesMetricEntity;
+import tech.illuin.wombat.persistence.ServerMetricRepository;
+import tech.illuin.wombat.persistence.model.MetricData;
+import tech.illuin.wombat.persistence.model.ServerMetricEntity;
 
 import java.time.Duration;
 import java.util.List;
@@ -23,7 +24,7 @@ class MetricRecorderServiceTest
     private static final Duration STEP = Duration.ofMinutes(5);
 
     @Inject
-    KubernetesMetricRepository repository;
+    ServerMetricRepository repository;
 
     private MockClock clock;
     private SqliteStepMeterRegistry stepRegistry;
@@ -68,13 +69,10 @@ class MetricRecorderServiceTest
 
         long flushMs = advanceAndFlush();
 
-        List<KubernetesMetricEntity> rows = rowsAt(flushMs);
+        List<ServerMetricEntity> rows = rowsAt(flushMs);
         assertEquals(1, rows.size());
-        KubernetesMetricEntity row = rows.getFirst();
-        assertEquals("c1", row.cluster);
-        assertEquals("ns", row.namespace);
-        assertEquals("podA", row.pod);
-        assertEquals("api", row.container);
+        ServerMetricEntity row = rows.getFirst();
+        assertEquals(new MetricData.KubernetesData("c1", "ns", "podA", "api"), row.data);
         assertEquals(200.0, row.cpuNanocores, 0.001);
     }
 
@@ -88,7 +86,7 @@ class MetricRecorderServiceTest
 
         long flushMs = advanceAndFlush();
 
-        List<KubernetesMetricEntity> rows = rowsAt(flushMs);
+        List<ServerMetricEntity> rows = rowsAt(flushMs);
         assertEquals(2, rows.size());
         assertEquals(100.0, cpuOf(rows, "podA", "api"), 0.001);
         assertEquals(2000.0, cpuOf(rows, "podA", "worker"), 0.001);
@@ -102,12 +100,12 @@ class MetricRecorderServiceTest
 
         long flushMs = advanceAndFlush();
 
-        List<KubernetesMetricEntity> rows = rowsAt(flushMs);
+        List<ServerMetricEntity> rows = rowsAt(flushMs);
         assertEquals(2, rows.size());
-        KubernetesMetricEntity first = rows.stream().filter(r -> "c1".equals(r.cluster)).findFirst().orElseThrow();
-        KubernetesMetricEntity second = rows.stream().filter(r -> "c2".equals(r.cluster)).findFirst().orElseThrow();
-        assertEquals("ns1", first.namespace);
-        assertEquals("ns2", second.namespace);
+        ServerMetricEntity first = rows.stream().filter(r -> "c1".equals(source(r).cluster())).findFirst().orElseThrow();
+        ServerMetricEntity second = rows.stream().filter(r -> "c2".equals(source(r).cluster())).findFirst().orElseThrow();
+        assertEquals("ns1", source(first).namespace());
+        assertEquals("ns2", source(second).namespace());
         assertEquals(100.0, first.cpuNanocores, 0.001);
         assertEquals(400.0, second.cpuNanocores, 0.001);
     }
@@ -172,9 +170,9 @@ class MetricRecorderServiceTest
 
         long flushMs = advanceAndFlush();
 
-        List<KubernetesMetricEntity> rows = rowsAt(flushMs);
+        List<ServerMetricEntity> rows = rowsAt(flushMs);
         assertEquals(1, rows.size(), "cpu and memory of the same container share one row");
-        KubernetesMetricEntity row = rows.getFirst();
+        ServerMetricEntity row = rows.getFirst();
         assertEquals(150.0, row.cpuNanocores, 0.001);
         assertEquals(2000.0, row.ramBytes, 0.001);
     }
@@ -186,17 +184,22 @@ class MetricRecorderServiceTest
         return this.clock.wallTime();
     }
 
-    private List<KubernetesMetricEntity> rowsAt(long instantMs)
+    private List<ServerMetricEntity> rowsAt(long instantMs)
     {
         return this.repository.findByRangeAndClusters(instantMs - 1, instantMs + 1, List.of());
     }
 
-    private static double cpuOf(List<KubernetesMetricEntity> rows, String pod, String container)
+    private static double cpuOf(List<ServerMetricEntity> rows, String pod, String container)
     {
         return rows.stream()
-            .filter(r -> pod.equals(r.pod) && container.equals(r.container))
+            .filter(r -> pod.equals(source(r).pod()) && container.equals(source(r).container()))
             .findFirst()
             .orElseThrow()
             .cpuNanocores;
+    }
+
+    private static MetricData.KubernetesData source(ServerMetricEntity row)
+    {
+        return (MetricData.KubernetesData) row.data;
     }
 }

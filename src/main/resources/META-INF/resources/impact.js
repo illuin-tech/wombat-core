@@ -110,29 +110,57 @@ Chart.defaults.color = TEXT; Chart.defaults.borderColor = BORDER;
 Chart.defaults.font.family = "'DM Sans', sans-serif"; Chart.defaults.font.size = 12; Chart.defaults.font.weight = '500';
 
 /* ── Overview charts ── */
-var hbarH = Math.max(160, serviceLabels.length * 36 + 80);
-document.querySelectorAll('.chart-wrap.hbar').forEach(function(el) { el.style.height = hbarH + 'px'; });
+// Wrap a long label onto several lines (word-aware) so it fits without being cut off.
+var LABEL_WRAP = 18;
+function wrapLabel(label, maxLen) {
+  var words = String(label).split(' ');
+  var lines = [];
+  var current = '';
+  words.forEach(function(w) {
+    if (current && (current + ' ' + w).length > maxLen) { lines.push(current); current = w; }
+    else { current = current ? current + ' ' + w : w; }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+var maxLabelLines = serviceNames.reduce(function(m, l) { return Math.max(m, wrapLabel(l, LABEL_WRAP).length); }, 1);
+
+// Full label shown on hover: "asset / service".
+function fullServiceLabel(i) { return serviceAssets[i] + ' / ' + serviceNames[i]; }
+
+// Full height needed to show every bar; the outer .chart-wrap is capped and scrolls vertically.
+var HBAR_MAX = 320;
+var hbarH = Math.max(130, serviceNames.length * (6 + maxLabelLines * 12) + 48);
+document.querySelectorAll('.chart-wrap.hbar').forEach(function(el) {
+  var inner = el.querySelector('.hbar-inner');
+  if (inner) inner.style.height = hbarH + 'px';
+  el.style.height = Math.min(hbarH, HBAR_MAX) + 'px';
+});
 
 new Chart(document.getElementById('chartSharesDonut'), {
   type: 'doughnut',
   data: {
-    labels: sharesLabels,
+    labels: serviceNames,
     datasets: [{ data: sharesValues, backgroundColor: palette.map(function(c) { return c + 'cc'; }), borderColor: palette, borderWidth: 1, hoverOffset: 8 }]
   },
   options: {
     responsive: true, maintainAspectRatio: false, cutout: '62%',
     plugins: {
       legend: { display: false },
-      tooltip: { callbacks: { label: function(ctx) { return ' ' + (ctx.parsed * 100).toFixed(1) + '%'; } } }
+      tooltip: { callbacks: {
+        title: function(items) { return fullServiceLabel(items[0].dataIndex); },
+        label: function(ctx) { return ' ' + (ctx.parsed * 100).toFixed(1) + '%'; }
+      } }
     }
   }
 });
 
 (function() {
   var legendEl = document.getElementById('sharesLegend');
-  sharesLabels.forEach(function(label, i) {
+  serviceNames.forEach(function(label, i) {
     var item = document.createElement('div');
     item.className = 'shares-legend-item';
+    item.title = fullServiceLabel(i);
     item.innerHTML =
       '<span class="shares-legend-dot" style="background:' + palette[i % palette.length] + '"></span>' +
       '<span class="shares-legend-label">' + label + '</span>' +
@@ -144,13 +172,17 @@ new Chart(document.getElementById('chartSharesDonut'), {
 function makeHBar(id, datasets, unit, color) {
   return new Chart(document.getElementById(id), {
     type: 'bar',
-    data: { labels: serviceLabels, datasets: datasets },
+    data: { labels: serviceNames, datasets: datasets },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'top', labels: { boxWidth: 10, padding: 14 } }, tooltip: { mode: 'index' } },
+      datasets: { bar: { categoryPercentage: 0.5, barPercentage: 0.9, maxBarThickness: 12 } },
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 10, padding: 14 } },
+        tooltip: { mode: 'index', callbacks: { title: function(items) { return fullServiceLabel(items[0].dataIndex); } } }
+      },
       scales: {
         x: { stacked: true, grid: { color: BORDER }, title: { display: true, text: unit, color: color } },
-        y: { stacked: true, grid: { color: BORDER } }
+        y: { stacked: true, grid: { color: BORDER }, ticks: { font: { size: 11, lineHeight: 1.05 }, callback: function(value) { return wrapLabel(this.getLabelForValue(value), LABEL_WRAP); } } }
       }
     }
   });
@@ -166,15 +198,17 @@ function makeHBar(id, datasets, unit, color) {
   ], m.unit, m.color);
 });
 
-/* ── Asset picker (single-select, auto-navigates on change) ── */
+/* ── Asset picker (multi-select; auto-navigates so the service picker refreshes immediately) ── */
 (function() {
   var picker   = document.getElementById('assetPicker');
   var trigger  = document.getElementById('assetTrigger');
   var dropdown = document.getElementById('assetDropdown');
+  if (!picker) return;
 
-  function updateLabel() {
-    var sel = document.querySelector('#assetList input[name="assets"]:checked');
-    document.getElementById('assetCount').textContent = sel ? (sel.dataset.label || sel.value) : '';
+  function updateCount() {
+    var boxes = document.querySelectorAll('#assetList input[name="assets"]');
+    document.getElementById('assetCount').textContent =
+      Array.from(boxes).filter(function(b) { return b.checked; }).length + ' / ' + boxes.length + ' assets';
   }
   function toggleDropdown(open) {
     trigger.classList.toggle('open', open);
@@ -185,14 +219,54 @@ function makeHBar(id, datasets, unit, color) {
   document.addEventListener('click', function(e) { if (!picker.contains(e.target)) toggleDropdown(false); });
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') toggleDropdown(false); });
 
+  // Changing the asset selection navigates immediately (dropping the service filter) so the
+  // services of the new selection are all selected and shown in the picker without clicking Apply.
   document.querySelectorAll('#assetList input[name="assets"]').forEach(function(b) {
+    b.addEventListener('change', function() {
+      updateCount();
+      var p = new URLSearchParams();
+      var from = document.getElementById('inputFrom').value;
+      var to   = document.getElementById('inputTo').value;
+      if (from) p.set('from', localInputToUtc(from));
+      if (to)   p.set('to',   localInputToUtc(to));
+      var env = document.querySelector('#envList input[name="environment"]:checked');
+      if (env) p.set('environment', env.value);
+      // Each selected asset with no service list => all services of that asset (selection reset).
+      document.querySelectorAll('#assetList input[name="assets"]:checked').forEach(function(a) { p.append('services', a.value); });
+      window.location.href = '?' + p.toString();
+    });
+  });
+  updateCount();
+})();
+
+/* ── Environment picker (single-select, auto-navigates on change; resets asset selection) ── */
+(function() {
+  var picker   = document.getElementById('envPicker');
+  var trigger  = document.getElementById('envTrigger');
+  var dropdown = document.getElementById('envDropdown');
+  if (!picker) return;
+
+  function updateLabel() {
+    var sel = document.querySelector('#envList input[name="environment"]:checked');
+    document.getElementById('envCount').textContent = sel ? (sel.dataset.label || sel.value) : '';
+  }
+  function toggleDropdown(open) {
+    trigger.classList.toggle('open', open);
+    dropdown.classList.toggle('open', open);
+  }
+
+  trigger.addEventListener('click', function(e) { e.stopPropagation(); toggleDropdown(!dropdown.classList.contains('open')); });
+  document.addEventListener('click', function(e) { if (!picker.contains(e.target)) toggleDropdown(false); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') toggleDropdown(false); });
+
+  document.querySelectorAll('#envList input[name="environment"]').forEach(function(b) {
     b.addEventListener('change', function() {
       var p = new URLSearchParams();
       var from = document.getElementById('inputFrom').value;
       var to   = document.getElementById('inputTo').value;
       if (from) p.set('from', localInputToUtc(from));
       if (to)   p.set('to',   localInputToUtc(to));
-      p.set('assets', b.value);
+      p.set('environment', b.value);
       window.location.href = '?' + p.toString();
     });
   });
@@ -201,15 +275,15 @@ function makeHBar(id, datasets, unit, color) {
 
 /* ── Container picker ── */
 (function() {
-  var picker   = document.getElementById('containerPicker');
-  var trigger  = document.getElementById('containerTrigger');
-  var dropdown = document.getElementById('containerDropdown');
-  var search   = document.getElementById('containerSearch');
+  var picker   = document.getElementById('servicePicker');
+  var trigger  = document.getElementById('serviceTrigger');
+  var dropdown = document.getElementById('serviceDropdown');
+  var search   = document.getElementById('serviceSearch');
 
   function updateCount() {
-    var boxes = document.querySelectorAll('#containerList input');
-    document.getElementById('containerCount').textContent =
-      Array.from(boxes).filter(function(b) { return b.checked; }).length + ' / ' + boxes.length + ' containers';
+    var boxes = document.querySelectorAll('#serviceList input');
+    document.getElementById('serviceCount').textContent =
+      Array.from(boxes).filter(function(b) { return b.checked; }).length + ' / ' + boxes.length + ' services';
   }
   function toggleDropdown(open) {
     trigger.classList.toggle('open', open);
@@ -223,20 +297,20 @@ function makeHBar(id, datasets, unit, color) {
 
   search.addEventListener('input', function() {
     var q = search.value.toLowerCase();
-    document.querySelectorAll('#containerList .container-item').forEach(function(item) {
+    document.querySelectorAll('#serviceList .container-item').forEach(function(item) {
       item.classList.toggle('hidden', !!q && !item.querySelector('span').textContent.toLowerCase().includes(q));
     });
   });
 
   document.getElementById('btnSelectAll').addEventListener('click', function() {
-    document.querySelectorAll('#containerList .container-item:not(.hidden) input').forEach(function(b) { b.checked = true; });
+    document.querySelectorAll('#serviceList .container-item:not(.hidden) input').forEach(function(b) { b.checked = true; });
     updateCount();
   });
   document.getElementById('btnSelectNone').addEventListener('click', function() {
-    document.querySelectorAll('#containerList .container-item:not(.hidden) input').forEach(function(b) { b.checked = false; });
+    document.querySelectorAll('#serviceList .container-item:not(.hidden) input').forEach(function(b) { b.checked = false; });
     updateCount();
   });
-  document.querySelectorAll('#containerList input').forEach(function(b) { b.addEventListener('change', updateCount); });
+  document.querySelectorAll('#serviceList input').forEach(function(b) { b.addEventListener('change', updateCount); });
   updateCount();
 })();
 
@@ -266,16 +340,46 @@ document.getElementById('filterForm').addEventListener('submit', function(e) {
   }
   if (from) p.set('from', localInputToUtc(from));
   if (to)   p.set('to',   localInputToUtc(to));
-  document.querySelectorAll('#assetList input[name="assets"]:checked').forEach(function(b) { p.append('assets', b.value); });
-  document.querySelectorAll('#containerList input:checked').forEach(function(b) { p.append('containers', b.value); });
+  var env = document.querySelector('#envList input[name="environment"]:checked');
+  if (env) p.set('environment', env.value);
+  // Encode the selection as services=<clusterId>[=svc1,svc2,...] per selected asset. The service
+  // picker is global, so the chosen services apply to every selected asset (empty => all services).
+  var selectedServices = Array.from(document.querySelectorAll('#serviceList input:checked')).map(function(b) { return b.value; });
+  var serviceSuffix = selectedServices.length ? '=' + selectedServices.join(',') : '';
+  document.querySelectorAll('#assetList input[name="assets"]:checked').forEach(function(b) { p.append('services', b.value + serviceSuffix); });
   window.location.href = '?' + p.toString();
 });
 
+/* ── Keep the resources panel the same height as the shares chart; scroll its overflow ── */
+(function() {
+  var row = document.querySelector('.overview-row');
+  if (!row) return;
+  var shares = row.querySelector('.chart-card');
+  var panel  = row.querySelector('.kpi-card');
+  if (!shares || !panel) return;
+  function sync() { panel.style.height = shares.offsetHeight + 'px'; }
+  sync();
+  window.addEventListener('resize', sync);
+})();
+
+/* ── Collapsible asset details (Services tracked panel) ── */
+document.querySelectorAll('.asset-head').forEach(function(head) {
+  function toggle() {
+    var detail = head.parentElement.querySelector('.asset-detail');
+    var open = !detail.classList.toggle('collapsed');
+    head.querySelector('.row-chevron').classList.toggle('open', open);
+  }
+  head.addEventListener('click', toggle);
+  head.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+});
+
 /* ── Per-service collapsible detail charts ── */
-var initializedRows = {};
+var detailCharts = {};
 
 function makeDetailChart(id, embedded, use, color, unit) {
-  new Chart(document.getElementById(id), {
+  return new Chart(document.getElementById(id), {
     type: 'bar',
     data: {
       labels: ['Embedded', 'Use'],
@@ -298,13 +402,17 @@ document.querySelectorAll('.service-summary').forEach(function(row) {
     var detail = document.getElementById('detail-' + idx);
     var open   = !detail.classList.toggle('collapsed');
     row.querySelector('.row-chevron').classList.toggle('open', open);
-    if (open && !initializedRows[idx]) {
+    if (!open) return;
+    if (!detailCharts[idx]) {
       var i = idx - 1;
-      [{ id: 'detailGwp-', emb: gwpEmbedded[i], use: gwpUse[i],  color: GREEN,  unit: 'kgCO2eq' },
-       { id: 'detailPe-',  emb: peEmbedded[i],  use: peUse[i],   color: BLUE,   unit: 'MJ'      },
-       { id: 'detailAdp-', emb: adpEmbedded[i], use: adpUse[i],  color: YELLOW, unit: 'kgSbeq'  }
-      ].forEach(function(m) { makeDetailChart(m.id + idx, m.emb, m.use, m.color, m.unit); });
-      initializedRows[idx] = true;
+      detailCharts[idx] = [
+        { id: 'detailGwp-', emb: gwpEmbedded[i], use: gwpUse[i],  color: GREEN,  unit: 'kgCO2eq' },
+        { id: 'detailPe-',  emb: peEmbedded[i],  use: peUse[i],   color: BLUE,   unit: 'MJ'      },
+        { id: 'detailAdp-', emb: adpEmbedded[i], use: adpUse[i],  color: YELLOW, unit: 'kgSbeq'  }
+      ].map(function(m) { return makeDetailChart(m.id + idx, m.emb, m.use, m.color, m.unit); });
+    } else {
+      // Replay the bar animation on every reopen: reset to the initial state, then re-render.
+      detailCharts[idx].forEach(function(chart) { chart.reset(); chart.update(); });
     }
   });
 });

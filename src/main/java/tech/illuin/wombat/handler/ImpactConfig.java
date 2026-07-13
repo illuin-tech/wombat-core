@@ -2,31 +2,21 @@ package tech.illuin.wombat.handler;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Singleton;
-import tech.illuin.wombat.handler.footprint_resolver.BoaviztaFootprintResolver;
-import tech.illuin.wombat.handler.impact_provider.BoaviztaImpactProvider;
-import tech.illuin.wombat.model.Datasource;
-import tech.illuin.wombat.persistence.SQLiteTarget;
-import java.util.Map;
+import tech.illuin.wombat.handler.impl.footprint_resolver.BoaviztaFootprintResolver;
+import tech.illuin.wombat.handler.impl.impact_provider.BoaviztaImpactProvider;
+import tech.illuin.wombat.persistence.KubernetesMetricsPersister;
 
 @ApplicationScoped
 public class ImpactConfig
 {
     @Singleton
-    public ImpactService provideImpactService(BoaviztaServiceHandler boaviztaServiceHandler)
-    {
-        return new ImpactService(Map.of(
-            Datasource.KUBERNETES, boaviztaServiceHandler
-        ));
-    }
-
-    @Singleton
-    public BoaviztaServiceHandler provideBoaviztaServiceHandler(
-        SQLiteTarget loadTarget,
+    public KubernetesImpactService provideImpactService(
+        KubernetesMetricsPersister metricsPersister,
         BoaviztaImpactProvider impactProvider,
         BoaviztaFootprintResolver footprintResolver
     )
     {
-        return new BoaviztaServiceHandler(loadTarget, impactProvider, footprintResolver);
+        return new KubernetesImpactService(metricsPersister, impactProvider, footprintResolver);
     }
 
     @Singleton

@@ -5,11 +5,11 @@ quarkus:
   rest-client:
     boavizta-api-url:
       uri: "http://localhost:5001/v1/"
+    ecologits-api-url:
+      uri: "http://localhost:5002/"
 
 monitor:
-  # Path to the polymorphic monitored-resources file (filesystem first, then classpath).
-  # Copy monitored/monitored-resources-dev.yaml.dist to monitored/monitored-resources-dev.yaml and edit it.
-  resources-file: monitored/monitored-resources-dev.yaml
+  environments-file: monitored/monitored-environments-dev.yaml
 
 backup:
   enabled: true

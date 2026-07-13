@@ -2,6 +2,7 @@ package tech.illuin.wombat.handler.footprint_resolver;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactResponse;
+import tech.illuin.wombat.handler.impl.footprint_resolver.BoaviztaFootprintResolver;
 import tech.illuin.wombat.model.Footprint;
 import tech.illuin.wombat.persistence.model.TimeRange;
 

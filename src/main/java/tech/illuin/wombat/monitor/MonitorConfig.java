@@ -4,48 +4,54 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Singleton;
-import tech.illuin.wombat.k8s.ClusterProperties;
-import tech.illuin.wombat.k8s.K8SResourceHandler;
-import tech.illuin.wombat.k8s.K8SResourceService;
+import tech.illuin.wombat.environment.ActiveEnvironments;
+import tech.illuin.wombat.kubernetes.KubernetesAssetProperties;
+import tech.illuin.wombat.kubernetes.KubernetesMonitorHandler;
+import tech.illuin.wombat.kubernetes.KubernetesMetricsCollector;
+import tech.illuin.wombat.llm.LLMProperties;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 @ApplicationScoped
 public class MonitorConfig
 {
     @Singleton
-    public K8SResourceHandler provideKubernetesResourceHandler(K8SResourceService k8sResourceService)
+    public MonitoredAssetHandler provideCompositeMonitoredAssetHandler(KubernetesMetricsCollector metricsCollector)
     {
-        return new K8SResourceHandler(k8sResourceService);
+        return new CompositeMonitoredAssetHandler(List.of(
+            new KubernetesMonitorHandler(metricsCollector)
+        ));
     }
 
+
     @Singleton
-    public MonitoredResources provideMonitoredResources(MonitorProperties properties)
+    public MonitoredEnvironments provideMonitoredEnvironments(MonitorProperties properties)
     {
-        String location = properties.resourcesFile();
+        String location = properties.environmentsFile();
         YAMLMapper mapper = YAMLMapper.builder()
             .findAndAddModules()
             .build();
         mapper.registerSubtypes(
-            new NamedType(ClusterProperties.class, MonitoredResourceType.KUBERNETES.name()),
-            new NamedType(CustomResourceProperties.class, MonitoredResourceType.CUSTOM.name())
+            new NamedType(KubernetesAssetProperties.class, AssetType.KUBERNETES_API.name()),
+            new NamedType(LLMProperties.class, AssetType.LLM_STATIC.name())
         );
         try (InputStream in = open(location))
         {
-            return mapper.readValue(in, MonitoredResources.class);
+            return mapper.readValue(in, MonitoredEnvironments.class);
         }
         catch (IOException e) {
-            throw new IllegalStateException("Failed to load monitored resources from '" + location + "'", e);
+            throw new IllegalStateException("Failed to load monitored environments from '" + location + "'", e);
         }
     }
 
     @Singleton
-    public Monitor provideMonitor(K8SResourceHandler k8sResourceHandler, MonitoredResources resources)
+    public Monitor provideMonitor(MonitoredAssetHandler handler, ActiveEnvironments activeEnvironments)
     {
-        return new Monitor(k8sResourceHandler, resources);
+        return new Monitor(handler, activeEnvironments);
     }
 
     private static InputStream open(String location) throws IOException

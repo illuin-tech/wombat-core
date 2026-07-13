@@ -1,5 +1,7 @@
 package tech.illuin.wombat.model;
 
+import tech.illuin.wombat.monitor.AssetType;
+
 import java.util.List;
 
 public record Footprint(
@@ -8,7 +10,7 @@ public record Footprint(
     FootprintImpact adp,
     String service,
     ImpactProvider impactProvider,
-    Datasource datasource
+    AssetType type
 ) {
     public record FootprintImpact(
         String unit,

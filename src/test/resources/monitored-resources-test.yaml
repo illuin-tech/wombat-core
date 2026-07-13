@@ -1,7 +1,0 @@
-resources:
-  - type: KUBERNETES
-    id: test-cluster
-    name: Test Cluster
-    profile-id: test-aws-c5
-    namespace: test-ns
-    config-path: src/test/resources/test-kubeconfig.yaml

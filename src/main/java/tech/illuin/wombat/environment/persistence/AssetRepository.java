@@ -1,0 +1,15 @@
+package tech.illuin.wombat.environment.persistence;
+
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+import jakarta.enterprise.context.ApplicationScoped;
+
+import java.util.List;
+
+@ApplicationScoped
+public class AssetRepository implements PanacheRepositoryBase<AssetEntity, String>
+{
+    public List<AssetEntity> findByEnvironment(String environmentId)
+    {
+        return this.list("environmentId", environmentId);
+    }
+}

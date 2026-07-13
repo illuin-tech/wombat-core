@@ -42,10 +42,10 @@ public class PersistenceConfig
     }
 
     @Singleton
-    @IfBuildProperty(name = "persistence.enable-memory-target", stringValue = "true")
-    public SQLiteTarget provideSQLiteTarget(KubernetesMetricRepository repository, MetricRecorderService recorder)
+    @IfBuildProperty(name = "persistence.enable-kubernetes-metrics-persister", stringValue = "true")
+    public KubernetesMetricsPersister provideKubernetesMetricsPersister(ServerMetricRepository repository, MetricRecorderService recorder)
     {
-        return new SQLiteTarget(repository, recorder);
+        return new KubernetesMetricsPersister(repository, recorder);
     }
 
     @Singleton

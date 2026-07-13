@@ -7,6 +7,8 @@ quarkus:
       body-limit: 1024
     boavizta-api-url:
       uri: "https://api.boavizta.org/v1/"
+    ecologits-api-url:
+      uri: "https://api.ecologits.ai/"
   log:
     category:
       "persistence":
@@ -51,7 +53,7 @@ ui:
     unit: MONTHS
 
 persistence:
-  enable-memory-target: true
+  enable-kubernetes-metrics-persister: true
 
 backup:
   enabled: false
@@ -60,27 +62,38 @@ backup:
 profiles:
   seeds:
     - id: "aws-c5a-16xlarge"
+      type: INFRASTRUCTURE
       description: "AWS c5a.16xlarge FRA"
       provider: aws
       instance-type: "c5a.16xlarge"
       location: "FRA"
       lifespan: 43800
     - id: "aws-c5a-4xlarge"
+      type: INFRASTRUCTURE
       description: "AWS c5a.4xlarge FRA"
       provider: aws
       instance-type: "c5a.4xlarge"
       location: "FRA"
       lifespan: 43800
     - id: "aws-c5-large"
+      type: INFRASTRUCTURE
       description: "AWS c5.large FRA"
       provider: aws
       instance-type: "c5.large"
       location: "FRA"
       lifespan: 43800
     - id: "gcp-n2-highcpu-32"
+      type: INFRASTRUCTURE
       description: "GCP n2-highcpu-32 FRA"
       provider: gcp
       instance-type: "n2-highcpu-32"
       location: "FRA"
       lifespan: 43800
-  default: "aws-c5a-4xlarge"
+    - id: "mistralai-mistral-large"
+      type: LLM
+      description: "Mistral Large latest"
+      provider: mistralai
+      location: "FRA"
+      model: "mistral-large-latest"
+      output-token-count: 500
+      request-per-year: 1000000000

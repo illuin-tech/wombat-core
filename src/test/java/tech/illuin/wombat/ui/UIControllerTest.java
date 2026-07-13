@@ -10,12 +10,16 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import tech.illuin.wombat.boavizta.BoaviztaClient;
 import tech.illuin.wombat.boavizta.BoaviztaTestData;
-import tech.illuin.wombat.persistence.KubernetesMetricRepository;
-import tech.illuin.wombat.persistence.model.KubernetesMetricEntity;
+import tech.illuin.wombat.ecologits.EcologitsClient;
+import tech.illuin.wombat.ecologits.EcologitsTestData;
+import tech.illuin.wombat.persistence.ServerMetricRepository;
+import tech.illuin.wombat.persistence.model.MetricData;
+import tech.illuin.wombat.persistence.model.ServerMetricEntity;
 
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -28,8 +32,12 @@ class UIControllerTest
     @RestClient
     BoaviztaClient boaviztaClient;
 
+    @InjectMock
+    @RestClient
+    EcologitsClient ecologitsClient;
+
     @Inject
-    KubernetesMetricRepository datapointRepository;
+    ServerMetricRepository datapointRepository;
 
     @BeforeEach
     @Transactional
@@ -38,20 +46,18 @@ class UIControllerTest
         datapointRepository.deleteAll();
         Mockito.when(boaviztaClient.getInstanceConfig(any(), any())).thenReturn(BoaviztaTestData.fakeInstanceConfig(8));
         Mockito.when(boaviztaClient.getInstanceImpact(anyBoolean(), anyInt(), any(), any())).thenReturn(BoaviztaTestData.fakeImpactResponse());
+        Mockito.when(ecologitsClient.estimate(any())).thenReturn(EcologitsTestData.fakeEstimation());
 
         long now = System.currentTimeMillis();
         datapointRepository.save(metricRow(now, "podA", "api", 100.0));
         datapointRepository.save(metricRow(now, "podA", "worker", 300.0));
     }
 
-    private static KubernetesMetricEntity metricRow(long instantMs, String pod, String container, double cpu)
+    private static ServerMetricEntity metricRow(long instantMs, String pod, String container, double cpu)
     {
-        KubernetesMetricEntity row = new KubernetesMetricEntity();
+        ServerMetricEntity row = new ServerMetricEntity();
         row.instantMs = instantMs;
-        row.cluster = "test-cluster";
-        row.namespace = "test-ns";
-        row.pod = pod;
-        row.container = container;
+        row.data = new MetricData.KubernetesData("test-cluster", "test-ns", pod, container);
         row.cpuNanocores = cpu;
         return row;
     }
@@ -72,7 +78,7 @@ class UIControllerTest
     void get_withAssetParam_selectsThatAsset()
     {
         given()
-            .queryParam("assets", "test-cluster")
+            .queryParam("services", "test-cluster")
             .when().get("/ui")
             .then()
             .statusCode(200)
@@ -82,6 +88,67 @@ class UIControllerTest
             .body(containsString("Memory"))
             .body(containsString("CPU used"))
             .body(containsString("Load factor"));
+    }
+
+    @Test
+    void get_withLLMAsset_rendersLLMBreakdown()
+    {
+        given()
+            .when().get("/ui")
+            .then()
+            .statusCode(200)
+            .body(containsString("Test LLM"))
+            .body(containsString("mistral-large-latest"))
+            .body(containsString("Output tokens / request"))
+            .body(containsString("Requests / year"))
+            .body(containsString("GWP / request"));
+    }
+
+    @Test
+    void get_withLLMAsset_includesLLMServiceInBreakdownTableAndCounts()
+    {
+        given()
+            .when().get("/ui")
+            .then()
+            .statusCode(200)
+            .body(containsString("Test LLM / mistral-large-latest"))
+            .body(containsString("Docker services"))
+            .body(containsString("LLM services"))
+            .body(containsString("icons/llm.svg"));
+    }
+
+    @Test
+    void get_withLLMAsset_modelIsListedInServicePicker()
+    {
+        given()
+            .when().get("/ui")
+            .then()
+            .statusCode(200)
+            .body(containsString("value=\"mistral-large-latest\""));
+    }
+
+    @Test
+    void get_withModelFilteredOut_excludesLLMFromAggregatesButKeepsAssetBlock()
+    {
+        given()
+            .queryParam("services", "test-llm=api")
+            .when().get("/ui")
+            .then()
+            .statusCode(200)
+            .body(not(containsString("Test LLM / mistral-large-latest")))
+            .body(containsString("Test LLM"));
+    }
+
+    @Test
+    void get_withOnlyLLMAssetSelected_rendersWithoutKubernetesMetrics()
+    {
+        given()
+            .queryParam("services", "test-llm")
+            .when().get("/ui")
+            .then()
+            .statusCode(200)
+            .body(containsString("Test LLM"))
+            .body(containsString("mistral-large-latest"));
     }
 
     @Test
