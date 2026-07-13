@@ -1,0 +1,14 @@
+environments:
+  test:
+    name: Test
+    assets:
+      - type: KUBERNETES_API
+        id: test-cluster
+        name: Test Cluster
+        profile-id: test-aws-c5
+        namespace: test-ns
+        config-path: src/test/resources/test-kubeconfig.yaml
+      - type: LLM_STATIC
+        id: test-llm
+        name: Test LLM
+        profile-id: test-mistral-large

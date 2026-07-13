@@ -1,0 +1,14 @@
+environments:
+  preprod:
+    name: Preprod
+    assets:
+      - type: KUBERNETES_API
+        id: my-cluster
+        name: My cluster (preprod)
+        profile-id: aws-c5a-4xlarge
+        namespace: my-namespace
+        config-path: /path/to/kubeconfig
+      - type: LLM_STATIC
+        id: my-llm
+        name: My LLM (preprod)
+        profile-id: mistralai-mistral-large

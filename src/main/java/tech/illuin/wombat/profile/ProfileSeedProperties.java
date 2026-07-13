@@ -1,19 +1,16 @@
 package tech.illuin.wombat.profile;
 
 import io.smallrye.config.ConfigMapping;
-import io.smallrye.config.WithName;
-import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.profile.model.ProfileType;
 
 import java.util.List;
+import java.util.Optional;
 
 @ConfigMapping(prefix = "profiles")
 public interface ProfileSeedProperties
 {
 
     List<ProfileSeed> seeds();
-
-    @WithName("default")
-    String defaultId();
 
     interface ProfileSeed
     {
@@ -22,12 +19,20 @@ public interface ProfileSeedProperties
 
         String description();
 
-        BoaviztaInstanceImpactRequest.Provider provider();
+        ProfileType type();
 
-        String instanceType();
+        String provider();
 
         String location();
 
-        int lifespan();
+        Optional<String> instanceType();
+
+        Optional<Integer> lifespan();
+
+        Optional<String> model();
+
+        Optional<Integer> outputTokenCount();
+
+        Optional<Integer> requestPerYear();
     }
 }

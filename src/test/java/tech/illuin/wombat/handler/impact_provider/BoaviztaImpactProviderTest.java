@@ -6,6 +6,7 @@ import tech.illuin.wombat.boavizta.BoaviztaClient;
 import tech.illuin.wombat.boavizta.BoaviztaTestData;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactResponse;
+import tech.illuin.wombat.handler.impl.impact_provider.BoaviztaImpactProvider;
 import tech.illuin.wombat.handler.model.BoaviztaKubernetesConfig;
 import tech.illuin.wombat.persistence.model.TimeRange;
 
@@ -32,7 +33,6 @@ class BoaviztaImpactProviderTest
     private BoaviztaImpactProvider provider()
     {
         when(this.client.getInstanceConfig(any(), any())).thenReturn(BoaviztaTestData.fakeInstanceConfig(VCPU));
-        // Each call echoes the requested load percentage as the impact value, so aggregation is verifiable.
         when(this.client.getInstanceImpact(anyBoolean(), anyInt(), any(), any())).thenAnswer(invocation -> {
             BoaviztaInstanceImpactRequest request = invocation.getArgument(3);
             double loadPercentage = request.usage().timeWorkload().getFirst().loadPercentage();
@@ -60,7 +60,7 @@ class BoaviztaImpactProviderTest
     {
         BoaviztaImpactProvider provider = provider();
 
-        BoaviztaInstanceImpactResponse response = provider.resolveImpact(config(), RANGE, nanocores(5)); // 5 / 10 vCPU = 50%
+        BoaviztaInstanceImpactResponse response = provider.resolveImpact(config(), RANGE, nanocores(5));
 
         assertEquals(1, response.nodeCount());
         assertEquals(50.0f, response.impacts().get("gwp").use().value(), 0.001);
@@ -72,7 +72,6 @@ class BoaviztaImpactProviderTest
     {
         BoaviztaImpactProvider provider = provider();
 
-        // 32 cores / 10 vCPU = 3.2 -> 3 nodes at 100% + 1 node at 20%, 4 nodes total
         BoaviztaInstanceImpactResponse response = provider.resolveImpact(config(), RANGE, nanocores(32));
 
         assertEquals(4, response.nodeCount());
@@ -86,7 +85,6 @@ class BoaviztaImpactProviderTest
     {
         BoaviztaImpactProvider provider = provider();
 
-        // 30 cores / 10 vCPU = 3.0 -> 3 nodes at 100%, no remainder
         BoaviztaInstanceImpactResponse response = provider.resolveImpact(config(), RANGE, nanocores(30));
 
         assertEquals(3, response.nodeCount());

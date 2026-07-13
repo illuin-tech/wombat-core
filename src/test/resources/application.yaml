@@ -2,6 +2,8 @@ quarkus:
   rest-client:
     boavizta-api-url:
       uri: "http://localhost:0/boavizta"
+    ecologits-api-url:
+      uri: "http://localhost:0/ecologits"
   datasource:
     db-kind: sqlite
     jdbc:
@@ -35,10 +37,10 @@ quarkus:
 
 monitor:
   cron: "0 0 0 ? * MON#5 2099"
-  resources-file: monitored-resources-test.yaml
+  environments-file: monitored-environments-test.yaml
 
 persistence:
-  enable-memory-target: true
+  enable-kubernetes-metrics-persister: true
 
 backup:
   enabled: false
@@ -52,15 +54,24 @@ backup:
 profiles:
   seeds:
     - id: "test-aws-c5"
+      type: INFRASTRUCTURE
       description: "Test AWS c5.large FRA"
       provider: aws
       instance-type: "c5.large"
       location: "FRA"
       lifespan: 43800
     - id: "test-gcp-n2"
+      type: INFRASTRUCTURE
       description: "Test GCP n2 FRA"
       provider: gcp
       instance-type: "n2-standard-4"
       location: "FRA"
       lifespan: 43800
-  default: "test-aws-c5"
+    - id: "test-mistral-large"
+      type: LLM
+      description: "Test Mistral Large"
+      provider: mistralai
+      location: "FRA"
+      model: "mistral-large-latest"
+      output-token-count: 500
+      request-per-year: 1000000

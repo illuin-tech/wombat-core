@@ -12,7 +12,7 @@ import jakarta.inject.Singleton;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.persistence.KubernetesMetricRepository;
+import tech.illuin.wombat.persistence.ServerMetricRepository;
 
 import java.time.Duration;
 import java.util.concurrent.Executors;
@@ -26,7 +26,7 @@ public class MetricsConfig
     @Singleton
     public SqliteStepMeterRegistry provideStepRegistry(
         MetricsProperties properties,
-        KubernetesMetricRepository repository
+        ServerMetricRepository repository
     )
     {
         Duration window = properties.aggregationWindow().asDuration();

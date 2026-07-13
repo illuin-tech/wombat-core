@@ -7,8 +7,9 @@ import io.micrometer.core.instrument.step.StepMeterRegistry;
 import io.micrometer.core.instrument.step.StepRegistryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.persistence.KubernetesMetricRepository;
-import tech.illuin.wombat.persistence.model.KubernetesMetricEntity;
+import tech.illuin.wombat.persistence.ServerMetricRepository;
+import tech.illuin.wombat.persistence.model.MetricData;
+import tech.illuin.wombat.persistence.model.ServerMetricEntity;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,13 +27,13 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
 
     private static final Logger logger = LoggerFactory.getLogger(SqliteStepMeterRegistry.class);
 
-    private final KubernetesMetricRepository repository;
+    private final ServerMetricRepository repository;
     private final Clock clock;
 
     public SqliteStepMeterRegistry(
         StepRegistryConfig config,
         Clock clock,
-        KubernetesMetricRepository repository
+        ServerMetricRepository repository
     )
     {
         super(config, clock);
@@ -52,7 +53,7 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
         logger.info("publish() invoked at wallTime={}", this.clock.wallTime());
         long ms = this.clock.wallTime();
 
-        Map<ContainerKey, ContainerUsage> grouped = new LinkedHashMap<>();
+        Map<MetricData.KubernetesData, ContainerUsage> grouped = new LinkedHashMap<>();
         for (Meter meter : this.getMeters())
         {
             Meter.Id id = meter.getId();
@@ -75,7 +76,7 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
             }
 
             double mean = summary.totalAmount() / count;
-            ContainerUsage usage = grouped.computeIfAbsent(new ContainerKey(cluster, namespace, pod, container), k -> new ContainerUsage());
+            ContainerUsage usage = grouped.computeIfAbsent(new MetricData.KubernetesData(cluster, namespace, pod, container), k -> new ContainerUsage());
             if (isCpu) usage.cpu = mean;
             else usage.ram = mean;
         }
@@ -86,16 +87,12 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
             return;
         }
 
-        for (Map.Entry<ContainerKey, ContainerUsage> entry : grouped.entrySet())
+        for (Map.Entry<MetricData.KubernetesData, ContainerUsage> entry : grouped.entrySet())
         {
-            ContainerKey key = entry.getKey();
             ContainerUsage usage = entry.getValue();
-            KubernetesMetricEntity row = new KubernetesMetricEntity();
+            ServerMetricEntity row = new ServerMetricEntity();
             row.instantMs = ms;
-            row.cluster = key.cluster();
-            row.namespace = key.namespace();
-            row.pod = key.pod();
-            row.container = key.container();
+            row.data = entry.getKey();
             row.cpuNanocores = usage.cpu;
             row.ramBytes = usage.ram;
             this.repository.save(row);
@@ -107,10 +104,6 @@ public class SqliteStepMeterRegistry extends StepMeterRegistry
     public void flush()
     {
         this.publish();
-    }
-
-    private record ContainerKey(String cluster, String namespace, String pod, String container)
-    {
     }
 
     private static final class ContainerUsage

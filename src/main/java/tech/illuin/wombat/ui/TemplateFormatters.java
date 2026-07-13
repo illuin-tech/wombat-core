@@ -4,6 +4,8 @@ import io.quarkus.qute.TemplateExtension;
 import tech.illuin.wombat.handler.model.BoaviztaKubernetesConfig;
 import tech.illuin.wombat.handler.model.ClusterInfo;
 import tech.illuin.wombat.handler.model.ProviderConfig;
+import tech.illuin.wombat.kubernetes.KubernetesAssetProperties;
+import tech.illuin.wombat.monitor.AssetProperties;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -64,6 +66,12 @@ public class TemplateFormatters
     {
         if (config instanceof BoaviztaKubernetesConfig c && c.clusters() != null) return c.clusters();
         return List.of();
+    }
+
+    public static String namespace(AssetProperties properties)
+    {
+        if (properties instanceof KubernetesAssetProperties k) return k.namespace();
+        return "";
     }
 
     public static String asDecimal(Float value)

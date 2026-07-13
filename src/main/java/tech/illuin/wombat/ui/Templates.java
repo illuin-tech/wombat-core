@@ -2,9 +2,7 @@ package tech.illuin.wombat.ui;
 
 import io.quarkus.qute.CheckedTemplate;
 import io.quarkus.qute.TemplateInstance;
-import tech.illuin.wombat.asset.AssetConfig;
-import tech.illuin.wombat.boavizta.model.BoaviztaInstanceConfigResponse;
-import tech.illuin.wombat.handler.model.ImpactResponse;
+import tech.illuin.wombat.asset.model.Asset;
 
 import java.util.List;
 
@@ -13,12 +11,9 @@ public class Templates
 {
 
     public static native TemplateInstance impact(
-        ImpactResponse impact,
-        List<AssetConfig> allAssets,
-        List<String> selectedAssetIds,
-        AssetConfig selectedAsset,
-        BoaviztaInstanceConfigResponse instanceConfig,
-        AssetLoad assetLoad,
+        EnvironmentImpact env,
+        AssetSelection assets,
+        EnvironmentSelection environments,
         MaxSpan maxSpan
     );
 
@@ -26,5 +21,9 @@ public class Templates
 
     public record MaxSpan(long millis, String label) {}
 
-    public record AssetLoad(double loadPercent, int nodeCount) {}
+    public record AssetSelection(List<Asset> all, List<String> selectedIds) {}
+
+    public record EnvironmentView(String id, String name) {}
+
+    public record EnvironmentSelection(List<EnvironmentView> options, String selectedId) {}
 }

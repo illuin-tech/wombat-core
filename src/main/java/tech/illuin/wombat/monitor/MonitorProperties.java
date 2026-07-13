@@ -10,7 +10,7 @@ public interface MonitorProperties
 {
     String cron();
 
-    @WithName("resources-file")
-    @WithDefault("monitored/monitored-resources.yaml")
-    String resourcesFile();
+    @WithName("environments-file")
+    @WithDefault("monitored/monitored-environments.yaml")
+    String environmentsFile();
 }

@@ -11,6 +11,12 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import tech.illuin.wombat.profile.model.InfrastructureProfile;
+import tech.illuin.wombat.profile.model.Profile;
+import tech.illuin.wombat.profile.model.ProfileType;
+import tech.illuin.wombat.profile.persistence.ProfileData;
+import tech.illuin.wombat.profile.persistence.ProfileEntity;
+import tech.illuin.wombat.profile.persistence.ProfileRepository;
 
 import java.util.List;
 
@@ -18,9 +24,9 @@ import java.util.List;
 public class ProfileController
 {
 
-    private final ServerProfileRepository repository;
+    private final ProfileRepository repository;
 
-    public ProfileController(ServerProfileRepository repository)
+    public ProfileController(ProfileRepository repository)
     {
         this.repository = repository;
     }
@@ -46,17 +52,17 @@ public class ProfileController
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public Profile create(Profile profile)
+    public InfrastructureProfile create(InfrastructureProfile profile)
     {
-        ServerProfileEntity entity = new ServerProfileEntity();
+        ProfileEntity entity = new ProfileEntity();
         entity.id = profile.id();
         entity.description = profile.description();
-        entity.provider = profile.provider();
-        entity.instanceType = profile.instanceType();
+        entity.type = ProfileType.INFRASTRUCTURE;
+        entity.provider = profile.provider().name();
         entity.location = profile.location();
-        entity.lifespan = profile.lifespan();
+        entity.data = new ProfileData.InfrastructureData(profile.instanceType(), profile.lifespan());
         this.repository.persist(entity);
-        return Profile.from(entity);
+        return InfrastructureProfile.from(entity);
     }
 
     @PUT
@@ -64,16 +70,15 @@ public class ProfileController
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public Profile update(@PathParam("id") String id, Profile dto)
+    public InfrastructureProfile update(@PathParam("id") String id, InfrastructureProfile dto)
     {
-        ServerProfileEntity entity = this.repository.findByIdOptional(id)
+        ProfileEntity entity = this.repository.findByIdOptional(id)
             .orElseThrow(NotFoundException::new);
         entity.description = dto.description();
-        entity.provider = dto.provider();
-        entity.instanceType = dto.instanceType();
+        entity.provider = dto.provider().name();
         entity.location = dto.location();
-        entity.lifespan = dto.lifespan();
-        return Profile.from(entity);
+        entity.data = new ProfileData.InfrastructureData(dto.instanceType(), dto.lifespan());
+        return InfrastructureProfile.from(entity);
     }
 
     @DELETE

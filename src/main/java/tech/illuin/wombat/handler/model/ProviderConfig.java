@@ -2,7 +2,7 @@ package tech.illuin.wombat.handler.model;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import tech.illuin.wombat.model.Datasource;
+import tech.illuin.wombat.monitor.AssetType;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
@@ -11,7 +11,7 @@ import tech.illuin.wombat.model.Datasource;
 public sealed interface ProviderConfig permits BoaviztaKubernetesConfig
 {
 
-    Datasource datasource();
+    AssetType datasource();
 
     int lifespan();
 }

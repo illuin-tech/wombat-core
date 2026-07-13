@@ -7,6 +7,9 @@ import jakarta.enterprise.event.Observes;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.illuin.wombat.profile.persistence.ProfileData;
+import tech.illuin.wombat.profile.persistence.ProfileEntity;
+import tech.illuin.wombat.profile.persistence.ProfileRepository;
 
 @ApplicationScoped
 public class ProfileSeeder
@@ -16,10 +19,10 @@ public class ProfileSeeder
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileSeeder.class);
 
-    private final ServerProfileRepository repository;
+    private final ProfileRepository repository;
     private final ProfileSeedProperties seedProperties;
 
-    public ProfileSeeder(ServerProfileRepository repository, ProfileSeedProperties seedProperties)
+    public ProfileSeeder(ProfileRepository repository, ProfileSeedProperties seedProperties)
     {
         this.repository = repository;
         this.seedProperties = seedProperties;
@@ -44,15 +47,36 @@ public class ProfileSeeder
             added, this.seedProperties.seeds().size() - added);
     }
 
-    private static ServerProfileEntity toEntity(ProfileSeedProperties.ProfileSeed seed)
+    private static ProfileEntity toEntity(ProfileSeedProperties.ProfileSeed seed)
     {
-        ServerProfileEntity entity = new ServerProfileEntity();
+        ProfileEntity entity = new ProfileEntity();
         entity.id = seed.id();
         entity.description = seed.description();
+        entity.type = seed.type();
         entity.provider = seed.provider();
-        entity.instanceType = seed.instanceType();
         entity.location = seed.location();
-        entity.lifespan = seed.lifespan();
+        entity.data = toData(seed);
         return entity;
+    }
+
+    private static ProfileData toData(ProfileSeedProperties.ProfileSeed seed)
+    {
+        return switch (seed.type())
+        {
+            case INFRASTRUCTURE -> new ProfileData.InfrastructureData(
+                seed.instanceType().orElseThrow(() -> missingField(seed, "instance-type")),
+                seed.lifespan().orElseThrow(() -> missingField(seed, "lifespan"))
+            );
+            case LLM -> new ProfileData.LLMData(
+                seed.model().orElseThrow(() -> missingField(seed, "model")),
+                seed.outputTokenCount().orElseThrow(() -> missingField(seed, "output-token-count")),
+                seed.requestPerYear().orElseThrow(() -> missingField(seed, "request-per-year"))
+            );
+        };
+    }
+
+    private static IllegalStateException missingField(ProfileSeedProperties.ProfileSeed seed, String field)
+    {
+        return new IllegalStateException("Profile seed " + seed.id() + " of type " + seed.type() + " is missing required field '" + field + "'");
     }
 }
