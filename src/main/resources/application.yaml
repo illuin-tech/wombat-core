@@ -96,4 +96,4 @@ profiles:
       location: "FRA"
       model: "mistral-large-latest"
       output-token-count: 500
-      request-per-year: 1000000000
+      request-per-year: 1920000 #4 req x 8 times x 12 x 5000 users
