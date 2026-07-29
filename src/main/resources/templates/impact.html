@@ -317,17 +317,24 @@
                 <span class="param-val">{llm.location}</span>
               </div>
               <div class="param-item">
+                {#if llm.measureType == 'STATIC'}
                 <span class="param-key">Output tokens / request</span>
+                {#else}
+                <span class="param-key">Output token total</span>
+                {/if}
                 <span class="param-val">{llm.outputTokenCount}</span>
               </div>
+              {#if llm.measureType == 'STATIC'}
               <div class="param-item">
                 <span class="param-key">Requests / year</span>
                 <span class="param-val">{llm.requestPerYear}</span>
               </div>
+              {/if}
             </div>
             <div class="card-section asset-load">
               <div class="card-section-label">Usage over period</div>
               <div class="asset-load-row">
+                {#if llm.measureType == 'STATIC'}
                 <div class="param-item">
                   <span class="param-key">Requests</span>
                   <span class="param-val">{llm.requestCount.asDecimal()}</span>
@@ -336,6 +343,7 @@
                   <span class="param-key">GWP / request</span>
                   <span class="param-val">{llm.gwpPerRequest.value.asDecimal()} {llm.gwpPerRequest.unit}</span>
                 </div>
+                {/if}
                 <div class="param-item">
                   <span class="param-key">GWP total</span>
                   <span class="param-val">{llm.gwpTotal.value.asDecimal()} {llm.gwpTotal.unit}</span>
@@ -354,7 +362,11 @@
                 </div>
               </div>
               <div class="asset-load-note">
+                {#if llm.measureType == 'STATIC'}
                 Estimated from the profile's typical request (EcoLogits) prorated over the selected period; not affected by the service filter above.
+                {#else}
+                Computed with EcoLogits from output tokens measured over the selected period; not affected by the service filter above.
+                {/if}
               </div>
             </div>
           </div>

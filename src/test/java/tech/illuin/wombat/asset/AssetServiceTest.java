@@ -4,18 +4,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import tech.illuin.wombat.asset.model.Asset;
+import tech.illuin.wombat.asset.model.profile.InfrastructureProfile;
+import tech.illuin.wombat.asset.model.profile.StaticLLMProfile;
+import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.ecologits.model.EcologitsEstimationRequest;
 import tech.illuin.wombat.environment.ActiveEnvironments;
 import tech.illuin.wombat.environment.persistence.AssetEntity;
 import tech.illuin.wombat.environment.persistence.AssetRepository;
 import tech.illuin.wombat.environment.persistence.EnvironmentEntity;
 import tech.illuin.wombat.environment.persistence.EnvironmentRepository;
-import tech.illuin.wombat.kubernetes.KubernetesAssetProperties;
-import tech.illuin.wombat.llm.LLMProperties;
+import tech.illuin.wombat.kubernetes.KubernetesAPIAssetProperties;
+import tech.illuin.wombat.llm.LLMStaticProperties;
 import tech.illuin.wombat.monitor.AssetType;
-import tech.illuin.wombat.profile.model.ProfileType;
-import tech.illuin.wombat.profile.persistence.ProfileData;
-import tech.illuin.wombat.profile.persistence.ProfileEntity;
-import tech.illuin.wombat.profile.persistence.ProfileRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -33,30 +33,26 @@ class AssetServiceTest
     @BeforeEach
     void setUp()
     {
-        ProfileRepository repository = Mockito.mock(ProfileRepository.class);
-        when(repository.findByIdOptional("p-infra")).thenReturn(Optional.of(infrastructureProfile()));
-        when(repository.findByIdOptional("p-llm")).thenReturn(Optional.of(llmProfile()));
-        when(repository.findByIdOptional("p-missing")).thenReturn(Optional.empty());
         this.environmentRepository = Mockito.mock(EnvironmentRepository.class);
         when(this.environmentRepository.findActive()).thenReturn(List.of(activeEnvironment("env-a", "Env A"), activeEnvironment("env-b", "Env B")));
         AssetRepository assetRepository = Mockito.mock(AssetRepository.class);
         when(assetRepository.findByEnvironment("env-a")).thenReturn(List.of(
-            AssetEntity.from("env-a", new KubernetesAssetProperties("cluster-a", "Cluster A", "p-infra", "/kube/config", "ns", Optional.empty(), Optional.empty())),
-            AssetEntity.from("env-a", new KubernetesAssetProperties("cluster-broken", "Cluster Broken", "p-missing", "/kube/config", "ns", Optional.empty(), Optional.empty()))
+            AssetEntity.from("env-a", new KubernetesAPIAssetProperties("cluster-a", "Cluster A", "/kube/config", "ns", Optional.empty(), Optional.empty(), 0, infrastructureProfile()))
         ));
         when(assetRepository.findByEnvironment("env-b")).thenReturn(List.of(
-            AssetEntity.from("env-b", new LLMProperties("llm-b", "LLM B", "p-llm"))
+            AssetEntity.from("env-b", new LLMStaticProperties("llm-b", "LLM B", llmProfile()))
         ));
-        this.assetService = new AssetService(new ActiveEnvironments(this.environmentRepository, assetRepository), repository);
+        this.assetService = new AssetService(new ActiveEnvironments(this.environmentRepository, assetRepository));
     }
 
     @Test
-    void allSkipsAssetsWhoseProfileIsMissing()
+    void allBuildsEveryAssetFromItsInlineProfile()
     {
         List<Asset> assets = this.assetService.all();
 
         assertEquals(2, assets.size());
-        assertTrue(assets.stream().noneMatch(a -> a.properties().id().equals("cluster-broken")));
+        assertTrue(assets.stream().anyMatch(a -> a.properties().id().equals("cluster-a")));
+        assertTrue(assets.stream().anyMatch(a -> a.properties().id().equals("llm-b")));
     }
 
     @Test
@@ -112,27 +108,16 @@ class AssetServiceTest
         return entity;
     }
 
-    private static ProfileEntity infrastructureProfile()
+    private static InfrastructureProfile infrastructureProfile()
     {
-        ProfileEntity entity = new ProfileEntity();
-        entity.id = "p-infra";
-        entity.description = "Infra profile";
-        entity.type = ProfileType.INFRASTRUCTURE;
-        entity.provider = "aws";
-        entity.location = "FRA";
-        entity.data = new ProfileData.InfrastructureData("c5.large", 43800);
-        return entity;
+        return new InfrastructureProfile(BoaviztaInstanceImpactRequest.Provider.aws, "c5.large", "FRA", 43800);
     }
 
-    private static ProfileEntity llmProfile()
+    private static StaticLLMProfile llmProfile()
     {
-        ProfileEntity entity = new ProfileEntity();
-        entity.id = "p-llm";
-        entity.description = "LLM profile";
-        entity.type = ProfileType.LLM;
-        entity.provider = "mistralai";
-        entity.location = "FRA";
-        entity.data = new ProfileData.LLMData("mistral-large-latest", 500, 1000);
-        return entity;
+        return new StaticLLMProfile(
+            EcologitsEstimationRequest.Provider.mistralai, "mistral-large-latest", "FRA",
+            new StaticLLMProfile.RequestProfile(500, 1000)
+        );
     }
 }

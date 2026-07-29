@@ -1,8 +1,12 @@
 package tech.illuin.wombat.handler.model;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.kubernetes.KubernetesAssetProperties;
-import tech.illuin.wombat.llm.LLMProperties;
+import tech.illuin.wombat.asset.model.profile.InfrastructureProfile;
+import tech.illuin.wombat.asset.model.profile.StaticLLMProfile;
+import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.ecologits.model.EcologitsEstimationRequest;
+import tech.illuin.wombat.kubernetes.KubernetesAPIAssetProperties;
+import tech.illuin.wombat.llm.LLMStaticProperties;
 import tech.illuin.wombat.monitor.AssetType;
 import tech.illuin.wombat.monitor.Environment;
 import tech.illuin.wombat.persistence.model.TimeRange;
@@ -21,8 +25,10 @@ class EnvironmentConfigTest
     void fromMapsEnvironmentAndAssetSummaries()
     {
         Environment environment = new Environment("Production", List.of(
-            new KubernetesAssetProperties("cluster-1", "Cluster One", "p-infra", "/kube/config", "ns", Optional.empty(), Optional.empty()),
-            new LLMProperties("llm-1", "LLM One", "p-llm")
+            new KubernetesAPIAssetProperties("cluster-1", "Cluster One", "/kube/config", "ns", Optional.empty(), Optional.empty(), 0,
+                new InfrastructureProfile(BoaviztaInstanceImpactRequest.Provider.aws, "c5.large", "FRA", 43800)),
+            new LLMStaticProperties("llm-1", "LLM One",
+                new StaticLLMProfile(EcologitsEstimationRequest.Provider.mistralai, "mistral-large-latest", "FRA", new StaticLLMProfile.RequestProfile(500, 1000)))
         ));
         TimeRange timeRange = new TimeRange(Instant.EPOCH, Instant.EPOCH.plusSeconds(60));
 

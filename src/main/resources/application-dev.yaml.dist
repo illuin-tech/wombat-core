@@ -20,3 +20,12 @@ backup:
     bucket: wombat-bucket
     access-key: admin
     secret-key: secret
+
+llm-simulator:
+  enabled: false
+  cron: "*/10 * * * * ?"
+  metric-name: generation.tokens
+  models:
+    - name: mistral-large-latest
+      min-tokens: 100
+      max-tokens: 2000

@@ -10,6 +10,6 @@ public class AssetRepository implements PanacheRepositoryBase<AssetEntity, Strin
 {
     public List<AssetEntity> findByEnvironment(String environmentId)
     {
-        return this.list("environmentId", environmentId);
+        return this.list("environmentId = ?1 and deletedAt is null", environmentId);
     }
 }

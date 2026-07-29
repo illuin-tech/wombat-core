@@ -4,5 +4,6 @@ import tech.illuin.wombat.ecologits.model.EcologitsEstimationResponse;
 
 public record LLMImpact(
     EcologitsEstimationResponse estimation,
+    int outputTokenCount,
     double requestCount
 ) {}

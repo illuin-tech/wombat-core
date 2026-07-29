@@ -186,7 +186,7 @@ class KubernetesMetricsPersisterTest
     {
         PodMetrics pod = buildPodMetrics("pod-a", Map.of("api", "500", "worker", "1500"));
 
-        target.outputToTarget(Instant.ofEpochMilli(2000), List.of(pod), "c1", "ns1");
+        target.outputToTarget(List.of(pod), "c1", "ns1");
         flushWindow();
 
         double avg = target.computeCpuUsage(rangeAroundFlush(), List.of());
@@ -195,7 +195,7 @@ class KubernetesMetricsPersisterTest
 
     @Test
     void outputToTarget_multiplePodsSameCluster_mergesIntoSamePayload() {
-        target.outputToTarget(Instant.ofEpochMilli(3000), List.of(
+        target.outputToTarget(List.of(
             buildPodMetrics("pod-a", Map.of("api", "100")),
             buildPodMetrics("pod-b", Map.of("db", "200"))
         ), "c1", "ns1");
@@ -209,8 +209,8 @@ class KubernetesMetricsPersisterTest
 
     @Test
     void outputToTarget_secondCallDifferentCluster_appendsNewPayload() {
-        target.outputToTarget(Instant.ofEpochMilli(4000), List.of(buildPodMetrics("pod-a", Map.of("api", "100"))), "c1", "ns1");
-        target.outputToTarget(Instant.ofEpochMilli(4000), List.of(buildPodMetrics("pod-a", Map.of("api", "200"))), "c2", "ns2");
+        target.outputToTarget(List.of(buildPodMetrics("pod-a", Map.of("api", "100"))), "c1", "ns1");
+        target.outputToTarget(List.of(buildPodMetrics("pod-a", Map.of("api", "200"))), "c2", "ns2");
         flushWindow();
 
         Map<String, List<ContainerLocation>> locations = target.getContainerLocations(rangeAroundFlush(), List.of());
@@ -223,7 +223,7 @@ class KubernetesMetricsPersisterTest
         usages.put("present", "42");
         PodMetrics pod = buildPodMetricsWithExplicitNullCpu("pod-x", usages, "missing");
 
-        target.outputToTarget(Instant.ofEpochMilli(5000), List.of(pod), "c1", "ns1");
+        target.outputToTarget(List.of(pod), "c1", "ns1");
         flushWindow();
 
         Map<String, Double> shares = target.getContainerShares(rangeAroundFlush(), List.of());

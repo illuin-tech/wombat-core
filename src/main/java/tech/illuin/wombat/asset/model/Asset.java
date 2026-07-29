@@ -7,8 +7,9 @@ import tech.illuin.wombat.monitor.AssetType;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = KubernetesAsset.class, name = "KUBERNETES_API"),
-    @JsonSubTypes.Type(value = LLMAsset.class, name = "LLM_STATIC")
+    @JsonSubTypes.Type(value = KubernetesAPIAsset.class, name = "KUBERNETES_API"),
+    @JsonSubTypes.Type(value = LLMStaticAsset.class, name = "LLM_STATIC"),
+    @JsonSubTypes.Type(value = LLMPrometheusAsset.class, name = "LLM_PROMETHEUS")
 })
 public interface Asset
 {

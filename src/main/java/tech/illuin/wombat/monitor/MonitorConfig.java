@@ -5,10 +5,13 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Singleton;
 import tech.illuin.wombat.environment.ActiveEnvironments;
-import tech.illuin.wombat.kubernetes.KubernetesAssetProperties;
+import tech.illuin.wombat.kubernetes.KubernetesAPIAssetProperties;
 import tech.illuin.wombat.kubernetes.KubernetesMonitorHandler;
 import tech.illuin.wombat.kubernetes.KubernetesMetricsCollector;
-import tech.illuin.wombat.llm.LLMProperties;
+import tech.illuin.wombat.llm.LLMMetricsCollector;
+import tech.illuin.wombat.llm.LLMMonitorHandler;
+import tech.illuin.wombat.llm.LLMPrometheusProperties;
+import tech.illuin.wombat.llm.LLMStaticProperties;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,13 +23,16 @@ import java.util.List;
 public class MonitorConfig
 {
     @Singleton
-    public MonitoredAssetHandler provideCompositeMonitoredAssetHandler(KubernetesMetricsCollector metricsCollector)
+    public MonitoredAssetHandler provideCompositeMonitoredAssetHandler(
+        KubernetesMetricsCollector kubernetesMetricsCollector,
+        LLMMetricsCollector llmMetricsCollector
+    )
     {
         return new CompositeMonitoredAssetHandler(List.of(
-            new KubernetesMonitorHandler(metricsCollector)
+            new KubernetesMonitorHandler(kubernetesMetricsCollector),
+            new LLMMonitorHandler(llmMetricsCollector)
         ));
     }
-
 
     @Singleton
     public MonitoredEnvironments provideMonitoredEnvironments(MonitorProperties properties)
@@ -36,8 +42,9 @@ public class MonitorConfig
             .findAndAddModules()
             .build();
         mapper.registerSubtypes(
-            new NamedType(KubernetesAssetProperties.class, AssetType.KUBERNETES_API.name()),
-            new NamedType(LLMProperties.class, AssetType.LLM_STATIC.name())
+            new NamedType(KubernetesAPIAssetProperties.class, AssetType.KUBERNETES_API.name()),
+            new NamedType(LLMStaticProperties.class, AssetType.LLM_STATIC.name()),
+            new NamedType(LLMPrometheusProperties.class, AssetType.LLM_PROMETHEUS.name())
         );
         try (InputStream in = open(location))
         {

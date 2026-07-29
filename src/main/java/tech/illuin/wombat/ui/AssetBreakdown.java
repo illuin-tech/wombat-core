@@ -5,13 +5,12 @@ import tech.illuin.wombat.handler.model.KubernetesImpactResponse;
 import tech.illuin.wombat.handler.model.ProviderConfig;
 import tech.illuin.wombat.monitor.AssetType;
 import tech.illuin.wombat.model.Footprint;
-import tech.illuin.wombat.profile.model.MeasureType;
 
 import java.util.List;
 
 public record AssetBreakdown(
     String name,
-    MeasureType measureType,
+    String measureType,
     ProviderConfig providerConfig,
     BoaviztaInstanceConfigResponse instanceConfig,
     List<String> services,
@@ -19,14 +18,14 @@ public record AssetBreakdown(
     Load load
 )
 {
-    public static AssetBreakdown from(KubernetesAssetImpact asset)
+    public static AssetBreakdown from(KubernetesAPIAssetImpact asset)
     {
         KubernetesImpactResponse response = asset.response();
         List<String> services = response.serviceImpacts().stream().map(Footprint::service).toList();
         boolean container = response.providerConfig().datasource() == AssetType.KUBERNETES_API;
         return new AssetBreakdown(
             asset.name(),
-            asset.measureType(),
+            asset.type().measureLabel(),
             response.providerConfig(),
             asset.instanceConfig(),
             services,

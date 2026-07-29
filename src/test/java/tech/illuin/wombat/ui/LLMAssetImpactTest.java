@@ -5,9 +5,9 @@ import tech.illuin.wombat.ecologits.model.EcologitsEstimationRequest;
 import tech.illuin.wombat.ecologits.model.EcologitsEstimationResponse;
 import tech.illuin.wombat.monitor.AssetType;
 import tech.illuin.wombat.model.Footprint;
+import tech.illuin.wombat.asset.model.profile.LLMProfile;
+import tech.illuin.wombat.asset.model.profile.StaticLLMProfile;
 import tech.illuin.wombat.model.ImpactProvider;
-import tech.illuin.wombat.profile.model.LLMProfile;
-import tech.illuin.wombat.profile.model.MeasureType;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -17,7 +17,7 @@ class LLMAssetImpactTest
     @Test
     void toFootprint_mapsUsageAndEmbodiedPhasesScaledByRequestCount()
     {
-        LLMAssetImpact impact = new LLMAssetImpact("My LLM", MeasureType.STATIC, profile(), estimation(), 10.0, true);
+        LLMAssetImpact impact = new LLMStaticAssetImpact("My LLM", profile(), estimation(), 500, 10.0, true);
 
         Footprint footprint = impact.toFootprint();
 
@@ -43,7 +43,7 @@ class LLMAssetImpactTest
             null,
             null
         ));
-        LLMAssetImpact impact = new LLMAssetImpact("My LLM", MeasureType.STATIC, profile(), noPhases, 10.0, true);
+        LLMAssetImpact impact = new LLMStaticAssetImpact("My LLM", profile(), noPhases, 500, 10.0, true);
 
         Footprint footprint = impact.toFootprint();
 
@@ -53,13 +53,11 @@ class LLMAssetImpactTest
 
     private static LLMProfile profile()
     {
-        return new LLMProfile(
-            "my-profile",
-            "My profile",
+        return new StaticLLMProfile(
             EcologitsEstimationRequest.Provider.mistralai,
             "my-model",
             "FRA",
-            new LLMProfile.RequestProfile(500, 1000000)
+            new StaticLLMProfile.RequestProfile(500, 1000000)
         );
     }
 

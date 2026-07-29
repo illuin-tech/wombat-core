@@ -6,7 +6,7 @@ import tech.illuin.wombat.monitor.MonitoredAssetHandler;
 
 import java.time.Instant;
 
-public class KubernetesMonitorHandler implements MonitoredAssetHandler
+public class KubernetesMonitorHandler implements MonitoredAssetHandler<KubernetesAPIAssetProperties>
 {
     private final KubernetesMetricsCollector metricsCollector;
 
@@ -21,10 +21,13 @@ public class KubernetesMonitorHandler implements MonitoredAssetHandler
     }
 
     @Override
-    public void handle(Instant instant, AssetProperties config)
+    public void handle(Instant instant, KubernetesAPIAssetProperties config)
     {
-        if (!(config instanceof KubernetesAssetProperties clusterConfig))
-            throw new IllegalArgumentException("Expected KubernetesAssetProperties config not provided");
-        this.metricsCollector.listPods(instant, clusterConfig);
+        this.metricsCollector.listPods(config);
+    }
+
+    @Override
+    public int heartbeatSkip(KubernetesAPIAssetProperties config) {
+        return config.heartbeatSkip();
     }
 }

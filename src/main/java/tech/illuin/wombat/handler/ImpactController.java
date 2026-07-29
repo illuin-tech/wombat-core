@@ -20,7 +20,7 @@ import tech.illuin.wombat.persistence.NoCPUUsageException;
 import tech.illuin.wombat.persistence.model.TimeRange;
 import tech.illuin.wombat.response.Response;
 import tech.illuin.wombat.ui.AssetImpact;
-import tech.illuin.wombat.ui.KubernetesAssetImpact;
+import tech.illuin.wombat.ui.KubernetesAPIAssetImpact;
 import tech.illuin.wombat.ui.LLMAssetImpact;
 
 import java.time.Instant;
@@ -33,6 +33,25 @@ import java.util.Map;
 @Path("impact")
 public class ImpactController
 {
+
+    private static TimeRange currentMonthTimeRange()
+    {
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+        Instant start = now.withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
+        Instant end = now.plusMonths(1).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
+        return new TimeRange(start, end);
+    }
+
+    private static Footprint globalFootprint(AssetImpact impact)
+    {
+        return switch (impact)
+        {
+            case KubernetesAPIAssetImpact kubernetes -> kubernetes.response().globalImpact();
+            case LLMAssetImpact llm -> llm.toFootprint();
+            default -> throw new IllegalStateException("Unsupported asset impact type: " + impact.type());
+        };
+    }
+
     private final AssetService assetService;
     private final AssetImpactService assetImpactService;
 
@@ -94,23 +113,5 @@ public class ImpactController
             return null;
         Environment environment = this.assetService.getEnvironmentProperties(environmentId);
         return environment == null ? null : EnvironmentConfig.from(environmentId, environment, timeRange);
-    }
-
-    private static Footprint globalFootprint(AssetImpact impact)
-    {
-        return switch (impact)
-        {
-            case KubernetesAssetImpact kubernetes -> kubernetes.response().globalImpact();
-            case LLMAssetImpact llm -> llm.toFootprint();
-            default -> throw new IllegalStateException("Unsupported asset impact type: " + impact.type());
-        };
-    }
-
-    private static TimeRange currentMonthTimeRange()
-    {
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        Instant start = now.withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
-        Instant end = now.plusMonths(1).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS).toInstant();
-        return new TimeRange(start, end);
     }
 }

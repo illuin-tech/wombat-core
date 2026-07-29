@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.persistence.KubernetesMetricsPersister;
 
-import java.time.Instant;
 import java.util.List;
 
 public class KubernetesMetricsCollector
@@ -22,7 +21,7 @@ public class KubernetesMetricsCollector
         this.persisters = persisters;
     }
 
-    public void listPods(Instant instant, KubernetesAssetProperties clusterConfig)
+    public void listPods(KubernetesAPIAssetProperties clusterConfig)
     {
         String clusterId = clusterConfig.id();
         logger.debug("Persisting pods usages for kubernetes config {}", clusterConfig.id());
@@ -36,7 +35,7 @@ public class KubernetesMetricsCollector
             .getItems();
 
         this.persisters.forEach(persister ->
-            persister.outputToTarget(instant, podMetricsList, clusterId, clusterConfig.namespace())
+            persister.outputToTarget(podMetricsList, clusterId, clusterConfig.namespace())
         );
     }
 }
