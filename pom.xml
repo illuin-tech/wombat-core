@@ -14,17 +14,17 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.37.0</quarkus.platform.version>
+        <quarkus.platform.version>3.38.0</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.6</surefire-plugin.version>
         <jdbc.sqlite.version>3.0.11</jdbc.sqlite.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>1.21.4</testcontainers.version>
         <junit4.version>4.13.2</junit4.version>
-        <checkstyle.version>13.7.0</checkstyle.version>
+        <checkstyle.version>13.9.0</checkstyle.version>
         <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
         <checkstyle.config.location>checkstyle.xml</checkstyle.config.location>
-        <aws.sdk.version>2.46.18</aws.sdk.version>
+        <aws.sdk.version>2.49.5</aws.sdk.version>
     </properties>
 
     <dependencyManagement>
