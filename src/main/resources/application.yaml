@@ -1,6 +1,9 @@
 quarkus:
   banner:
     path: wombat-banner.txt
+  http:
+    limits:
+      max-initial-line-length: 32768
   rest-client:
     logging:
       scope: none
@@ -40,7 +43,7 @@ quarkus:
         enabled: false
 
 monitor:
-  cron: "*/10 * * * * ?" # every 10s
+  heartbeat: "*/10 * * * * ?" # every 10s
 
 metrics:
   aggregation-window:
@@ -59,41 +62,5 @@ backup:
   enabled: false
   cron: "0 0 2 * * ?"
 
-profiles:
-  seeds:
-    - id: "aws-c5a-16xlarge"
-      type: INFRASTRUCTURE
-      description: "AWS c5a.16xlarge FRA"
-      provider: aws
-      instance-type: "c5a.16xlarge"
-      location: "FRA"
-      lifespan: 43800
-    - id: "aws-c5a-4xlarge"
-      type: INFRASTRUCTURE
-      description: "AWS c5a.4xlarge FRA"
-      provider: aws
-      instance-type: "c5a.4xlarge"
-      location: "FRA"
-      lifespan: 43800
-    - id: "aws-c5-large"
-      type: INFRASTRUCTURE
-      description: "AWS c5.large FRA"
-      provider: aws
-      instance-type: "c5.large"
-      location: "FRA"
-      lifespan: 43800
-    - id: "gcp-n2-highcpu-32"
-      type: INFRASTRUCTURE
-      description: "GCP n2-highcpu-32 FRA"
-      provider: gcp
-      instance-type: "n2-highcpu-32"
-      location: "FRA"
-      lifespan: 43800
-    - id: "mistralai-mistral-large"
-      type: LLM
-      description: "Mistral Large latest"
-      provider: mistralai
-      location: "FRA"
-      model: "mistral-large-latest"
-      output-token-count: 500
-      request-per-year: 1920000 #4 req x 8 times x 12 x 5000 users
+llm-simulator:
+  enabled: false

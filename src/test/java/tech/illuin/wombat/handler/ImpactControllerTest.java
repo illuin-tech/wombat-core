@@ -129,7 +129,7 @@ class ImpactControllerTest
             .body("payload.asset_impacts.'test-llm'.name", is("Test LLM"))
             .body("payload.asset_impacts.'test-llm'.measure_type", is("STATIC"))
             .body("payload.asset_impacts.'test-llm'.profile.model", is("mistral-large-latest"))
-            .body("payload.asset_impacts.'test-llm'.profile.request_profile.output_token_count", is(500))
+            .body("payload.asset_impacts.'test-llm'.profile.'request-profile'.'output-token-count'", is(500))
             .body("payload.asset_impacts.'test-llm'.request_count", greaterThan(0.0f))
             .body("payload.asset_impacts.'test-llm'.estimation.impacts.gwp", notNullValue())
             .body("payload.global.gwp.total", notNullValue())

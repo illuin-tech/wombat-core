@@ -3,6 +3,7 @@ package tech.illuin.wombat.ui;
 import io.quarkus.qute.CheckedTemplate;
 import io.quarkus.qute.TemplateInstance;
 import tech.illuin.wombat.asset.model.Asset;
+import tech.illuin.wombat.persistence.model.TimeRange;
 
 import java.util.List;
 
@@ -17,7 +18,7 @@ public class Templates
         MaxSpan maxSpan
     );
 
-    public static native TemplateInstance impactError(String from, String to);
+    public static native TemplateInstance impactError(TimeRange timeRange, MaxSpan maxSpan);
 
     public record MaxSpan(long millis, String label) {}
 

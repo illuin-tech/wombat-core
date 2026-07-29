@@ -28,9 +28,9 @@ public record EnvironmentImpact(
 {
     public static EnvironmentImpact from(List<AssetImpact> assetImpacts, TimeRange timeRange)
     {
-        List<KubernetesAssetImpact> kubernetesImpacts = assetImpacts.stream()
-            .filter(KubernetesAssetImpact.class::isInstance)
-            .map(KubernetesAssetImpact.class::cast)
+        List<KubernetesAPIAssetImpact> kubernetesImpacts = assetImpacts.stream()
+            .filter(KubernetesAPIAssetImpact.class::isInstance)
+            .map(KubernetesAPIAssetImpact.class::cast)
             .toList();
 
         List<LLMAssetImpact> llmImpacts = assetImpacts.stream()

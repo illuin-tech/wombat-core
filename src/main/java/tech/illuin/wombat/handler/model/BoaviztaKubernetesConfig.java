@@ -1,10 +1,10 @@
 package tech.illuin.wombat.handler.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import tech.illuin.wombat.asset.model.KubernetesAsset;
+import tech.illuin.wombat.asset.model.KubernetesAPIAsset;
+import tech.illuin.wombat.asset.model.profile.InfrastructureProfile;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
 import tech.illuin.wombat.monitor.AssetType;
-import tech.illuin.wombat.profile.model.InfrastructureProfile;
 
 import java.util.List;
 
@@ -24,7 +24,7 @@ public record BoaviztaKubernetesConfig(
         return AssetType.KUBERNETES_API;
     }
 
-    public static BoaviztaKubernetesConfig fromAsset(KubernetesAsset asset)
+    public static BoaviztaKubernetesConfig fromAsset(KubernetesAPIAsset asset)
     {
         InfrastructureProfile profile = asset.profile();
         ClusterInfo cluster = new ClusterInfo(asset.properties().id(), asset.properties().namespace());

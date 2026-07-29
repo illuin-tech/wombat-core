@@ -8,12 +8,15 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import tech.illuin.wombat.kubernetes.KubernetesAssetProperties;
-import tech.illuin.wombat.llm.LLMProperties;
+import tech.illuin.wombat.kubernetes.KubernetesAPIAssetProperties;
+import tech.illuin.wombat.llm.LLMPrometheusProperties;
+import tech.illuin.wombat.llm.LLMStaticProperties;
 import tech.illuin.wombat.monitor.AssetProperties;
 import tech.illuin.wombat.monitor.AssetType;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,30 +43,50 @@ public class AssetEntity extends PanacheEntityBase
     @Column(nullable = false)
     public AssetType type;
 
-    @Column(name = "profile_id", nullable = false)
-    public String profileId;
-
     @Convert(converter = AssetDataConverter.class)
     @Column(nullable = false)
     public AssetData data;
+
+    @Column(name = "created_at", nullable = false, columnDefinition = "INTEGER")
+    public Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false, columnDefinition = "INTEGER")
+    public Instant updatedAt;
+
+    @Column(name = "deleted_at", columnDefinition = "INTEGER")
+    public Instant deletedAt;
 
     @PrePersist
     void onPersist()
     {
         if (this.uuid == null)
             this.uuid = UUID.randomUUID().toString();
+        this.createdAt = EnvironmentEntity.now();
+        this.updatedAt = this.createdAt;
+    }
+
+    @PreUpdate
+    void onUpdate()
+    {
+        this.updatedAt = EnvironmentEntity.now();
     }
 
     public AssetProperties toProperties()
     {
         return switch (this.data)
         {
-            case AssetData.KubernetesData kubernetes -> new KubernetesAssetProperties(
-                this.id, this.name, this.profileId,
+            case AssetData.KubernetesAPIData kubernetes -> new KubernetesAPIAssetProperties(
+                this.id, this.name,
                 kubernetes.configPath(), kubernetes.namespace(),
-                Optional.ofNullable(kubernetes.context()), Optional.ofNullable(kubernetes.readTimeout())
+                Optional.ofNullable(kubernetes.context()), Optional.ofNullable(kubernetes.readTimeout()),
+                kubernetes.heartbeatSkip(), kubernetes.profile()
             );
-            case AssetData.LLMData ignored -> new LLMProperties(this.id, this.name, this.profileId);
+            case AssetData.LLMStaticData llm -> new LLMStaticProperties(this.id, this.name, llm.profile());
+            case AssetData.LLMPrometheusData prometheus -> new LLMPrometheusProperties(
+                this.id, this.name,
+                prometheus.prometheusUrl(), prometheus.proxyUrl(), prometheus.username(), prometheus.password(),
+                prometheus.heartbeatSkip(), prometheus.profile()
+            );
         };
     }
 
@@ -74,21 +97,24 @@ public class AssetEntity extends PanacheEntityBase
         entity.environmentId = environmentId;
         entity.name = properties.name();
         entity.type = properties.type();
-        switch (properties)
-        {
-            case KubernetesAssetProperties kubernetes -> {
-                entity.profileId = kubernetes.profileId();
-                entity.data = new AssetData.KubernetesData(
-                    kubernetes.configPath(), kubernetes.namespace(),
-                    kubernetes.context().orElse(null), kubernetes.readTimeout().orElse(null)
-                );
-            }
-            case LLMProperties llm -> {
-                entity.profileId = llm.profileId();
-                entity.data = new AssetData.LLMData();
-            }
-            default -> throw new IllegalArgumentException("Unsupported asset type: " + properties.type());
-        }
+        entity.data = dataFrom(properties);
         return entity;
+    }
+
+    public static AssetData dataFrom(AssetProperties properties)
+    {
+        return switch (properties)
+        {
+            case KubernetesAPIAssetProperties kubernetes -> new AssetData.KubernetesAPIData(
+                kubernetes.configPath(), kubernetes.namespace(),
+                kubernetes.context().orElse(null), kubernetes.readTimeout().orElse(null),
+                kubernetes.heartbeatSkip(), kubernetes.profile()
+            );
+            case LLMStaticProperties llm -> new AssetData.LLMStaticData(llm.profile());
+            case LLMPrometheusProperties llm -> new AssetData.LLMPrometheusData(
+                llm.prometheusUrl(), llm.proxyUrl(), llm.username(), llm.password(), llm.heartbeatSkip(), llm.profile()
+            );
+            default -> throw new IllegalArgumentException("Unsupported asset type: " + properties.type());
+        };
     }
 }

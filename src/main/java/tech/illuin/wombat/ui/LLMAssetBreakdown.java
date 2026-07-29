@@ -1,12 +1,12 @@
 package tech.illuin.wombat.ui;
 
+import tech.illuin.wombat.asset.model.profile.LLMProfile;
+import tech.illuin.wombat.asset.model.profile.StaticLLMProfile;
 import tech.illuin.wombat.ecologits.model.EcologitsEstimationResponse;
-import tech.illuin.wombat.profile.model.LLMProfile;
-import tech.illuin.wombat.profile.model.MeasureType;
 
 public record LLMAssetBreakdown(
     String name,
-    MeasureType measureType,
+    String measureType,
     String provider,
     String model,
     String location,
@@ -23,16 +23,16 @@ public record LLMAssetBreakdown(
     public static LLMAssetBreakdown from(LLMAssetImpact impact)
     {
         LLMProfile profile = impact.profile();
-        LLMProfile.RequestProfile requestProfile = profile.requestProfile();
+        int requestPerYear = profile instanceof StaticLLMProfile staticProfile ? staticProfile.requestProfile().requestPerYear() : 0;
         EcologitsEstimationResponse.Impacts impacts = impact.estimation().impacts();
         return new LLMAssetBreakdown(
             impact.name(),
-            profile.measureType(),
+            impact.type().measureLabel(),
             profile.provider().name(),
             profile.model(),
             profile.location(),
-            requestProfile.outputTokenCount(),
-            requestProfile.requestPerYear(),
+            impact.outputTokenCount(),
+            requestPerYear,
             impact.requestCount(),
             perRequest(impacts.gwp()),
             total(impacts.gwp(), impact.requestCount()),

@@ -49,7 +49,7 @@ public class UIController
 
             List<Asset> allAssets = this.assetService.all();
             if (allAssets.isEmpty())
-                throw new IllegalStateException("No assets configured (cluster.profile-id missing or referenced profile not found)");
+                throw new IllegalStateException("No assets configured (check the monitored-environments YAML reconciled at startup)");
 
             LinkedHashMap<String, String> environmentNames = new LinkedHashMap<>();
             allAssets.forEach(a -> environmentNames.putIfAbsent(a.environmentId(), a.environmentName()));
@@ -88,7 +88,10 @@ public class UIController
             return Templates.impact(environmentImpact, assetSelection, environmentSelection, span);
         }
         catch (NoCPUUsageException e) {
-            return Templates.impactError(from, to);
+            TimeRange timeRange = this.computeTimeRange(from, to);
+            String maxSpanLabel = this.uiProperties.maxDateRange().duration() + " " + this.uiProperties.maxDateRange().unit().name().toLowerCase();
+            Templates.MaxSpan span = new Templates.MaxSpan(this.uiProperties.maxDateRange().asDuration().toMillis(), maxSpanLabel);
+            return Templates.impactError(timeRange, span);
         }
     }
 

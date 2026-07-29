@@ -2,7 +2,7 @@ package tech.illuin.wombat.handler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.asset.model.KubernetesAsset;
+import tech.illuin.wombat.asset.model.KubernetesAPIAsset;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactResponse;
 import tech.illuin.wombat.handler.impl.footprint_resolver.BoaviztaFootprintResolver;
 import tech.illuin.wombat.handler.impl.impact_provider.BoaviztaImpactProvider;
@@ -49,11 +49,11 @@ public class KubernetesImpactService
     public List<KubernetesImpactResponse> computeImpactResponse(
         TimeRange timeRange,
         Collection<String> serviceIds,
-        Collection<KubernetesAsset> assets
+        Collection<KubernetesAPIAsset> assets
     ) throws NoCPUUsageException
     {
         List<KubernetesImpactResponse> results = new ArrayList<>();
-        for (KubernetesAsset asset : assets)
+        for (KubernetesAPIAsset asset : assets)
         {
             BoaviztaKubernetesConfig config = BoaviztaKubernetesConfig.fromAsset(asset);
             results.add(this.compute(config, timeRange, serviceIds, List.of(asset.properties().id())));

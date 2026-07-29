@@ -1,98 +1,3 @@
-/* ── Local time helpers ── */
-function formatLocalRange(startIso, endIso) {
-  var opts = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-  var fmt = function(iso) { return iso ? new Date(iso).toLocaleString(navigator.language, opts) : '—'; };
-  return fmt(startIso) + ' → ' + fmt(endIso);
-}
-
-/* ── Init date range picker and header from UTC data attrs ── */
-(function() {
-  function pad(n) { return (n < 10 ? '0' : '') + n; }
-  function localInputFmt(d) {
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-  }
-  function isoToDate(iso) { return iso ? new Date(iso) : null; }
-
-  var picker = document.getElementById('dateRangePicker');
-  var inFrom = document.getElementById('inputFrom');
-  var inTo   = document.getElementById('inputTo');
-
-  if (picker && window.easepick) {
-    var fromDate = isoToDate(picker.dataset.fromUtc);
-    var toDate   = isoToDate(picker.dataset.toUtc);
-    var maxSpanMs = parseInt(picker.dataset.maxSpanMs, 10) || 0;
-    var maxDays = maxSpanMs ? Math.max(1, Math.ceil(maxSpanMs / 86400000)) : 0;
-
-    function nowMinus(hours) { return new Date(Date.now() - hours * 3600000); }
-    var presets = {
-      'Last hour':    [nowMinus(1),   new Date()],
-      'Last 24h':     [nowMinus(24),  new Date()],
-      'Last 7 days':  [nowMinus(168), new Date()],
-      'Last 30 days': [nowMinus(720), new Date()]
-    };
-
-    var ep = new easepick.create({
-      element: picker,
-      css: [
-        'https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.css',
-        '/easepick-theme.css'
-      ],
-      zIndex: 10,
-      grid: window.matchMedia('(max-width: 720px)').matches ? 1 : 2,
-      calendars: window.matchMedia('(max-width: 720px)').matches ? 1 : 2,
-      format: 'YYYY-MM-DD HH:mm',
-      plugins: ['RangePlugin', 'TimePlugin', 'PresetPlugin', 'LockPlugin'],
-      RangePlugin: {
-        tooltip: true,
-        startDate: fromDate || undefined,
-        endDate: toDate || undefined,
-        repick: true,
-        delimiter: ' → '
-      },
-      TimePlugin: { format: 'HH:mm', stepMinutes: 5 },
-      PresetPlugin: { customPreset: presets, position: 'bottom' },
-      LockPlugin: {
-        filter: function(date, picked) {
-          if (!maxSpanMs || !picked || picked.length !== 1) return false;
-          var anchorMs = picked[0].toJSDate().getTime();
-          var dMs = date.toJSDate().getTime();
-          return Math.abs(dMs - anchorMs) > maxSpanMs;
-        }
-      },
-      setup: function(p) {
-        var clamping = false;
-        p.on('select', function(e) {
-          var start = e.detail.start;
-          var end = e.detail.end;
-          if (clamping) {
-            clamping = false;
-            if (start) inFrom.value = localInputFmt(start);
-            if (end)   inTo.value   = localInputFmt(end);
-            return;
-          }
-          if (start && end && maxSpanMs && (end.getTime() - start.getTime()) > maxSpanMs) {
-            var clampedStart = new Date(end.getTime() - maxSpanMs);
-            inFrom.value = localInputFmt(clampedStart);
-            inTo.value   = localInputFmt(end);
-            clamping = true;
-            setTimeout(function() { ep.setDateRange(clampedStart, end); }, 0);
-            return;
-          }
-          if (start) inFrom.value = localInputFmt(start);
-          if (end)   inTo.value   = localInputFmt(end);
-        });
-      }
-    });
-
-    if (fromDate) inFrom.value = localInputFmt(fromDate);
-    if (toDate)   inTo.value   = localInputFmt(toDate);
-  }
-
-  var meta = document.getElementById('headerMeta');
-  if (meta) meta.textContent = formatLocalRange(meta.dataset.start, meta.dataset.end);
-})();
-
 /* ── Chart defaults ── */
 var cssVar = function(name, fallback) {
   var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -344,8 +249,12 @@ document.getElementById('filterForm').addEventListener('submit', function(e) {
   if (env) p.set('environment', env.value);
   // Encode the selection as services=<clusterId>[=svc1,svc2,...] per selected asset. The service
   // picker is global, so the chosen services apply to every selected asset (empty => all services).
-  var selectedServices = Array.from(document.querySelectorAll('#serviceList input:checked')).map(function(b) { return b.value; });
-  var serviceSuffix = selectedServices.length ? '=' + selectedServices.join(',') : '';
+  // When every service is checked we omit the list entirely (empty => all): this keeps the URL short
+  // and avoids overflowing the request-line limit (414) on wide selections.
+  var allServiceBoxes = document.querySelectorAll('#serviceList input');
+  var selectedServices = Array.from(allServiceBoxes).filter(function(b) { return b.checked; }).map(function(b) { return b.value; });
+  var allSelected = selectedServices.length === allServiceBoxes.length;
+  var serviceSuffix = (selectedServices.length && !allSelected) ? '=' + selectedServices.join(',') : '';
   document.querySelectorAll('#assetList input[name="assets"]:checked').forEach(function(b) { p.append('services', b.value + serviceSuffix); });
   window.location.href = '?' + p.toString();
 });

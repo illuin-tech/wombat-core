@@ -4,8 +4,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Singleton;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import tech.illuin.wombat.asset.impl.CompositeAssetHandler;
-import tech.illuin.wombat.asset.impl.KubernetesAssetHandler;
-import tech.illuin.wombat.asset.impl.LLMAssetHandler;
+import tech.illuin.wombat.asset.impl.KubernetesAPIAssetHandler;
+import tech.illuin.wombat.asset.impl.LLMPrometheusAssetHandler;
+import tech.illuin.wombat.asset.impl.LLMStaticAssetHandler;
 import tech.illuin.wombat.boavizta.BoaviztaClient;
 import tech.illuin.wombat.handler.KubernetesImpactService;
 import tech.illuin.wombat.handler.LLMImpactService;
@@ -16,21 +17,31 @@ import java.util.List;
 public class AssetConfig
 {
     @Singleton
-    public KubernetesAssetHandler provideKubernetesAssetHandler(KubernetesImpactService kubernetesImpactService, @RestClient BoaviztaClient boaviztaClient)
+    public KubernetesAPIAssetHandler provideKubernetesAPIAssetHandler(KubernetesImpactService kubernetesImpactService, @RestClient BoaviztaClient boaviztaClient)
     {
-        return new KubernetesAssetHandler(kubernetesImpactService, boaviztaClient);
+        return new KubernetesAPIAssetHandler(kubernetesImpactService, boaviztaClient);
     }
 
     @Singleton
-    public LLMAssetHandler provideLLMAssetHandler(LLMImpactService llmImpactService)
+    public LLMStaticAssetHandler provideLLMStaticAssetHandler(LLMImpactService llmImpactService)
     {
-        return new LLMAssetHandler(llmImpactService);
+        return new LLMStaticAssetHandler(llmImpactService);
     }
 
     @Singleton
-    public CompositeAssetHandler provideCompositeAssetHandler(KubernetesAssetHandler kubernetesAssetHandler, LLMAssetHandler llmAssetHandler)
+    public LLMPrometheusAssetHandler provideLLMPrometheusAssetHandler(LLMImpactService llmImpactService)
     {
-        return new CompositeAssetHandler(List.of(kubernetesAssetHandler, llmAssetHandler));
+        return new LLMPrometheusAssetHandler(llmImpactService);
+    }
+
+    @Singleton
+    public CompositeAssetHandler provideCompositeAssetHandler(
+        KubernetesAPIAssetHandler kubernetesAssetHandler,
+        LLMStaticAssetHandler llmStaticAssetHandler,
+        LLMPrometheusAssetHandler llmPrometheusAssetHandler
+    )
+    {
+        return new CompositeAssetHandler(List.of(kubernetesAssetHandler, llmStaticAssetHandler, llmPrometheusAssetHandler));
     }
 
     @Singleton

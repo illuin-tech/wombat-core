@@ -28,7 +28,7 @@ public class KubernetesMetricsPersister
         this.recorder = recorder;
     }
 
-    public void outputToTarget(Instant instant, Collection<PodMetrics> podMetricsList, String clusterId, String namespace)
+    public void outputToTarget(Collection<PodMetrics> podMetricsList, String clusterId, String namespace)
     {
         logger.debug("Recording metrics for {} pods in {}/{}", podMetricsList.size(), clusterId, namespace);
         for (PodMetrics podMetrics : podMetricsList)

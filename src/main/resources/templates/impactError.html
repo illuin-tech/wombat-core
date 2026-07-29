@@ -1,18 +1,22 @@
 {#include impactLayout.html}
 
 {#headScripts}
+  <script src="https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.umd.min.js"></script>
   <script src="/impactError.js"></script>
 {/headScripts}
 
 <!-- Filter bar -->
 <form class="filter-bar" method="get" action="" id="filterForm">
-  <div class="filter-group">
-    <span class="filter-label">From</span>
-    <input type="datetime-local" name="from" id="inputFrom" value="{from}"/>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">To</span>
-    <input type="datetime-local" name="to" id="inputTo" value="{to}"/>
+  <div class="filter-group date-range-group">
+    <span class="filter-label">Date range</span>
+    <input type="text" id="dateRangePicker" class="date-range-picker"
+           placeholder="Pick range…"
+           data-from-utc="{timeRange.start.asIsoUtc()}"
+           data-to-utc="{timeRange.end.asIsoUtc()}"
+           data-max-span-ms="{maxSpan.millis}"
+           readonly/>
+    <input type="hidden" name="from" id="inputFrom"/>
+    <input type="hidden" name="to" id="inputTo"/>
   </div>
   <button type="submit" class="btn-apply">Apply</button>
 </form>

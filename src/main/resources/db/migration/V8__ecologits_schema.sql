@@ -48,9 +48,9 @@ CREATE TABLE profiles (
 );
 
 INSERT INTO profiles (id, description, type, provider, location, data, uuid)
-    SELECT id, description, 'INFRASTRUCTURE', provider, location,
+    SELECT id, description, 'KUBERNETES_API', provider, location,
         json_object(
-            'type', 'INFRASTRUCTURE',
+            'type', 'KUBERNETES_API',
             'instance_type', instanceType,
             'lifespan', lifespan
         ),

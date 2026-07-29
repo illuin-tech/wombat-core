@@ -8,7 +8,7 @@ import io.smallrye.config.WithName;
 @ConfigMapping(prefix = "monitor")
 public interface MonitorProperties
 {
-    String cron();
+    String heartbeat();
 
     @WithName("environments-file")
     @WithDefault("monitored/monitored-environments.yaml")

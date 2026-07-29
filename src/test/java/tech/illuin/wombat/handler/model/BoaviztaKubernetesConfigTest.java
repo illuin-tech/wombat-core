@@ -1,10 +1,10 @@
 package tech.illuin.wombat.handler.model;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.asset.model.KubernetesAsset;
+import tech.illuin.wombat.asset.model.KubernetesAPIAsset;
+import tech.illuin.wombat.asset.model.profile.InfrastructureProfile;
 import tech.illuin.wombat.boavizta.model.BoaviztaInstanceImpactRequest;
-import tech.illuin.wombat.kubernetes.KubernetesAssetProperties;
-import tech.illuin.wombat.profile.model.InfrastructureProfile;
+import tech.illuin.wombat.kubernetes.KubernetesAPIAssetProperties;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,12 +18,11 @@ class BoaviztaKubernetesConfigTest
     void fromAsset_buildsSingleClusterConfigFromProfileAndCluster()
     {
         InfrastructureProfile profile = new InfrastructureProfile(
-            "aws-c5", "AWS c5.large", BoaviztaInstanceImpactRequest.Provider.aws,
-            "c5.large", "FRA", 43800
+            BoaviztaInstanceImpactRequest.Provider.aws, "c5.large", "FRA", 43800
         );
-        KubernetesAssetProperties cluster = cluster("c1", "ns-a", "aws-c5");
+        KubernetesAPIAssetProperties cluster = cluster("c1", "ns-a", profile);
 
-        BoaviztaKubernetesConfig config = BoaviztaKubernetesConfig.fromAsset(new KubernetesAsset("env-1", "Env 1", "c1-name", profile, cluster));
+        BoaviztaKubernetesConfig config = BoaviztaKubernetesConfig.fromAsset(new KubernetesAPIAsset("env-1", "Env 1", "c1-name", profile, cluster));
 
         assertEquals(List.of(new ClusterInfo("c1", "ns-a")), config.clusters());
         assertEquals(BoaviztaInstanceImpactRequest.Provider.aws, config.provider());
@@ -32,8 +31,8 @@ class BoaviztaKubernetesConfigTest
         assertEquals(43800, config.lifespan());
     }
 
-    private KubernetesAssetProperties cluster(String id, String namespace, String profileId)
+    private KubernetesAPIAssetProperties cluster(String id, String namespace, InfrastructureProfile profile)
     {
-        return new KubernetesAssetProperties(id, id, profileId, "", namespace, Optional.empty(), Optional.empty());
+        return new KubernetesAPIAssetProperties(id, id, "", namespace, Optional.empty(), Optional.empty(), 0, profile);
     }
 }
