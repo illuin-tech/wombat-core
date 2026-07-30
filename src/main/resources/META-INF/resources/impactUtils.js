@@ -66,7 +66,7 @@ function initDateRangePicker() {
     var ep = new easepick.create({
       element: picker,
       css: [
-        'https://cdn.jsdelivr.net/npm/@easepick/bundle@1.2.1/dist/index.css',
+        '/vendor/easepick.css',
         '/easepick-theme.css'
       ],
       zIndex: 10,
