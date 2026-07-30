@@ -129,11 +129,7 @@ function makeHBar(id, datasets, unit, color) {
   document.querySelectorAll('#assetList input[name="assets"]').forEach(function(b) {
     b.addEventListener('change', function() {
       updateCount();
-      var p = new URLSearchParams();
-      var from = document.getElementById('inputFrom').value;
-      var to   = document.getElementById('inputTo').value;
-      if (from) p.set('from', localInputToUtc(from));
-      if (to)   p.set('to',   localInputToUtc(to));
+      var p = appendDateParams(new URLSearchParams());
       var env = document.querySelector('#envList input[name="environment"]:checked');
       if (env) p.set('environment', env.value);
       // Each selected asset with no service list => all services of that asset (selection reset).
@@ -166,11 +162,7 @@ function makeHBar(id, datasets, unit, color) {
 
   document.querySelectorAll('#envList input[name="environment"]').forEach(function(b) {
     b.addEventListener('change', function() {
-      var p = new URLSearchParams();
-      var from = document.getElementById('inputFrom').value;
-      var to   = document.getElementById('inputTo').value;
-      if (from) p.set('from', localInputToUtc(from));
-      if (to)   p.set('to',   localInputToUtc(to));
+      var p = appendDateParams(new URLSearchParams());
       p.set('environment', b.value);
       window.location.href = '?' + p.toString();
     });
@@ -227,24 +219,7 @@ document.getElementById('btnReset').addEventListener('click', function() {
 /* ── Form submit ── */
 document.getElementById('filterForm').addEventListener('submit', function(e) {
   e.preventDefault();
-  var p = new URLSearchParams();
-  var from = document.getElementById('inputFrom').value;
-  var to   = document.getElementById('inputTo').value;
-  var picker = document.getElementById('dateRangePicker');
-  var maxSpanMs = picker ? parseInt(picker.dataset.maxSpanMs, 10) : 0;
-  if (from && to && maxSpanMs) {
-    var fromMs = new Date(from).getTime();
-    var toMs   = new Date(to).getTime();
-    if (toMs - fromMs > maxSpanMs) {
-      from = (function(d) {
-        function pad(n) { return (n < 10 ? '0' : '') + n; }
-        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-          + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-      })(new Date(toMs - maxSpanMs));
-    }
-  }
-  if (from) p.set('from', localInputToUtc(from));
-  if (to)   p.set('to',   localInputToUtc(to));
+  var p = appendDateParams(new URLSearchParams());
   var env = document.querySelector('#envList input[name="environment"]:checked');
   if (env) p.set('environment', env.value);
   // Encode the selection as services=<clusterId>[=svc1,svc2,...] per selected asset. The service

@@ -1,9 +1,11 @@
-document.getElementById('filterForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  var from = document.getElementById('inputFrom').value;
-  var to   = document.getElementById('inputTo').value;
-  var params = new URLSearchParams();
-  if (from) params.set('from', localInputToUtc(from));
-  if (to)   params.set('to',   localInputToUtc(to));
-  window.location.href = '?' + params.toString();
+/* Loaded in <head>, so bind once the form exists. The submit routes through the shared
+   appendDateParams so the range is converted to UTC and clamped exactly like the main report. */
+document.addEventListener('DOMContentLoaded', function() {
+  var form = document.getElementById('filterForm');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var params = appendDateParams(new URLSearchParams());
+    window.location.href = '?' + params.toString();
+  });
 });
