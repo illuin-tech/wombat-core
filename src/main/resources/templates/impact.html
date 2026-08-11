@@ -219,10 +219,12 @@
         {#for asset in env.assets}
         <div class="asset-block">
           <div class="asset-head" role="button" tabindex="0">
-            <span class="row-chevron">▶</span>
+            <button type="button" class="asset-expand" title="Expand details" aria-label="Expand details">⤢</button>
             <span class="asset-name">{asset.name}</span>
-            <span class="asset-type-tag kubernetes"><img class="svc-icon" src="/icons/docker.svg" alt="container"/>KUBERNETES</span>
-            <span class="asset-type-tag measure">{asset.measureType}</span>
+            <div class="asset-tags">
+              <span class="asset-type-tag kubernetes"><img class="svc-icon" src="/icons/docker.svg" alt="container"/>KUBERNETES</span>
+              <span class="asset-type-tag measure">{asset.measureType}</span>
+            </div>
             <span class="asset-count">{asset.services.size()} services</span>
           </div>
           <div class="asset-detail collapsed">
@@ -294,10 +296,12 @@
         {#for llm in env.llmAssets}
         <div class="asset-block">
           <div class="asset-head" role="button" tabindex="0">
-            <span class="row-chevron">▶</span>
+            <button type="button" class="asset-expand" title="Expand details" aria-label="Expand details">⤢</button>
             <span class="asset-name">{llm.name}</span>
-            <span class="asset-type-tag llm"><img class="svc-icon" src="/icons/llm.svg" alt="llm"/>LLM</span>
-            <span class="asset-type-tag measure">{llm.measureType}</span>
+            <div class="asset-tags">
+              <span class="asset-type-tag llm"><img class="svc-icon" src="/icons/llm.svg" alt="llm"/>LLM</span>
+              <span class="asset-type-tag measure">{llm.measureType}</span>
+            </div>
             <span class="asset-count">1 service</span>
           </div>
           <div class="asset-detail collapsed">
@@ -461,6 +465,17 @@
     </table>
   </div>
 
+</div>
+
+<!-- Asset detail modal -->
+<div class="asset-modal-overlay" id="assetModal" hidden>
+  <div class="asset-modal" role="dialog" aria-modal="true" aria-labelledby="assetModalTitle">
+    <div class="asset-modal-head">
+      <span class="asset-modal-title" id="assetModalTitle"></span>
+      <button type="button" class="asset-modal-close" id="assetModalClose" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="asset-modal-body" id="assetModalBody"></div>
+  </div>
 </div>
 
 {#include impactScript.html /}
