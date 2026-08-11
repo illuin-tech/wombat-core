@@ -19,7 +19,7 @@ public record ServiceImpact(
             footprint.service(),
             assetName + " / " + footprint.service(),
             footprint.type() == AssetType.KUBERNETES_API,
-            footprint.type() == AssetType.LLM_STATIC,
+            footprint.type() == AssetType.LLM_STATIC || footprint.type() == AssetType.LLM_PROMETHEUS,
             footprint
         );
     }

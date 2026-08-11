@@ -246,18 +246,41 @@ document.getElementById('filterForm').addEventListener('submit', function(e) {
   window.addEventListener('resize', sync);
 })();
 
-/* ── Collapsible asset details (Services tracked panel) ── */
-document.querySelectorAll('.asset-head').forEach(function(head) {
-  function toggle() {
-    var detail = head.parentElement.querySelector('.asset-detail');
-    var open = !detail.classList.toggle('collapsed');
-    head.querySelector('.row-chevron').classList.toggle('open', open);
+/* ── Asset detail modal (Services tracked panel) ── */
+(function() {
+  var overlay = document.getElementById('assetModal');
+  if (!overlay) return;
+  var body    = document.getElementById('assetModalBody');
+  var titleEl = document.getElementById('assetModalTitle');
+  var closeBtn = document.getElementById('assetModalClose');
+
+  function open(block) {
+    var detail = block.querySelector('.asset-detail');
+    var name   = block.querySelector('.asset-name');
+    titleEl.textContent = name ? name.textContent : '';
+    body.innerHTML = detail ? detail.innerHTML : '';
+    overlay.hidden = false;
+    document.body.classList.add('modal-open');
+    closeBtn.focus();
   }
-  head.addEventListener('click', toggle);
-  head.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  function close() {
+    overlay.hidden = true;
+    body.innerHTML = '';
+    document.body.classList.remove('modal-open');
+  }
+
+  document.querySelectorAll('.asset-head').forEach(function(head) {
+    head.addEventListener('click', function() { open(head.closest('.asset-block')); });
+    head.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(head.closest('.asset-block')); }
+    });
   });
-});
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !overlay.hidden) close();
+  });
+})();
 
 /* ── Per-service collapsible detail charts ── */
 var detailCharts = {};
