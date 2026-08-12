@@ -2,6 +2,7 @@ package tech.illuin.wombat.persistence.backup;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
+import tech.illuin.wombat.persistence.backend.s3.S3Properties;
 
 @ConfigMapping(prefix = "backup")
 public interface BackupProperties
@@ -12,18 +13,8 @@ public interface BackupProperties
     @WithDefault("0 0 2 * * ?")
     String cron();
 
-    S3 s3();
+    @WithDefault("true")
+    boolean restoreOnStartup();
 
-    interface S3
-    {
-        String endpoint();
-
-        String bucket();
-
-        String keyPrefix();
-
-        String accessKey();
-
-        String secretKey();
-    }
+    S3Properties s3();
 }

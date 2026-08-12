@@ -59,7 +59,7 @@ persistence:
   enable-kubernetes-metrics-persister: true
 
 backup:
-  enabled: false
+  enabled: true
   cron: "0 0 2 * * ?"
 
 llm-simulator:

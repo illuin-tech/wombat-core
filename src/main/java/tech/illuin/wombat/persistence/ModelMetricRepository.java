@@ -9,7 +9,6 @@ import tech.illuin.wombat.persistence.model.ModelMetricEntity;
 @ApplicationScoped
 public class ModelMetricRepository implements PanacheRepositoryBase<ModelMetricEntity, Long>
 {
-
     @Transactional
     public void save(ModelMetricEntity entity)
     {
