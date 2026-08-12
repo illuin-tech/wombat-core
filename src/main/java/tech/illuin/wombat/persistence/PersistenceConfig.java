@@ -1,44 +1,51 @@
 package tech.illuin.wombat.persistence;
 
-import io.agroal.api.AgroalDataSource;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Singleton;
-import org.flywaydb.core.Flyway;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.metrics.MetricRecorderService;
-import tech.illuin.wombat.persistence.backup.BackupProperties;
-import tech.illuin.wombat.persistence.backup.SqliteBackupService;
-import tech.illuin.wombat.persistence.observability.SQLiteSizeGauge;
-
-import java.io.File;
+import tech.illuin.wombat.persistence.backend.PersistenceBackend;
+import tech.illuin.wombat.persistence.backend.PersistenceInitializer;
 
 @ApplicationScoped
 public class PersistenceConfig
 {
+    private static final int PRIORITY_INIT = 900;
+    private static final int PRIORITY_SETUP = 1000;
 
-    static final int STARTUP_PRIORITY_BOOTSTRAP = 1000;
+    private static final Logger logger = LoggerFactory.getLogger(PersistenceConfig.class);
 
-    private SQLiteSizeGauge sizeGauge;
+    /**
+     * This hook is used for anything that needs to be performed before wiring the datasource and the backend object.
+     *
+     * @param event
+     * @param initializer
+     */
+    void onStartInitialize(
+        @Observes @Priority(PRIORITY_INIT) StartupEvent event,
+        PersistenceInitializer initializer
+    ) {
+        logger.info("Running persistence initialize stage with initializer {}", initializer.getClass().getSimpleName());
+        initializer.initialize();
+    }
 
-    void onStart(
-        @Observes @Priority(STARTUP_PRIORITY_BOOTSTRAP) StartupEvent event,
-        Flyway flyway,
-        AgroalDataSource dataSource,
-        MeterRegistry registry
-    )
-    {
-        new File("data/db").mkdirs();
-        flyway.migrate();
-
-        this.sizeGauge = new SQLiteSizeGauge(dataSource);
-        Gauge.builder("sqlite.db.size.bytes", this.sizeGauge, SQLiteSizeGauge::sizeBytes)
-            .description("SQLite database size in bytes")
-            .register(registry);
+    /**
+     * This hook is used for anything that needs to be performed after wiring the backend object.
+     *
+     * @param event
+     * @param backend
+     */
+    void onStartSetup(
+        @Observes @Priority(PRIORITY_SETUP) StartupEvent event,
+        PersistenceBackend backend
+    ) {
+        logger.info("Running persistence setup stage with backend {}", backend.getClass().getSimpleName());
+        backend.setup();
     }
 
     @Singleton
@@ -46,12 +53,5 @@ public class PersistenceConfig
     public KubernetesMetricsPersister provideKubernetesMetricsPersister(ServerMetricRepository repository, MetricRecorderService recorder)
     {
         return new KubernetesMetricsPersister(repository, recorder);
-    }
-
-    @Singleton
-    @IfBuildProperty(name = "backup.enabled", stringValue = "true")
-    public SqliteBackupService provideSqliteBackupService(AgroalDataSource dataSource, BackupProperties props)
-    {
-        return new SqliteBackupService(dataSource, props);
     }
 }

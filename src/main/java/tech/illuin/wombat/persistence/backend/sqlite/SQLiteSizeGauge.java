@@ -1,4 +1,4 @@
-package tech.illuin.wombat.persistence.observability;
+package tech.illuin.wombat.persistence.backend.sqlite;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -8,7 +8,6 @@ import java.sql.Statement;
 
 public class SQLiteSizeGauge
 {
-
     private final DataSource dataSource;
 
     public SQLiteSizeGauge(DataSource dataSource)

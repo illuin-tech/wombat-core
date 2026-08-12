@@ -1,4 +1,4 @@
-package tech.illuin.wombat.persistence.backup;
+package tech.illuin.wombat.persistence.backend.sqlite;
 
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -18,24 +18,28 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import tech.illuin.wombat.persistence.backend.s3.S3Properties;
+import tech.illuin.wombat.persistence.backup.BackupProperties;
 
 import java.net.URI;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @QuarkusTest
-class SqliteBackupServiceTest
+class SQLiteBackupProducerTest
 {
-
     private static final String BUCKET = "wombat-backups";
-    private static final String KEY_PREFIX = "test/";
+    private static final String KEY_PREFIX = "test-producer/";
 
     private static LocalStackContainer localstack;
 
-    @Inject
-    AgroalDataSource dataSource;
+    @Inject AgroalDataSource dataSource;
 
     @BeforeAll
     static void startLocalStack()
@@ -61,9 +65,9 @@ class SqliteBackupServiceTest
     void backup_uploadsSqliteSnapshotToS3()
     {
         BackupProperties props = props();
-        SqliteBackupService service = new SqliteBackupService(dataSource, props);
+        SQLiteBackupProducer producer = new SQLiteBackupProducer(this.dataSource, props);
 
-        service.backup();
+        producer.backup();
 
         try (S3Client s3 = adminClient())
         {
@@ -72,16 +76,27 @@ class SqliteBackupServiceTest
 
             assertEquals(1, listing.contents().size(), "expected one backup file");
             S3Object uploaded = listing.contents().getFirst();
-            assertTrue(uploaded.key().startsWith(KEY_PREFIX + "backup_"));
+            assertTrue(uploaded.key().startsWith(KEY_PREFIX + "backup-"));
             assertTrue(uploaded.key().endsWith(".db"));
             assertTrue(uploaded.size() > 0L, "uploaded file should not be empty");
         }
     }
 
+    @Test
+    void onShutdown_triggersBackupOfTheDatabase()
+    {
+        BackupProperties props = props();
+        SQLiteBackupProducer producer = spy(new SQLiteBackupProducer(this.dataSource, props));
+        doNothing().when(producer).backup();
+
+        producer.onShutdown(null);
+
+        verify(producer, times(1)).backup();
+    }
+
     private static boolean isDockerAvailable()
     {
-        try
-        {
+        try {
             return DockerClientFactory.instance().isDockerAvailable();
         }
         catch (Throwable t) {
@@ -100,7 +115,7 @@ class SqliteBackupServiceTest
             .build();
     }
 
-    private BackupProperties props()
+    private static BackupProperties props()
     {
         return new BackupProperties()
         {
@@ -108,9 +123,11 @@ class SqliteBackupServiceTest
 
             @Override public String cron() { return "0 0 0 ? * MON#5 2099"; }
 
-            @Override public S3 s3()
+            @Override public boolean restoreOnStartup() { return false; }
+
+            @Override public S3Properties s3()
             {
-                return new S3()
+                return new S3Properties()
                 {
                     @Override public String endpoint() { return localstack.getEndpoint().toString(); }
 
