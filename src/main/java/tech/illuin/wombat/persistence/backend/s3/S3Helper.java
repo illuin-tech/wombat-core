@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -31,8 +33,13 @@ public final class S3Helper
         S3ClientBuilder builder = S3Client.builder()
             .httpClient(UrlConnectionHttpClient.create())
             .endpointOverride(URI.create(props.endpoint()))
-            .region(Region.US_EAST_1)
-            .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build());
+            .region(Region.of(props.region()))
+            .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+            .responseChecksumValidation(ResponseChecksumValidation.WHEN_REQUIRED)
+            .serviceConfiguration(S3Configuration.builder()
+                .pathStyleAccessEnabled(true)
+                .build()
+            );
 
         if (!props.accessKey().isBlank() && !props.secretKey().isBlank())
         {

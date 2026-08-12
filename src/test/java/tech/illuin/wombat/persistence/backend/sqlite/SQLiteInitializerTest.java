@@ -146,6 +146,8 @@ class SQLiteInitializerTest
 
                     @Override public String bucket() { return "wombat-test"; }
 
+                    @Override public String region() { return "us-east-1"; }
+
                     @Override public String keyPrefix() { return "tests/"; }
 
                     @Override public String accessKey() { return ""; }

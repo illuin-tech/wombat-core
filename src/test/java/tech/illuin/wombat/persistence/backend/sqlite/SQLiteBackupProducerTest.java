@@ -133,6 +133,8 @@ class SQLiteBackupProducerTest
 
                     @Override public String bucket() { return BUCKET; }
 
+                    @Override public String region() { return "us-east-1"; }
+
                     @Override public String keyPrefix() { return KEY_PREFIX; }
 
                     @Override public String accessKey() { return localstack.getAccessKey(); }

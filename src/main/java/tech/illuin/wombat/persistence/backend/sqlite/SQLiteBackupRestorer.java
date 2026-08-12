@@ -74,7 +74,9 @@ public class SQLiteBackupRestorer implements BackupRestorer
             .build();
 
         ListObjectsV2Response response = this.s3Client.listObjectsV2(request);
-        return response.contents().stream().max(Comparator.comparing(S3Object::key));
+        return response.contents().stream()
+            .filter(o -> o.key().endsWith(".db"))
+            .max(Comparator.comparing(S3Object::key));
     }
 
     /**
