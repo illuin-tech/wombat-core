@@ -25,7 +25,7 @@
         <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
         <checkstyle.config.location>checkstyle.xml</checkstyle.config.location>
         <aws.sdk.version>2.51.3</aws.sdk.version>
-        <record-builder.version>44</record-builder.version>
+        <record-builder.version>53</record-builder.version>
         <download-maven-plugin.version>1.13.0</download-maven-plugin.version>
         <chartjs.version>4.4.0</chartjs.version>
         <easepick.version>1.2.1</easepick.version>
