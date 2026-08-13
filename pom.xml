@@ -14,7 +14,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.38.1</quarkus.platform.version>
+        <quarkus.platform.version>3.38.2</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.6</surefire-plugin.version>
         <jdbc.sqlite.version>3.0.11</jdbc.sqlite.version>
@@ -24,7 +24,7 @@
         <checkstyle.version>13.10.0</checkstyle.version>
         <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
         <checkstyle.config.location>checkstyle.xml</checkstyle.config.location>
-        <aws.sdk.version>2.51.3</aws.sdk.version>
+        <aws.sdk.version>2.52.1</aws.sdk.version>
         <record-builder.version>53</record-builder.version>
         <download-maven-plugin.version>1.13.0</download-maven-plugin.version>
         <chartjs.version>4.4.0</chartjs.version>
