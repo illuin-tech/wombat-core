@@ -1,9 +1,10 @@
-package tech.illuin.wombat.persistence.backend.sqlite;
+package tech.illuin.wombat.persistence.backend.sqlite.backup;
 
 import io.agroal.api.AgroalDataSource;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.scheduler.Scheduled;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -32,7 +33,7 @@ import java.time.format.DateTimeFormatter;
 @Singleton
 @IfBuildProperty(name = "quarkus.datasource.db-kind", stringValue = "sqlite")
 @IfBuildProperty(name = "backup.enabled", stringValue = "true")
-public class SQLiteBackupProducer implements BackupProducer
+public class SQLiteBackupProducer implements BackupProducer, AutoCloseable
 {
     private final AgroalDataSource dataSource;
     private final BackupProperties props;
@@ -49,16 +50,15 @@ public class SQLiteBackupProducer implements BackupProducer
         this.s3Client = S3Helper.createClient(props.s3());
     }
 
-    @Scheduled(identity = "sqlite-backup", cron = "{backup.cron}")
-    void scheduled()
+    @Scheduled(identity = "sqlite-backup-produce", cron = "{backup.cron}")
+    public void scheduledBackup()
     {
         this.backup();
     }
 
-    void onShutdown(@Observes ShutdownEvent event)
+    public void onShutdown(@Observes ShutdownEvent event)
     {
         this.backup();
-        this.s3Client.close();
     }
 
     @Override
@@ -112,5 +112,12 @@ public class SQLiteBackupProducer implements BackupProducer
         catch (IOException e) {
             logger.warn("Failed to delete temp file at {}", path, e);
         }
+    }
+
+    @Override
+    @PreDestroy
+    public void close()
+    {
+        this.s3Client.close();
     }
 }

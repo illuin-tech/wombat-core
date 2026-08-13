@@ -3,6 +3,7 @@ package tech.illuin.wombat.persistence.backend.sqlite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.persistence.backend.PersistenceInitializer;
+import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupRestorer;
 
 import java.io.IOException;
 import java.nio.file.Files;

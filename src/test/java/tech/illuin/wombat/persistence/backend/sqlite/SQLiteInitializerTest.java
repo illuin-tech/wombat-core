@@ -2,12 +2,17 @@ package tech.illuin.wombat.persistence.backend.sqlite;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.persistence.backend.s3.S3Properties;
+import tech.illuin.wombat.persistence.backend.s3.S3TestProperties;
+import tech.illuin.wombat.persistence.backend.s3.S3TestPropertiesBuilder;
+import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupRestorer;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
+import tech.illuin.wombat.persistence.backup.BackupTestPropertiesBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -20,6 +25,8 @@ class SQLiteInitializerTest
 {
     private Path workDir;
 
+    private static final String KEY_PREFIX = "test-restorer/";
+
     @AfterEach
     void cleanup() throws IOException
     {
@@ -27,7 +34,7 @@ class SQLiteInitializerTest
             return;
         try (var paths = Files.walk(this.workDir))
         {
-            paths.sorted((a, b) -> b.compareTo(a)).forEach(p -> {
+            paths.sorted(Comparator.reverseOrder()).forEach(p -> {
                 try { Files.deleteIfExists(p); } catch (IOException ignored) { /* best effort cleanup */ }
             });
         }
@@ -37,7 +44,7 @@ class SQLiteInitializerTest
     void initialize_createsMissingDatabaseDirectory() throws IOException
     {
         Path dbPath = this.freshDbPath();
-        SQLiteProperties props = properties(dbPath, backupProps(false));
+        SQLiteProperties props = properties(dbPath, SQLiteTestHelper.createProps(withRestoreOnStartupAndKeyPrefix(false, KEY_PREFIX)));
         SQLiteInitializer initializer = new SQLiteInitializer(props, null);
 
         initializer.initialize();
@@ -51,7 +58,7 @@ class SQLiteInitializerTest
         Path dbPath = this.freshDbPath();
         SQLiteBackupRestorer backupRestorer = mock(SQLiteBackupRestorer.class);
         when(backupRestorer.restore()).thenReturn(true);
-        SQLiteProperties props = properties(dbPath, backupProps(true));
+        SQLiteProperties props = properties(dbPath, SQLiteTestHelper.createProps(withRestoreOnStartupAndKeyPrefix(true, KEY_PREFIX)));
         SQLiteInitializer initializer = new SQLiteInitializer(props, backupRestorer);
 
         initializer.initialize();
@@ -63,7 +70,7 @@ class SQLiteInitializerTest
     void initialize_skipsRestore_whenBackupRestorerIsAbsent() throws IOException
     {
         Path dbPath = this.freshDbPath();
-        SQLiteProperties props = properties(dbPath, backupProps(true));
+        SQLiteProperties props = properties(dbPath, SQLiteTestHelper.createProps(withRestoreOnStartupAndKeyPrefix(true, KEY_PREFIX)));
         SQLiteInitializer initializer = new SQLiteInitializer(props, null);
 
         initializer.initialize();
@@ -76,7 +83,7 @@ class SQLiteInitializerTest
     {
         Path dbPath = this.freshDbPath();
         SQLiteBackupRestorer backupRestorer = mock(SQLiteBackupRestorer.class);
-        SQLiteProperties props = properties(dbPath, backupProps(false));
+        SQLiteProperties props = properties(dbPath, SQLiteTestHelper.createProps(withRestoreOnStartupAndKeyPrefix(false, KEY_PREFIX)));
         SQLiteInitializer initializer = new SQLiteInitializer(props, backupRestorer);
 
         initializer.initialize();
@@ -91,7 +98,7 @@ class SQLiteInitializerTest
         Files.createDirectories(dbPath.getParent());
         Files.writeString(dbPath, "existing-data");
         SQLiteBackupRestorer backupRestorer = mock(SQLiteBackupRestorer.class);
-        SQLiteProperties props = properties(dbPath, backupProps(true));
+        SQLiteProperties props = properties(dbPath, SQLiteTestHelper.createProps(withRestoreOnStartupAndKeyPrefix(true, KEY_PREFIX)));
         SQLiteInitializer initializer = new SQLiteInitializer(props, backupRestorer);
 
         initializer.initialize();
@@ -107,7 +114,7 @@ class SQLiteInitializerTest
         Files.createFile(dbPath);
         SQLiteBackupRestorer backupRestorer = mock(SQLiteBackupRestorer.class);
         when(backupRestorer.restore()).thenReturn(true);
-        SQLiteProperties props = properties(dbPath, backupProps(true));
+        SQLiteProperties props = properties(dbPath, SQLiteTestHelper.createProps(withRestoreOnStartupAndKeyPrefix(true, KEY_PREFIX)));
         SQLiteInitializer initializer = new SQLiteInitializer(props, backupRestorer);
 
         initializer.initialize();
@@ -128,33 +135,10 @@ class SQLiteInitializerTest
         return new SQLiteProperties("jdbc:sqlite:" + dbPath, dbPath, backup);
     }
 
-    private static BackupProperties backupProps(boolean restoreOnStartup)
+    public static Consumer<BackupTestPropertiesBuilder> withRestoreOnStartupAndKeyPrefix(boolean restoreOnStartup, String keyPrefix)
     {
-        return new BackupProperties()
-        {
-            @Override public boolean enabled() { return true; }
-
-            @Override public String cron() { return "0 0 0 ? * MON#5 2099"; }
-
-            @Override public boolean restoreOnStartup() { return restoreOnStartup; }
-
-            @Override public S3Properties s3()
-            {
-                return new S3Properties()
-                {
-                    @Override public String endpoint() { return "http://localhost:0"; }
-
-                    @Override public String bucket() { return "wombat-test"; }
-
-                    @Override public String region() { return "us-east-1"; }
-
-                    @Override public String keyPrefix() { return "tests/"; }
-
-                    @Override public String accessKey() { return ""; }
-
-                    @Override public String secretKey() { return ""; }
-                };
-            }
-        };
+        return b -> b
+            .restoreOnStartup(restoreOnStartup)
+            .s3(S3TestPropertiesBuilder.builder((S3TestProperties) b.s3()).keyPrefix(keyPrefix).build());
     }
 }

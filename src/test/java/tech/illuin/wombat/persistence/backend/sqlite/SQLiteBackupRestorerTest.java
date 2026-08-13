@@ -17,24 +17,29 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import tech.illuin.wombat.persistence.backend.s3.S3Properties;
+import tech.illuin.wombat.persistence.backend.s3.S3TestProperties;
+import tech.illuin.wombat.persistence.backend.s3.S3TestPropertiesBuilder;
+import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupProducer;
+import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupRestorer;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
+import tech.illuin.wombat.persistence.backup.BackupTestPropertiesBuilder;
 
 import java.net.URI;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static tech.illuin.wombat.persistence.backup.BackupTestProperties.DEFAULT_BUCKET;
 
 @QuarkusTest
 class SQLiteBackupRestorerTest
 {
-    private static final String BUCKET = "wombat-backups";
     private static final String RESTORE_KEY_PREFIX = "test-restore/";
     private static final String EMPTY_KEY_PREFIX = "test-empty/";
     private static final String ORDERING_KEY_PREFIX = "test-ordering/";
@@ -55,7 +60,7 @@ class SQLiteBackupRestorerTest
 
         try (S3Client s3 = adminClient())
         {
-            s3.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
+            s3.createBucket(CreateBucketRequest.builder().bucket(DEFAULT_BUCKET).build());
         }
     }
 
@@ -68,7 +73,7 @@ class SQLiteBackupRestorerTest
     @Test
     void restore_restoresLatestBackupFromS3() throws Exception
     {
-        BackupProperties props = props(RESTORE_KEY_PREFIX);
+        BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(RESTORE_KEY_PREFIX));
         SQLiteBackupProducer producer = new SQLiteBackupProducer(this.dataSource, props);
         producer.backup();
 
@@ -92,7 +97,7 @@ class SQLiteBackupRestorerTest
     @Test
     void restore_returnsFalseWhenNoBackupIsAvailable() throws Exception
     {
-        BackupProperties props = props(EMPTY_KEY_PREFIX);
+        BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(EMPTY_KEY_PREFIX));
         Path restoreTarget = Files.createTempFile("sqlite-restore-target-", ".db");
         Files.deleteIfExists(restoreTarget);
         SQLiteProperties restoreProperties = new SQLiteProperties(this.sqliteProperties.jdbcUrl(), restoreTarget, props);
@@ -112,17 +117,17 @@ class SQLiteBackupRestorerTest
     @Test
     void restore_picksMostRecentBackupWhenMultipleExist() throws Exception
     {
-        BackupProperties props = props(ORDERING_KEY_PREFIX);
+        BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(ORDERING_KEY_PREFIX));
         byte[] oldContent = "old-backup".getBytes();
         byte[] newContent = "new-backup-content".getBytes();
 
         try (S3Client s3 = adminClient())
         {
             s3.putObject(
-                PutObjectRequest.builder().bucket(BUCKET).key(ORDERING_KEY_PREFIX + "backup-2020-01-01-00-00.db").build(),
+                PutObjectRequest.builder().bucket(DEFAULT_BUCKET).key(ORDERING_KEY_PREFIX + "backup-2020-01-01-00-00.db").build(),
                 RequestBody.fromBytes(oldContent));
             s3.putObject(
-                PutObjectRequest.builder().bucket(BUCKET).key(ORDERING_KEY_PREFIX + "backup-2030-01-01-00-00.db").build(),
+                PutObjectRequest.builder().bucket(DEFAULT_BUCKET).key(ORDERING_KEY_PREFIX + "backup-2030-01-01-00-00.db").build(),
                 RequestBody.fromBytes(newContent));
         }
 
@@ -145,13 +150,13 @@ class SQLiteBackupRestorerTest
     @Test
     void restore_overwritesExistingFileInPlace_preservingFileIdentity() throws Exception
     {
-        BackupProperties props = props(IN_PLACE_KEY_PREFIX);
+        BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(IN_PLACE_KEY_PREFIX));
         byte[] backupContent = "backup-content-for-in-place-restore".getBytes();
 
         try (S3Client s3 = adminClient())
         {
             s3.putObject(
-                PutObjectRequest.builder().bucket(BUCKET).key(IN_PLACE_KEY_PREFIX + "backup-2020-01-01-00-00.db").build(),
+                PutObjectRequest.builder().bucket(DEFAULT_BUCKET).key(IN_PLACE_KEY_PREFIX + "backup-2020-01-01-00-00.db").build(),
                 RequestBody.fromBytes(backupContent));
         }
 
@@ -203,33 +208,8 @@ class SQLiteBackupRestorerTest
             .build();
     }
 
-    private static BackupProperties props(String keyPrefix)
+    private static Consumer<BackupTestPropertiesBuilder> withKeyPrefix(String keyPrefix)
     {
-        return new BackupProperties()
-        {
-            @Override public boolean enabled() { return true; }
-
-            @Override public String cron() { return "0 0 0 ? * MON#5 2099"; }
-
-            @Override public boolean restoreOnStartup() { return false; }
-
-            @Override public S3Properties s3()
-            {
-                return new S3Properties()
-                {
-                    @Override public String endpoint() { return localstack.getEndpoint().toString(); }
-
-                    @Override public String bucket() { return BUCKET; }
-
-                    @Override public String region() { return "us-east-1"; }
-
-                    @Override public String keyPrefix() { return keyPrefix; }
-
-                    @Override public String accessKey() { return localstack.getAccessKey(); }
-
-                    @Override public String secretKey() { return localstack.getSecretKey(); }
-                };
-            }
-        };
+        return b -> b.s3(S3TestPropertiesBuilder.builder((S3TestProperties) b.s3()).keyPrefix(keyPrefix).build());
     }
 }

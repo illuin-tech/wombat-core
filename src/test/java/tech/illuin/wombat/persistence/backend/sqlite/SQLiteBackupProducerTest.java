@@ -18,10 +18,14 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
-import tech.illuin.wombat.persistence.backend.s3.S3Properties;
+import tech.illuin.wombat.persistence.backend.s3.S3TestProperties;
+import tech.illuin.wombat.persistence.backend.s3.S3TestPropertiesBuilder;
+import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupProducer;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
+import tech.illuin.wombat.persistence.backup.BackupTestPropertiesBuilder;
 
 import java.net.URI;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,11 +34,11 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static tech.illuin.wombat.persistence.backup.BackupTestProperties.DEFAULT_BUCKET;
 
 @QuarkusTest
 class SQLiteBackupProducerTest
 {
-    private static final String BUCKET = "wombat-backups";
     private static final String KEY_PREFIX = "test-producer/";
 
     private static LocalStackContainer localstack;
@@ -51,7 +55,7 @@ class SQLiteBackupProducerTest
 
         try (S3Client s3 = adminClient())
         {
-            s3.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
+            s3.createBucket(CreateBucketRequest.builder().bucket(DEFAULT_BUCKET).build());
         }
     }
 
@@ -64,7 +68,7 @@ class SQLiteBackupProducerTest
     @Test
     void backup_uploadsSqliteSnapshotToS3()
     {
-        BackupProperties props = props();
+        BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(KEY_PREFIX));
         SQLiteBackupProducer producer = new SQLiteBackupProducer(this.dataSource, props);
 
         producer.backup();
@@ -72,7 +76,7 @@ class SQLiteBackupProducerTest
         try (S3Client s3 = adminClient())
         {
             ListObjectsV2Response listing = s3.listObjectsV2(
-                ListObjectsV2Request.builder().bucket(BUCKET).prefix(KEY_PREFIX).build());
+                ListObjectsV2Request.builder().bucket(DEFAULT_BUCKET).prefix(KEY_PREFIX).build());
 
             assertEquals(1, listing.contents().size(), "expected one backup file");
             S3Object uploaded = listing.contents().getFirst();
@@ -85,7 +89,7 @@ class SQLiteBackupProducerTest
     @Test
     void onShutdown_triggersBackupOfTheDatabase()
     {
-        BackupProperties props = props();
+        BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(KEY_PREFIX));
         SQLiteBackupProducer producer = spy(new SQLiteBackupProducer(this.dataSource, props));
         doNothing().when(producer).backup();
 
@@ -115,33 +119,8 @@ class SQLiteBackupProducerTest
             .build();
     }
 
-    private static BackupProperties props()
+    private static Consumer<BackupTestPropertiesBuilder> withKeyPrefix(String keyPrefix)
     {
-        return new BackupProperties()
-        {
-            @Override public boolean enabled() { return true; }
-
-            @Override public String cron() { return "0 0 0 ? * MON#5 2099"; }
-
-            @Override public boolean restoreOnStartup() { return false; }
-
-            @Override public S3Properties s3()
-            {
-                return new S3Properties()
-                {
-                    @Override public String endpoint() { return localstack.getEndpoint().toString(); }
-
-                    @Override public String bucket() { return BUCKET; }
-
-                    @Override public String region() { return "us-east-1"; }
-
-                    @Override public String keyPrefix() { return KEY_PREFIX; }
-
-                    @Override public String accessKey() { return localstack.getAccessKey(); }
-
-                    @Override public String secretKey() { return localstack.getSecretKey(); }
-                };
-            }
-        };
+        return b -> b.s3(S3TestPropertiesBuilder.builder((S3TestProperties) b.s3()).keyPrefix(keyPrefix).build());
     }
 }

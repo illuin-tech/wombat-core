@@ -61,6 +61,10 @@ persistence:
 backup:
   enabled: true
   cron: "0 0 2 * * ?"
+  cleanup:
+    enabled: true
+    cron: "0 0 3 * * ?"
+    retain-last: 10
 
 llm-simulator:
   enabled: false
