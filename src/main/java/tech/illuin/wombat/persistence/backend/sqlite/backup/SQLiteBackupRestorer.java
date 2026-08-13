@@ -1,4 +1,4 @@
-package tech.illuin.wombat.persistence.backend.sqlite;
+package tech.illuin.wombat.persistence.backend.sqlite.backup;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +9,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import tech.illuin.wombat.persistence.backend.s3.S3Helper;
+import tech.illuin.wombat.persistence.backend.sqlite.SQLiteProperties;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.BackupRestorer;
 

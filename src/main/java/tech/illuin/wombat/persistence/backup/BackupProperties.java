@@ -17,4 +17,18 @@ public interface BackupProperties
     boolean restoreOnStartup();
 
     S3Properties s3();
+
+    CleanupProperties cleanup();
+
+    interface CleanupProperties
+    {
+        @WithDefault("true")
+        boolean enabled();
+
+        @WithDefault("0 0 3 * * ?")
+        String cron();
+
+        @WithDefault("10")
+        int retainLast();
+    }
 }

@@ -10,6 +10,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.flywaydb.core.Flyway;
 import tech.illuin.wombat.persistence.backend.PersistenceBackend;
 import tech.illuin.wombat.persistence.backend.PersistenceInitializer;
+import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupRestorer;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 
 import java.nio.file.Path;
