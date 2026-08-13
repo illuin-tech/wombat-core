@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import tech.illuin.wombat.persistence.backend.s3.S3Helper;
 import tech.illuin.wombat.persistence.backend.sqlite.SQLiteProperties;
+import tech.illuin.wombat.persistence.backend.s3.S3Properties;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.BackupRestorer;
 
@@ -24,7 +25,7 @@ import java.util.Optional;
 public class SQLiteBackupRestorer implements BackupRestorer
 {
     private final SQLiteProperties sqliteProperties;
-    private final BackupProperties backupProperties;
+    private final S3Properties s3Properties;
     private final S3Client s3Client;
 
     private static final Logger logger = LoggerFactory.getLogger(SQLiteBackupRestorer.class);
@@ -32,8 +33,8 @@ public class SQLiteBackupRestorer implements BackupRestorer
     public SQLiteBackupRestorer(SQLiteProperties sqliteProperties, BackupProperties backupProperties)
     {
         this.sqliteProperties = sqliteProperties;
-        this.backupProperties = backupProperties;
-        this.s3Client = S3Helper.createClient(backupProperties.s3());
+        this.s3Properties = backupProperties.s3();
+        this.s3Client = S3Helper.createClient(this.s3Properties);
     }
 
     @Override
@@ -44,7 +45,7 @@ public class SQLiteBackupRestorer implements BackupRestorer
             Optional<S3Object> latest = this.findLatestBackup();
             if (latest.isEmpty())
             {
-                logger.info("No SQLite backup found in S3 under prefix {}, skipping restore", this.backupProperties.s3().keyPrefix());
+                logger.info("No SQLite backup found in S3 under prefix {}, skipping restore", this.s3Properties.keyPrefix());
                 return false;
             }
 
@@ -70,8 +71,8 @@ public class SQLiteBackupRestorer implements BackupRestorer
     private Optional<S3Object> findLatestBackup()
     {
         ListObjectsV2Request request = ListObjectsV2Request.builder()
-            .bucket(this.backupProperties.s3().bucket())
-            .prefix(this.backupProperties.s3().keyPrefix())
+            .bucket(this.s3Properties.bucket())
+            .prefix(this.s3Properties.keyPrefix())
             .build();
 
         ListObjectsV2Response response = this.s3Client.listObjectsV2(request);
@@ -107,7 +108,7 @@ public class SQLiteBackupRestorer implements BackupRestorer
     private void download(String key, Path dest) throws IOException
     {
         GetObjectRequest request = GetObjectRequest.builder()
-            .bucket(this.backupProperties.s3().bucket())
+            .bucket(this.s3Properties.bucket())
             .key(key)
             .build();
 

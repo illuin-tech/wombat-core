@@ -11,8 +11,10 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import tech.illuin.wombat.persistence.backend.s3.S3Helper;
+import tech.illuin.wombat.persistence.backend.s3.S3Properties;
 import tech.illuin.wombat.persistence.backup.BackupCleaner;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
+import tech.illuin.wombat.persistence.backup.BackupProperties.CleanupProperties;
 
 import java.util.Comparator;
 import java.util.List;
@@ -25,7 +27,8 @@ import java.util.List;
 @IfBuildProperty(name = "backup.cleanup.enabled", stringValue = "true")
 public class SQLiteBackupCleaner implements BackupCleaner, AutoCloseable
 {
-    private final BackupProperties properties;
+    private final CleanupProperties properties;
+    private final S3Properties s3Properties;
     private final S3Client s3Client;
 
     private static final Logger logger = LoggerFactory.getLogger(SQLiteBackupCleaner.class);
@@ -33,8 +36,9 @@ public class SQLiteBackupCleaner implements BackupCleaner, AutoCloseable
     @Inject
     public SQLiteBackupCleaner(BackupProperties properties)
     {
-        this.properties = properties;
-        this.s3Client = S3Helper.createClient(properties.s3());
+        this.properties = properties.cleanup();
+        this.s3Properties = properties.s3();
+        this.s3Client = S3Helper.createClient(this.s3Properties);
     }
 
     @Scheduled(identity = "sqlite-backup-cleanup", cron = "{backup.cleanup.cron}")
@@ -68,13 +72,13 @@ public class SQLiteBackupCleaner implements BackupCleaner, AutoCloseable
     {
         return this.s3Client
             .listObjectsV2(builder -> builder
-                .bucket(this.properties.s3().bucket())
-                .prefix(this.properties.s3().keyPrefix())
+                .bucket(this.s3Properties.bucket())
+                .prefix(this.s3Properties.keyPrefix())
                 .build()
             ).contents().stream()
             .filter(obj -> obj.key().endsWith(".db"))
             .sorted(Comparator.comparing(S3Object::lastModified).reversed())
-            .skip(this.properties.cleanup().retainLast())
+            .skip(this.properties.retainLast())
             .toList();
     }
 
@@ -82,7 +86,7 @@ public class SQLiteBackupCleaner implements BackupCleaner, AutoCloseable
     {
         try {
             this.s3Client.deleteObject(builder -> builder
-                .bucket(this.properties.s3().bucket())
+                .bucket(this.s3Properties.bucket())
                 .key(object.key())
                 .build());
 
