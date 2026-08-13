@@ -25,18 +25,20 @@ public class SQLiteInitializer implements PersistenceInitializer
     @Override
     public void initialize()
     {
-        this.ensureDirectory();
-        this.restoreBackup();
+        this.initDirectory();
+        this.initBackup();
     }
 
-    private void ensureDirectory()
+    private void initDirectory()
     {
         logger.info("Ensuring database directory exists");
         this.properties.dbPath().getParent().toFile().mkdirs();
     }
 
-    private void restoreBackup()
+    private void initBackup()
     {
+        logger.info("Database backup is {}", this.properties.backup().enabled() ? "enabled" : "disabled");
+
         /* If backup restoration is enabled */
         if (!this.properties.backup().restoreOnStartup() || this.backupRestorer == null)
             logger.info("Database restoration is disabled");

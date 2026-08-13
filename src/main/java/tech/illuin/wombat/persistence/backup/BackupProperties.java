@@ -16,6 +16,7 @@ public interface BackupProperties
     @WithDefault("true")
     boolean restoreOnStartup();
 
+    @WithDefault("null")
     S3Properties s3();
 
     CleanupProperties cleanup();

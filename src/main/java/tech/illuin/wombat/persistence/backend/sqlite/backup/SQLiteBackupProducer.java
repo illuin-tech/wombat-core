@@ -14,6 +14,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import tech.illuin.wombat.persistence.backend.s3.S3Helper;
+import tech.illuin.wombat.persistence.backend.s3.S3Properties;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.BackupProducer;
 
@@ -36,7 +37,7 @@ import java.time.format.DateTimeFormatter;
 public class SQLiteBackupProducer implements BackupProducer, AutoCloseable
 {
     private final AgroalDataSource dataSource;
-    private final BackupProperties props;
+    private final S3Properties s3Properties;
     private final S3Client s3Client;
 
     private static final Logger logger = LoggerFactory.getLogger(SQLiteBackupProducer.class);
@@ -46,8 +47,8 @@ public class SQLiteBackupProducer implements BackupProducer, AutoCloseable
     public SQLiteBackupProducer(AgroalDataSource dataSource, BackupProperties props)
     {
         this.dataSource = dataSource;
-        this.props = props;
-        this.s3Client = S3Helper.createClient(props.s3());
+        this.s3Properties = props.s3();
+        this.s3Client = S3Helper.createClient(this.s3Properties);
     }
 
     @Scheduled(identity = "sqlite-backup-produce", cron = "{backup.cron}")
@@ -89,10 +90,10 @@ public class SQLiteBackupProducer implements BackupProducer, AutoCloseable
 
     private void uploadDump(Path file) throws IOException
     {
-        String key = this.props.s3().keyPrefix() + "backup-" + LocalDateTime.now(ZoneOffset.UTC).format(KEY_FMT) + ".db";
+        String key = this.s3Properties.keyPrefix() + "backup-" + LocalDateTime.now(ZoneOffset.UTC).format(KEY_FMT) + ".db";
 
         PutObjectRequest request = PutObjectRequest.builder()
-            .bucket(this.props.s3().bucket())
+            .bucket(this.s3Properties.bucket())
             .key(key)
             .contentType("application/octet-stream")
             .build();
