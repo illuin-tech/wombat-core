@@ -19,8 +19,8 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import tech.illuin.wombat.persistence.backend.s3.S3TestProperties;
 import tech.illuin.wombat.persistence.backend.s3.S3TestPropertiesBuilder;
-import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupProducer;
-import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupRestorer;
+import tech.illuin.wombat.persistence.backend.sqlite.action.SQLiteBackupProduce;
+import tech.illuin.wombat.persistence.backend.sqlite.action.SQLiteBackupRestore;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.BackupTestPropertiesBuilder;
 
@@ -29,12 +29,14 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static tech.illuin.wombat.persistence.backend.sqlite.SQLiteTestHelper.createS3PropsBuilder;
 import static tech.illuin.wombat.persistence.backup.BackupTestProperties.DEFAULT_BUCKET;
 
 @QuarkusTest
@@ -48,7 +50,6 @@ class SQLiteBackupRestorerTest
     private static LocalStackContainer localstack;
 
     @Inject AgroalDataSource dataSource;
-    @Inject SQLiteProperties sqliteProperties;
 
     @BeforeAll
     static void startLocalStack()
@@ -74,13 +75,12 @@ class SQLiteBackupRestorerTest
     void restore_restoresLatestBackupFromS3() throws Exception
     {
         BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(RESTORE_KEY_PREFIX));
-        SQLiteBackupProducer producer = new SQLiteBackupProducer(this.dataSource, props);
+        SQLiteBackupProduce producer = new SQLiteBackupProduce(this.dataSource, props.s3().orElseThrow());
         producer.backup();
 
         Path restoreTarget = Files.createTempFile("sqlite-restore-target-", ".db");
         Files.deleteIfExists(restoreTarget);
-        SQLiteProperties restoreProperties = new SQLiteProperties(this.sqliteProperties.jdbcUrl(), restoreTarget, props);
-        SQLiteBackupRestorer restorer = new SQLiteBackupRestorer(restoreProperties, props);
+        SQLiteBackupRestore restorer = new SQLiteBackupRestore(restoreTarget, props.s3().orElseThrow());
 
         try {
             boolean restored = restorer.restore();
@@ -100,8 +100,7 @@ class SQLiteBackupRestorerTest
         BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(EMPTY_KEY_PREFIX));
         Path restoreTarget = Files.createTempFile("sqlite-restore-target-", ".db");
         Files.deleteIfExists(restoreTarget);
-        SQLiteProperties restoreProperties = new SQLiteProperties(this.sqliteProperties.jdbcUrl(), restoreTarget, props);
-        SQLiteBackupRestorer restorer = new SQLiteBackupRestorer(restoreProperties, props);
+        SQLiteBackupRestore restorer = new SQLiteBackupRestore(restoreTarget, props.s3().orElseThrow());
 
         try {
             boolean restored = restorer.restore();
@@ -133,8 +132,7 @@ class SQLiteBackupRestorerTest
 
         Path restoreTarget = Files.createTempFile("sqlite-restore-target-", ".db");
         Files.deleteIfExists(restoreTarget);
-        SQLiteProperties restoreProperties = new SQLiteProperties(this.sqliteProperties.jdbcUrl(), restoreTarget, props);
-        SQLiteBackupRestorer restorer = new SQLiteBackupRestorer(restoreProperties, props);
+        SQLiteBackupRestore restorer = new SQLiteBackupRestore(restoreTarget, props.s3().orElseThrow());
 
         try {
             boolean restored = restorer.restore();
@@ -162,8 +160,7 @@ class SQLiteBackupRestorerTest
 
         Path restoreTarget = Files.createTempFile("sqlite-restore-target-", ".db");
         Files.writeString(restoreTarget, "pre-existing-placeholder-content");
-        SQLiteProperties restoreProperties = new SQLiteProperties(this.sqliteProperties.jdbcUrl(), restoreTarget, props);
-        SQLiteBackupRestorer restorer = new SQLiteBackupRestorer(restoreProperties, props);
+        SQLiteBackupRestore restorer = new SQLiteBackupRestore(restoreTarget, props.s3().orElseThrow());
 
         try {
             /* Keep a file descriptor open on the destination path, mimicking a datasource/connection
@@ -210,6 +207,6 @@ class SQLiteBackupRestorerTest
 
     private static Consumer<BackupTestPropertiesBuilder> withKeyPrefix(String keyPrefix)
     {
-        return b -> b.s3(S3TestPropertiesBuilder.builder((S3TestProperties) b.s3()).keyPrefix(keyPrefix).build());
+        return b -> b.s3(Optional.of(createS3PropsBuilder(b.s3()).keyPrefix(keyPrefix).build()));
     }
 }

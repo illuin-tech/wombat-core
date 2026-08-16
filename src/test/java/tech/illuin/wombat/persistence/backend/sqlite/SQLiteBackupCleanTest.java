@@ -20,7 +20,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import tech.illuin.wombat.persistence.backend.s3.S3TestProperties;
 import tech.illuin.wombat.persistence.backend.s3.S3TestPropertiesBuilder;
-import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupCleaner;
+import tech.illuin.wombat.persistence.backend.sqlite.action.SQLiteBackupClean;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.BackupTestPropertiesBuilder;
 import tech.illuin.wombat.persistence.backup.CleanupTestProperties;
@@ -28,23 +28,20 @@ import tech.illuin.wombat.persistence.backup.CleanupTestPropertiesBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static tech.illuin.wombat.persistence.backend.sqlite.SQLiteTestHelper.createS3PropsBuilder;
 import static tech.illuin.wombat.persistence.backup.BackupTestProperties.DEFAULT_BUCKET;
 
 @QuarkusTest
-class SQLiteBackupCleanerTest
+class SQLiteBackupCleanTest
 {
     private static final String CLEANUP_KEY_PREFIX = "test-cleanup/";
     private static final String WITHIN_LIMIT_KEY_PREFIX = "test-cleanup-within-limit/";
-    private static final String SCHEDULED_KEY_PREFIX = "test-cleanup-scheduled/";
 
     private static LocalStackContainer localstack;
 
@@ -90,7 +87,7 @@ class SQLiteBackupCleanerTest
         }
 
         BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefixAndRetainLast(CLEANUP_KEY_PREFIX, retainLast));
-        SQLiteBackupCleaner cleaner = new SQLiteBackupCleaner(props);
+        SQLiteBackupClean cleaner = new SQLiteBackupClean(props.cleanup(), props.s3().orElseThrow());
 
         cleaner.clean();
 
@@ -121,7 +118,7 @@ class SQLiteBackupCleanerTest
         }
 
         BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefixAndRetainLast(WITHIN_LIMIT_KEY_PREFIX, 10));
-        SQLiteBackupCleaner cleaner = new SQLiteBackupCleaner(props);
+        SQLiteBackupClean cleaner = new SQLiteBackupClean(props.cleanup(), props.s3().orElseThrow());
 
         cleaner.clean();
 
@@ -132,18 +129,6 @@ class SQLiteBackupCleanerTest
 
             assertEquals(keys.size(), listing.contents().size(), "no backup should be deleted when the retain limit is not exceeded");
         }
-    }
-
-    @Test
-    void scheduledCleanup_triggersCleanOfOldBackups()
-    {
-        BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefixAndRetainLast(SCHEDULED_KEY_PREFIX, 5));
-        SQLiteBackupCleaner cleaner = spy(new SQLiteBackupCleaner(props));
-        doNothing().when(cleaner).clean();
-
-        cleaner.scheduledCleanup();
-
-        verify(cleaner, times(1)).clean();
     }
 
     private static boolean isDockerAvailable()
@@ -170,7 +155,7 @@ class SQLiteBackupCleanerTest
     public static Consumer<BackupTestPropertiesBuilder> withKeyPrefixAndRetainLast(String keyPrefix, int retainLast)
     {
         return b -> b
-            .s3(S3TestPropertiesBuilder.builder((S3TestProperties) b.s3()).keyPrefix(keyPrefix).build())
+            .s3(Optional.of(createS3PropsBuilder(b.s3()).keyPrefix(keyPrefix).build()))
             .cleanup(CleanupTestPropertiesBuilder.builder((CleanupTestProperties) b.cleanup()).retainLast(retainLast).build());
     }
 }

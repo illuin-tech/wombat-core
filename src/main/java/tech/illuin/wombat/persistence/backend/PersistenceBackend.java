@@ -1,6 +1,0 @@
-package tech.illuin.wombat.persistence.backend;
-
-public interface PersistenceBackend
-{
-    void setup();
-}

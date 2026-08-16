@@ -2,60 +2,62 @@ package tech.illuin.wombat.persistence.backend.sqlite;
 
 import io.agroal.api.AgroalDataSource;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.quarkus.arc.properties.IfBuildProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
+import jakarta.ws.rs.Produces;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.flywaydb.core.Flyway;
-import tech.illuin.wombat.persistence.backend.PersistenceBackend;
-import tech.illuin.wombat.persistence.backend.PersistenceInitializer;
-import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupRestorer;
+import tech.illuin.wombat.persistence.backend.api.*;
+import tech.illuin.wombat.persistence.backend.s3.S3Properties;
+import tech.illuin.wombat.persistence.backend.sqlite.action.*;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+import static tech.illuin.wombat.persistence.backend.api.HookPhase.*;
 
 @ApplicationScoped
-@IfBuildProperty(name = "quarkus.datasource.db-kind", stringValue = "sqlite")
 public class SQLiteBackendConfig
 {
-    @Singleton
-    public SQLiteProperties provideProperties(
+    @Produces @Singleton
+    public PersistenceBackend provideSQLiteBackend(
+        @ConfigProperty(name = "quarkus.datasource.db-kind") String dbKind,
         @ConfigProperty(name = "quarkus.datasource.jdbc.url") String jdbcUrl,
-        BackupProperties backupProperties
+        BackupProperties backupProperties,
+        Instance<AgroalDataSource> dataSources,
+        Instance<Flyway> flyway,
+        Instance<MeterRegistry> registry
     ) {
-        return new SQLiteProperties(
-            jdbcUrl,
-            Path.of(jdbcUrl.substring("jdbc:sqlite:".length())),
-            backupProperties
-        );
-    }
+        if (!dbKind.equals("sqlite"))
+            return PersistenceBackend.disabled("sqlite");
 
-    @Singleton
-    public PersistenceInitializer provideInitializer(SQLiteProperties properties, Instance<SQLiteBackupRestorer> backupRestorer)
-    {
-        return new SQLiteInitializer(properties, backupRestorer.isUnsatisfied() ? null : backupRestorer.get());
-    }
+        List<HookSupplier> hooks = new ArrayList<>();
+        List<ProcessSupplier> processes = new ArrayList<>();
 
-    @Singleton
-    public PersistenceBackend provideBackend(
-        Flyway flyway,
-        MeterRegistry registry,
-        SQLiteSizeGauge sizeGauge
-    ) {
-        return new SQLiteBackend(flyway, registry, sizeGauge);
-    }
+        Path dbPath = Path.of(jdbcUrl.substring("jdbc:sqlite:".length()));
 
-    @Singleton
-    @IfBuildProperty(name = "backup.enabled", stringValue = "true")
-    public SQLiteBackupRestorer provideBackupRestorer(SQLiteProperties sqliteProperties, BackupProperties backupProperties)
-    {
-        return new SQLiteBackupRestorer(sqliteProperties, backupProperties);
-    }
+        hooks.add(new HookSupplier("directory-init", RESOURCE_INIT, 0, () -> new SQLiteDirectoryInit(dbPath)));
+        hooks.add(new HookSupplier("flyway-migration", BACKEND_SETUP, 0, () -> new SQLiteFlywayMigrate(flyway.get())));
+        hooks.add(new HookSupplier("db-metrics", BACKEND_SETUP, 16, () -> new SQLiteDBMetricsInit(registry.get(), dataSources.get())));
 
-    @Singleton
-    public SQLiteSizeGauge provideSizeGauge(AgroalDataSource dataSource)
-    {
-        return new SQLiteSizeGauge(dataSource);
+        if (backupProperties.enabled())
+        {
+            S3Properties s3Properties = backupProperties.s3().orElseThrow(() -> new IllegalArgumentException("S3 properties must be provided when backup is enabled"));
+
+            Supplier<Action> backupAction = () -> new SQLiteBackupProduce(dataSources.get(), s3Properties);
+            processes.add(new ProcessSupplier("backup-produce", backupProperties.cron(), backupAction));
+            hooks.add(new HookSupplier("backup-produce", BACKEND_TEARDOWN, backupAction));
+
+            if (backupProperties.restoreOnStartup())
+                hooks.add(new HookSupplier("backup-restore", RESOURCE_INIT, 16, () -> new SQLiteBackupRestore(dbPath, s3Properties)));
+            if (backupProperties.cleanup().enabled())
+                processes.add(new ProcessSupplier("backup-clean", backupProperties.cleanup().cron(), () -> new SQLiteBackupClean(backupProperties.cleanup(), s3Properties)));
+        }
+
+        return PersistenceBackend.of("sqlite", hooks, processes);
     }
 }
