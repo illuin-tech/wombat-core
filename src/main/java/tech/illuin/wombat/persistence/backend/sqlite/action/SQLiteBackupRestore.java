@@ -39,11 +39,16 @@ public class SQLiteBackupRestore implements BackupRestorer, Action
     @Override
     public void run()
     {
-        if (this.isDatabaseMissingOrEmpty())
-            logger.info("Database file already exists, skipping restoration");
-        else {
-            logger.info("Attempting database restoration from remote backup");
-            this.restore();
+        try {
+            if (this.isDatabaseMissingOrEmpty())
+                logger.info("Database file already exists, skipping restoration");
+            else {
+                logger.info("Attempting database restoration from remote backup");
+                this.restore();
+            }
+        }
+        catch (RestoreException e) {
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
@@ -61,7 +66,7 @@ public class SQLiteBackupRestore implements BackupRestorer, Action
     }
 
     @Override
-    public boolean restore()
+    public boolean restore() throws RestoreException
     {
         Path tmp = null;
         try {
@@ -83,8 +88,7 @@ public class SQLiteBackupRestore implements BackupRestorer, Action
             return true;
         }
         catch (IOException | SdkException e) {
-            logger.error("SQLite database restore failed", e);
-            return false;
+            throw new RestoreException("SQLite database restore failed: " + e.getMessage(), e);
         }
         finally {
             this.deleteSilently(tmp);
