@@ -20,20 +20,18 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import tech.illuin.wombat.persistence.backend.s3.S3TestProperties;
 import tech.illuin.wombat.persistence.backend.s3.S3TestPropertiesBuilder;
-import tech.illuin.wombat.persistence.backend.sqlite.backup.SQLiteBackupProducer;
+import tech.illuin.wombat.persistence.backend.sqlite.action.SQLiteBackupProduce;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.BackupTestPropertiesBuilder;
 
 import java.net.URI;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static tech.illuin.wombat.persistence.backend.sqlite.SQLiteTestHelper.createS3PropsBuilder;
 import static tech.illuin.wombat.persistence.backup.BackupTestProperties.DEFAULT_BUCKET;
 
 @QuarkusTest
@@ -69,7 +67,7 @@ class SQLiteBackupProducerTest
     void backup_uploadsSqliteSnapshotToS3()
     {
         BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(KEY_PREFIX));
-        SQLiteBackupProducer producer = new SQLiteBackupProducer(this.dataSource, props);
+        SQLiteBackupProduce producer = new SQLiteBackupProduce(this.dataSource, props.s3().orElseThrow());
 
         producer.backup();
 
@@ -84,18 +82,6 @@ class SQLiteBackupProducerTest
             assertTrue(uploaded.key().endsWith(".db"));
             assertTrue(uploaded.size() > 0L, "uploaded file should not be empty");
         }
-    }
-
-    @Test
-    void onShutdown_triggersBackupOfTheDatabase()
-    {
-        BackupProperties props = SQLiteTestHelper.createProps(localstack, withKeyPrefix(KEY_PREFIX));
-        SQLiteBackupProducer producer = spy(new SQLiteBackupProducer(this.dataSource, props));
-        doNothing().when(producer).backup();
-
-        producer.onShutdown(null);
-
-        verify(producer, times(1)).backup();
     }
 
     private static boolean isDockerAvailable()
@@ -121,6 +107,6 @@ class SQLiteBackupProducerTest
 
     private static Consumer<BackupTestPropertiesBuilder> withKeyPrefix(String keyPrefix)
     {
-        return b -> b.s3(S3TestPropertiesBuilder.builder((S3TestProperties) b.s3()).keyPrefix(keyPrefix).build());
+        return b -> b.s3(Optional.of(createS3PropsBuilder(b.s3()).keyPrefix(keyPrefix).build()));
     }
 }

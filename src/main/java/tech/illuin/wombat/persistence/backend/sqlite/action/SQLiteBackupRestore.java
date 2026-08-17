@@ -1,4 +1,4 @@
-package tech.illuin.wombat.persistence.backend.sqlite.backup;
+package tech.illuin.wombat.persistence.backend.sqlite.action;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,10 +8,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import tech.illuin.wombat.persistence.backend.api.Action;
 import tech.illuin.wombat.persistence.backend.s3.S3Helper;
-import tech.illuin.wombat.persistence.backend.sqlite.SQLiteProperties;
 import tech.illuin.wombat.persistence.backend.s3.S3Properties;
-import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.BackupRestorer;
 
 import java.io.IOException;
@@ -22,19 +21,43 @@ import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 import java.util.Optional;
 
-public class SQLiteBackupRestorer implements BackupRestorer
+public class SQLiteBackupRestore implements BackupRestorer, Action
 {
-    private final SQLiteProperties sqliteProperties;
+    private final Path dbPath;
     private final S3Properties s3Properties;
     private final S3Client s3Client;
 
-    private static final Logger logger = LoggerFactory.getLogger(SQLiteBackupRestorer.class);
+    private static final Logger logger = LoggerFactory.getLogger(SQLiteBackupRestore.class);
 
-    public SQLiteBackupRestorer(SQLiteProperties sqliteProperties, BackupProperties backupProperties)
+    public SQLiteBackupRestore(Path dbPath, S3Properties s3Properties)
     {
-        this.sqliteProperties = sqliteProperties;
-        this.s3Properties = backupProperties.s3();
+        this.dbPath = dbPath;
+        this.s3Properties = s3Properties;
         this.s3Client = S3Helper.createClient(this.s3Properties);
+    }
+
+    @Override
+    public void run()
+    {
+        if (this.isDatabaseMissingOrEmpty())
+            logger.info("Database file already exists, skipping restoration");
+        else {
+            logger.info("Attempting database restoration from remote backup");
+            this.restore();
+        }
+    }
+
+    private boolean isDatabaseMissingOrEmpty()
+    {
+        if (!Files.exists(this.dbPath))
+            return false;
+        try {
+            return Files.size(this.dbPath) > 0;
+        }
+        catch (IOException e) {
+            logger.warn("Failed to check database file size at {}, assuming it already has data", this.dbPath, e);
+            return true;
+        }
     }
 
     @Override
@@ -54,9 +77,9 @@ public class SQLiteBackupRestorer implements BackupRestorer
             Files.deleteIfExists(tmp);
             this.download(key, tmp);
 
-            this.overwriteInPlace(tmp, this.sqliteProperties.dbPath());
+            this.overwriteInPlace(tmp, this.dbPath);
 
-            logger.info("Restored SQLite database from S3 backup {} to {}", key, this.sqliteProperties.dbPath());
+            logger.info("Restored SQLite database from S3 backup {} to {}", key, this.dbPath);
             return true;
         }
         catch (IOException | SdkException e) {

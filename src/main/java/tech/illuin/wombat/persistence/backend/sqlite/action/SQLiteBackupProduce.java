@@ -1,21 +1,14 @@
-package tech.illuin.wombat.persistence.backend.sqlite.backup;
+package tech.illuin.wombat.persistence.backend.sqlite.action;
 
 import io.agroal.api.AgroalDataSource;
-import io.quarkus.arc.properties.IfBuildProperty;
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.scheduler.Scheduled;
-import jakarta.annotation.PreDestroy;
-import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import tech.illuin.wombat.persistence.backend.api.Action;
 import tech.illuin.wombat.persistence.backend.s3.S3Helper;
 import tech.illuin.wombat.persistence.backend.s3.S3Properties;
-import tech.illuin.wombat.persistence.backup.BackupProperties;
 import tech.illuin.wombat.persistence.backup.BackupProducer;
 
 import java.io.IOException;
@@ -28,36 +21,24 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
-/**
- * We need to declare these here as @Scheduled/@Observes will trigger a bean creation regardless of what happen in SQLiteBackendConfig
- */
-@Singleton
-@IfBuildProperty(name = "quarkus.datasource.db-kind", stringValue = "sqlite")
-@IfBuildProperty(name = "backup.enabled", stringValue = "true")
-public class SQLiteBackupProducer implements BackupProducer, AutoCloseable
+public class SQLiteBackupProduce implements BackupProducer, Action, AutoCloseable
 {
     private final AgroalDataSource dataSource;
     private final S3Properties s3Properties;
     private final S3Client s3Client;
 
-    private static final Logger logger = LoggerFactory.getLogger(SQLiteBackupProducer.class);
+    private static final Logger logger = LoggerFactory.getLogger(SQLiteBackupProduce.class);
     private static final DateTimeFormatter KEY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm");
 
-    @Inject
-    public SQLiteBackupProducer(AgroalDataSource dataSource, BackupProperties props)
+    public SQLiteBackupProduce(AgroalDataSource dataSource, S3Properties s3Properties)
     {
         this.dataSource = dataSource;
-        this.s3Properties = props.s3();
+        this.s3Properties = s3Properties;
         this.s3Client = S3Helper.createClient(this.s3Properties);
     }
 
-    @Scheduled(identity = "sqlite-backup-produce", cron = "{backup.cron}")
-    public void scheduledBackup()
-    {
-        this.backup();
-    }
-
-    public void onShutdown(@Observes ShutdownEvent event)
+    @Override
+    public void run()
     {
         this.backup();
     }
@@ -116,7 +97,6 @@ public class SQLiteBackupProducer implements BackupProducer, AutoCloseable
     }
 
     @Override
-    @PreDestroy
     public void close()
     {
         this.s3Client.close();

@@ -47,6 +47,7 @@ backup:
   s3:
     endpoint: "http://localhost:0"
     bucket: "wombat-test"
+    region: "us-east-1"
     key-prefix: "tests/"
     access-key: "test"
     secret-key: "test"

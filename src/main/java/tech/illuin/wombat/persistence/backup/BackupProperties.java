@@ -4,6 +4,8 @@ import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import tech.illuin.wombat.persistence.backend.s3.S3Properties;
 
+import java.util.Optional;
+
 @ConfigMapping(prefix = "backup")
 public interface BackupProperties
 {
@@ -16,8 +18,7 @@ public interface BackupProperties
     @WithDefault("true")
     boolean restoreOnStartup();
 
-    @WithDefault("null")
-    S3Properties s3();
+    Optional<S3Properties> s3();
 
     CleanupProperties cleanup();
 
