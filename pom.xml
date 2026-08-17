@@ -21,10 +21,10 @@
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>1.21.4</testcontainers.version>
         <junit4.version>4.13.2</junit4.version>
-        <checkstyle.version>13.10.0</checkstyle.version>
+        <checkstyle.version>13.11.0</checkstyle.version>
         <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
         <checkstyle.config.location>checkstyle.xml</checkstyle.config.location>
-        <aws.sdk.version>2.52.1</aws.sdk.version>
+        <aws.sdk.version>2.53.1</aws.sdk.version>
         <record-builder.version>53</record-builder.version>
         <download-maven-plugin.version>1.13.0</download-maven-plugin.version>
         <chartjs.version>4.4.0</chartjs.version>
