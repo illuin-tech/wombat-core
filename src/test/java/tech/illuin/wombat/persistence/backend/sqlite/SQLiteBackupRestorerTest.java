@@ -4,6 +4,7 @@ import io.agroal.api.AgroalDataSource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.DockerClientFactory;
@@ -17,8 +18,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import tech.illuin.wombat.persistence.backend.s3.S3TestProperties;
-import tech.illuin.wombat.persistence.backend.s3.S3TestPropertiesBuilder;
 import tech.illuin.wombat.persistence.backend.sqlite.action.SQLiteBackupProduce;
 import tech.illuin.wombat.persistence.backend.sqlite.action.SQLiteBackupRestore;
 import tech.illuin.wombat.persistence.backup.BackupProperties;
@@ -83,7 +82,7 @@ class SQLiteBackupRestorerTest
         SQLiteBackupRestore restorer = new SQLiteBackupRestore(restoreTarget, props.s3().orElseThrow());
 
         try {
-            boolean restored = restorer.restore();
+            boolean restored = Assertions.assertDoesNotThrow(restorer::restore);
 
             assertTrue(restored, "restore should report success when a backup is available");
             assertTrue(Files.exists(restoreTarget), "restored database file should exist");
@@ -103,7 +102,7 @@ class SQLiteBackupRestorerTest
         SQLiteBackupRestore restorer = new SQLiteBackupRestore(restoreTarget, props.s3().orElseThrow());
 
         try {
-            boolean restored = restorer.restore();
+            boolean restored = Assertions.assertDoesNotThrow(restorer::restore);
 
             assertFalse(restored, "restore should report failure when no backup exists");
             assertFalse(Files.exists(restoreTarget), "no database file should be created when restore fails");
@@ -135,7 +134,7 @@ class SQLiteBackupRestorerTest
         SQLiteBackupRestore restorer = new SQLiteBackupRestore(restoreTarget, props.s3().orElseThrow());
 
         try {
-            boolean restored = restorer.restore();
+            boolean restored = Assertions.assertDoesNotThrow(restorer::restore);
 
             assertTrue(restored);
             assertArrayEquals(newContent, Files.readAllBytes(restoreTarget), "the most recent backup should have been restored");
@@ -171,7 +170,7 @@ class SQLiteBackupRestorerTest
             {
                 Object inodeBefore = Files.getAttribute(restoreTarget, "unix:ino");
 
-                boolean restored = restorer.restore();
+                boolean restored = Assertions.assertDoesNotThrow(restorer::restore);
 
                 assertTrue(restored, "restore should report success when a backup is available");
                 Object inodeAfter = Files.getAttribute(restoreTarget, "unix:ino");

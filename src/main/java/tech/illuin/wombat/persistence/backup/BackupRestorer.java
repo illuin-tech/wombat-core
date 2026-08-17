@@ -5,5 +5,13 @@ public interface BackupRestorer
     /**
      * Restore datastore to latest saved backup
      */
-    boolean restore();
+    boolean restore() throws RestoreException;
+
+    class RestoreException extends Exception
+    {
+        public RestoreException(String message, Throwable cause)
+        {
+            super(message, cause);
+        }
+    }
 }
