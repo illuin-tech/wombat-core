@@ -38,24 +38,30 @@ public class SQLiteBackendConfig
         List<HookSupplier> hooks = new ArrayList<>();
         List<ProcessSupplier> processes = new ArrayList<>();
 
-        Path dbPath = Path.of(jdbcUrl.substring("jdbc:sqlite:".length()));
+        String jdbcPath = jdbcUrl.substring("jdbc:sqlite:".length());
 
-        hooks.add(new HookSupplier("directory-init", RESOURCE_INIT, 0, () -> new SQLiteDirectoryInit(dbPath)));
         hooks.add(new HookSupplier("flyway-migration", BACKEND_SETUP, 0, () -> new SQLiteFlywayMigrate(flyway.get())));
         hooks.add(new HookSupplier("db-metrics", BACKEND_SETUP, 16, () -> new SQLiteDBMetricsInit(registry.get(), dataSources.get())));
 
-        if (backupProperties.enabled())
+        if (!jdbcPath.equals(":memory:"))
         {
-            S3Properties s3Properties = backupProperties.s3().orElseThrow(() -> new IllegalArgumentException("S3 properties must be provided when backup is enabled"));
+            Path dbPath = Path.of(jdbcPath);
+            
+            hooks.add(new HookSupplier("directory-init", RESOURCE_INIT, 0, () -> new SQLiteDirectoryInit(dbPath)));
 
-            Supplier<Action> backupAction = () -> new SQLiteBackupProduce(dataSources.get(), s3Properties);
-            processes.add(new ProcessSupplier("backup-produce", backupProperties.cron(), backupAction));
-            hooks.add(new HookSupplier("backup-produce", BACKEND_TEARDOWN, backupAction));
+            if (backupProperties.enabled())
+            {
+                S3Properties s3Properties = backupProperties.s3().orElseThrow(() -> new IllegalArgumentException("S3 properties must be provided when backup is enabled"));
 
-            if (backupProperties.restoreOnStartup())
-                hooks.add(new HookSupplier("backup-restore", RESOURCE_INIT, 16, () -> new SQLiteBackupRestore(dbPath, s3Properties)));
-            if (backupProperties.cleanup().enabled())
-                processes.add(new ProcessSupplier("backup-clean", backupProperties.cleanup().cron(), () -> new SQLiteBackupClean(backupProperties.cleanup(), s3Properties)));
+                Supplier<Action> backupAction = () -> new SQLiteBackupProduce(dataSources.get(), s3Properties);
+                processes.add(new ProcessSupplier("backup-produce", backupProperties.cron(), backupAction));
+                hooks.add(new HookSupplier("backup-produce", BACKEND_TEARDOWN, backupAction));
+
+                if (backupProperties.restoreOnStartup())
+                    hooks.add(new HookSupplier("backup-restore", RESOURCE_INIT, 16, () -> new SQLiteBackupRestore(dbPath, s3Properties)));
+                if (backupProperties.cleanup().enabled())
+                    processes.add(new ProcessSupplier("backup-clean", backupProperties.cleanup().cron(), () -> new SQLiteBackupClean(backupProperties.cleanup(), s3Properties)));
+            }
         }
 
         return PersistenceBackend.of("sqlite", hooks, processes);
