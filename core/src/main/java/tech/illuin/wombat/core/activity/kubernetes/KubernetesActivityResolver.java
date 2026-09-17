@@ -1,0 +1,88 @@
+package tech.illuin.wombat.core.activity.kubernetes;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.illuin.wombat.core.activity.WombatActivityException;
+import tech.illuin.wombat.core.activity.WombatActivityResolver;
+import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.AssetFilter;
+import tech.illuin.wombat.core.activity.commons.TimeRange;
+import tech.illuin.wombat.core.asset.ActivityRegime;
+import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.ClusterInfo;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.ContainerLocation;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static tech.illuin.wombat.core.activity.commons.TimeRange.toEpochMs;
+
+public class KubernetesActivityResolver implements WombatActivityResolver
+{
+    private final KubernetesMetricResolver metricResolver;
+
+    private static final Logger logger = LoggerFactory.getLogger(KubernetesActivityResolver.class);
+
+    public KubernetesActivityResolver(KubernetesMetricResolver metricResolver)
+    {
+        this.metricResolver = metricResolver;
+    }
+
+    @Override
+    public boolean accept(Asset asset)
+    {
+        return asset.profile().serviceFamily() == ServiceFamily.KUBERNETES_CONTAINER;
+    }
+
+    @Override
+    public ActivityData resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
+    {
+        try {
+            List<String> clusters = List.of(asset.id());
+            Set<String> serviceIds = serviceIds(asset, filter);
+            long start = toEpochMs(range.start());
+            long end = toEpochMs(range.end());
+
+            double cpuUsage = this.metricResolver.averageCpuPerInstant(start, end, clusters)
+                .orElseThrow(() -> new NoCPUUsageException("Could not compute CPU Usage"));
+            Map<String, Double> containerShares = this.metricResolver.containerShares(start, end, clusters);
+            Map<String, ClusterInfo> containerLocations = toClusterInfo(this.metricResolver.containerLocations(start, end, clusters));
+
+            return new KubernetesActivityData(ActivityRegime.MEASURED, serviceIds, range, cpuUsage, containerShares, containerLocations);
+        }
+        catch (NoCPUUsageException e) {
+            throw new WombatActivityException("An error occurred while computing Kubernetes activity", e);
+        }
+
+    }
+
+    private static Set<String> serviceIds(Asset asset, AssetFilter filter)
+    {
+        if (filter == null)
+            return Set.of();
+
+        return filter.environment(asset.environmentId())
+            .map(environment -> environment.assets().stream()
+                .filter(filtered -> filtered.id().equals(asset.id()))
+                .flatMap(filtered -> filtered.serviceIds().stream())
+                .collect(Collectors.toSet()))
+            .orElseGet(Set::of);
+    }
+
+    private static Map<String, ClusterInfo> toClusterInfo(Map<String, List<ContainerLocation>> locations)
+    {
+        Map<String, ClusterInfo> mapped = new LinkedHashMap<>();
+        locations.forEach((containerId, containerLocations) -> {
+            if (containerLocations.isEmpty())
+                return;
+            if (containerLocations.size() > 1)
+                logger.warn("Container {} reported {} locations, keeping the first one", containerId, containerLocations.size());
+
+            ContainerLocation location = containerLocations.getFirst();
+            mapped.put(containerId, new ClusterInfo(location.clusterId(), location.namespace()));
+        });
+        return mapped;
+    }
+}
