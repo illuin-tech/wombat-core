@@ -22,10 +22,10 @@ The application can be packaged using:
 ./mvnw package
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+It produces the `quarkus-run.jar` file in the `app/target/quarkus-app/` directory.
+Be aware that it’s not an _über-jar_ as the dependencies are copied into the `app/target/quarkus-app/lib/` directory.
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+The application is now runnable using `java -jar app/target/quarkus-app/quarkus-run.jar`.
 
 If you want to build an _über-jar_, execute the following command:
 
@@ -33,7 +33,7 @@ If you want to build an _über-jar_, execute the following command:
 ./mvnw package -Dquarkus.package.jar.type=uber-jar
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+The application, packaged as an _über-jar_, is now runnable using `java -jar app/target/*-runner.jar`.
 
 ## Creating a native executable
 
@@ -49,7 +49,7 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 ./mvnw package -Dnative -Dquarkus.native.container-build=true
 ```
 
-You can then execute your native executable with: `./target/wombat-1.0-SNAPSHOT-runner`
+You can then execute your native executable with: `./app/target/wombat-app-1.0-SNAPSHOT-runner`
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
 
