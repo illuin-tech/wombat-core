@@ -23,8 +23,9 @@ public class LLMActivityResolver implements WombatActivityResolver
     }
 
     @Override
-    public boolean accept(Asset asset) {
-        return asset.profile().serviceFamily() == ServiceFamily.LLM;
+    public boolean accept(Asset asset)
+    {
+        return asset.type().family() == ServiceFamily.LLM;
     }
 
     @Override

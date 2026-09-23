@@ -34,21 +34,21 @@ public class AssetEvaluator implements AutoCloseable
         this.contextProvider = contextProvider;
     }
 
-    public AssetEvaluator registerActivityResolver(Asset properties, WombatActivityResolver resolver)
+    public AssetEvaluator registerActivityResolver(AssetType type, WombatActivityResolver resolver)
     {
-        this.activityResolvers.put(properties.type(), resolver);
+        this.activityResolvers.put(type, resolver);
         return this;
     }
 
-    public AssetEvaluator registerCostResolver(Asset properties, WombatEvaluationResolver resolver)
+    public AssetEvaluator registerCostResolver(AssetType type, WombatEvaluationResolver resolver)
     {
-        this.costResolvers.put(properties.type(), resolver);
+        this.costResolvers.put(type, resolver);
         return this;
     }
 
-    public AssetEvaluator registerImpactResolver(Asset properties, WombatEvaluationResolver resolver)
+    public AssetEvaluator registerImpactResolver(AssetType type, WombatEvaluationResolver resolver)
     {
-        this.impactResolvers.put(properties.type(), resolver);
+        this.impactResolvers.put(type, resolver);
         return this;
     }
 
@@ -86,7 +86,7 @@ public class AssetEvaluator implements AutoCloseable
         }
     }
 
-    private Optional<ActivityData> computeActivity(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
+    public Optional<ActivityData> computeActivity(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
     {
         WombatActivityResolver resolver = this.activityResolvers.get(asset.type());
 
@@ -98,7 +98,7 @@ public class AssetEvaluator implements AutoCloseable
         return Optional.of(resolver.resolve(asset, range, filter));
     }
 
-    private Optional<AssetEvaluation> computeImpact(Asset asset, ActivityData activity) throws WombatEvaluationException
+    public Optional<AssetEvaluation> computeImpact(Asset asset, ActivityData activity) throws WombatEvaluationException
     {
         WombatEvaluationResolver resolver = this.impactResolvers.get(asset.type());
 
@@ -110,7 +110,7 @@ public class AssetEvaluator implements AutoCloseable
         return Optional.of(resolver.resolve(asset, activity));
     }
 
-    private Optional<AssetEvaluation> computeCost(Asset asset, ActivityData activity) throws WombatEvaluationException
+    public Optional<AssetEvaluation> computeCost(Asset asset, ActivityData activity) throws WombatEvaluationException
     {
         WombatEvaluationResolver resolver = this.costResolvers.get(asset.type());
 

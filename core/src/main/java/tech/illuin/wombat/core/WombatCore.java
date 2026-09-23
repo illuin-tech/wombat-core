@@ -84,25 +84,24 @@ public final class WombatCore implements AutoCloseable
         logger.info("Creating wombat impact-calculator out of {} registered modules", this.modules.size());
         AssetEvaluator calculator = new AssetEvaluator(this.contextProvider);
         WombatContext context = this.contextProvider.provide();
-        context.assets().stream()
-            .filter(asset -> this.modules.containsKey(asset.type()))
-            .forEach(props -> {
-                WombatModule module = this.modules.get(props.type());
-                WombatContext scoped = context.scope(props.type());
-                ServiceFamily family = props.profile().serviceFamily();
 
-                WombatActivityResolver activityResolver = module.createActivityResolver(scoped).or(() -> this.defaults.getActivityResolver(family)).orElseThrow();
-                calculator.registerActivityResolver(props, activityResolver);
-                logger.debug("Registered wombat activity-resolver {} for asset-type {}", activityResolver.getClass().getSimpleName(), props.type());
+        for (WombatModule module : this.modules.values())
+        {
+            ServiceFamily family = module.type().family();
 
-                WombatEvaluationResolver impactResolver = module.createImpactResolver(scoped).or(() -> this.defaults.getImpactResolver(family)).orElseThrow();
-                calculator.registerImpactResolver(props, impactResolver);
-                logger.debug("Registered wombat impact-resolver {} for asset-type {}", impactResolver.getClass().getSimpleName(), props.type());
+            WombatActivityResolver activityResolver = module.createActivityResolver().or(() -> this.defaults.getActivityResolver(family)).orElseThrow();
+            calculator.registerActivityResolver(module.type(), activityResolver);
+            logger.debug("Registered wombat activity-resolver {} for asset-type {}", activityResolver.getClass().getSimpleName(), module.type());
 
-                WombatEvaluationResolver costResolver = module.createCostResolver(scoped).or(() -> this.defaults.getCostResolver(family)).orElseThrow();
-                calculator.registerCostResolver(props, costResolver);
-                logger.debug("Registered wombat cost-resolver {} for asset-type {}", impactResolver.getClass().getSimpleName(), props.type());
-            });
+            WombatEvaluationResolver impactResolver = module.createImpactResolver().or(() -> this.defaults.getImpactResolver(family)).orElseThrow();
+            calculator.registerImpactResolver(module.type(), impactResolver);
+            logger.debug("Registered wombat impact-resolver {} for asset-type {}", impactResolver.getClass().getSimpleName(), module.type());
+
+            WombatEvaluationResolver costResolver = module.createCostResolver().or(() -> this.defaults.getCostResolver(family)).orElseThrow();
+            calculator.registerCostResolver(module.type(), costResolver);
+            logger.debug("Registered wombat cost-resolver {} for asset-type {}", impactResolver.getClass().getSimpleName(), module.type());
+        }
+
         return calculator;
     }
 
