@@ -231,20 +231,7 @@ class WombatCoreTest
         }
     }
 
-    private static final Profile PROFILE = new Profile()
-    {
-        @Override
-        public String id()
-        {
-            return "profile";
-        }
-
-        @Override
-        public ServiceFamily serviceFamily()
-        {
-            return ServiceFamily.LLM;
-        }
-    };
+    private static final Profile PROFILE = () -> "profile";
 
     private static final class SourcingModule implements WombatModule
     {
@@ -293,7 +280,7 @@ class WombatCoreTest
         }
 
         @Override
-        public Optional<WombatEvaluationResolver> createImpactResolver(WombatContext context)
+        public Optional<WombatEvaluationResolver> createImpactResolver()
         {
             return Optional.of((resolved, data) -> new AssetImpact(
                 resolved.environmentId(),

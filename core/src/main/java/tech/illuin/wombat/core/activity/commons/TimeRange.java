@@ -10,8 +10,10 @@ public record TimeRange(
 ) {
     public static long toEpochMs(Instant instant)
     {
-        if (instant.equals(Instant.MIN)) return Long.MIN_VALUE;
-        if (instant.equals(Instant.MAX)) return Long.MAX_VALUE;
+        if (instant.equals(Instant.MIN))
+            return Long.MIN_VALUE;
+        if (instant.equals(Instant.MAX))
+            return Long.MAX_VALUE;
         return instant.toEpochMilli();
     }
 }

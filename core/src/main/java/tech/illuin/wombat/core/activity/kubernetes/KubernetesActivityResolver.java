@@ -33,7 +33,7 @@ public class KubernetesActivityResolver implements WombatActivityResolver
     @Override
     public boolean accept(Asset asset)
     {
-        return asset.profile().serviceFamily() == ServiceFamily.KUBERNETES_CONTAINER;
+        return asset.type().family() == ServiceFamily.KUBERNETES_CONTAINER;
     }
 
     @Override

@@ -31,7 +31,7 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
     @Override
     public boolean accept(Asset asset)
     {
-        return asset.profile().serviceFamily() == ServiceFamily.LLM;
+        return asset.type().family() == ServiceFamily.LLM;
     }
 
     @Override

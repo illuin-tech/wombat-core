@@ -1,11 +1,10 @@
 package tech.illuin.wombat.module.llm_static;
 
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
-import tech.illuin.wombat.core.context.WombatContext;
-import tech.illuin.wombat.module.llm_static.activity.LLMStaticActivityResolver;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetType;
 import tech.illuin.wombat.core.module.WombatModule;
+import tech.illuin.wombat.module.llm_static.activity.LLMStaticActivityResolver;
 
 import java.util.Optional;
 
@@ -24,7 +23,7 @@ public class LLMStaticModule implements WombatModule
     }
 
     @Override
-    public Optional<WombatActivityResolver> createActivityResolver(WombatContext context)
+    public Optional<WombatActivityResolver> createActivityResolver()
     {
         return Optional.of(new LLMStaticActivityResolver());
     }
