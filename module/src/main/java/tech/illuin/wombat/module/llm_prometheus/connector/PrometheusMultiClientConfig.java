@@ -41,7 +41,7 @@ public class PrometheusMultiClientConfig
         // require() rather than find(): a basic-auth asset whose variable is unset must fail, not silently
         // authenticate with a blank password.
         if (properties.usesBasicAuth())
-            builder.requestInterceptor(new BasicAuthInterceptor(properties.username(), secrets.require(properties.passwordEnv())));
+            builder.requestInterceptor(new BasicAuthInterceptor(properties.username(), secrets.require(properties.passwordKey())));
 
         return builder.target(PrometheusClient.class, properties.prometheusUrl());
     }

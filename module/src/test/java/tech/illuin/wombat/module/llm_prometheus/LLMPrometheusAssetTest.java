@@ -39,7 +39,7 @@ class LLMPrometheusAssetTest
 
         IllegalStateException e = assertThrows(IllegalStateException.class, asset::requiredSecretKeys);
 
-        assertTrue(e.getMessage().contains("password-env"), e.getMessage());
+        assertTrue(e.getMessage().contains("password-key"), e.getMessage());
     }
 
     private static LLMPrometheusAsset asset(String username, String passwordEnv)

@@ -16,7 +16,7 @@ public record LLMPrometheusAsset(
     @JsonProperty("prometheus-url") String prometheusUrl,
     @JsonProperty("proxy-url") String proxyUrl,
     @JsonProperty("username") String username,
-    @JsonProperty("password-env") String passwordEnv,
+    @JsonProperty("password-key") String passwordKey,
     @JsonProperty("heartbeat-skip") int heartbeatSkip,
     @JsonProperty("profile") LLMPrometheusProfile profile
 ) implements Asset, SecretAware, Monitorable
@@ -32,10 +32,10 @@ public record LLMPrometheusAsset(
     {
         if (!this.usesBasicAuth())
             return Set.of();
-        if (this.passwordEnv == null || this.passwordEnv.isBlank())
-            throw new IllegalStateException("Asset " + this.id + " declares a Prometheus username but no password-env");
+        if (this.passwordKey == null || this.passwordKey.isBlank())
+            throw new IllegalStateException("Asset " + this.id + " declares a Prometheus username but no password-key");
 
-        return Set.of(this.passwordEnv);
+        return Set.of(this.passwordKey);
     }
 
     public boolean usesBasicAuth()

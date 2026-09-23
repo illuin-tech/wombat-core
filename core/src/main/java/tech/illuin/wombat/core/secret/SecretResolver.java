@@ -56,4 +56,24 @@ public interface SecretResolver
     {
         return KeyStoreSecretResolver.builder();
     }
+
+    static SecretResolver directory(java.nio.file.Path directory)
+    {
+        return new DirectorySecretResolver(directory);
+    }
+
+    static SecretResolver directory(java.io.File directory)
+    {
+        return new DirectorySecretResolver(directory.toPath());
+    }
+
+    static SecretResolver directory(String directoryPath)
+    {
+        return new DirectorySecretResolver(java.nio.file.Path.of(directoryPath));
+    }
+
+    static DirectorySecretResolver.Builder directoryBuilder()
+    {
+        return DirectorySecretResolver.builder();
+    }
 }

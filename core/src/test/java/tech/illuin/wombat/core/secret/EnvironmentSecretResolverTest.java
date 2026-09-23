@@ -45,7 +45,7 @@ class EnvironmentSecretResolverTest
     @Test
     void rejectsAnUnnamedKey()
     {
-        // An asset that declares basic auth without a password-env would otherwise look up the empty variable name.
+        // An asset that declares basic auth without a password-key would otherwise look up the empty variable name.
         SecretResolver resolver = resolver(Map.of("PROM_PASSWORD", "s3cret"));
 
         assertThrows(IllegalArgumentException.class, () -> resolver.find(null));
