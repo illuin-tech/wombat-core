@@ -1,7 +1,6 @@
 package tech.illuin.wombat.module.llm_prometheus;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.asset.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.context.ResolvedContext;
@@ -19,14 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class LLMPrometheusModuleTest
+public class LLMPrometheusModuleTest
 {
     private final LLMPrometheusModule module = new LLMPrometheusModule();
 
     @Test
     void declaresThePrometheusLLMAssetType()
     {
-        assertEquals(AssetType.LLM_PROMETHEUS, this.module.type());
+        assertEquals(LLMPrometheusModule.TYPE, this.module.type());
         assertEquals(LLMPrometheusAsset.class, this.module.assetClass());
     }
 

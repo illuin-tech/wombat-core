@@ -3,7 +3,6 @@ package tech.illuin.wombat.core.connector.ecologits.impact;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.llm.LLMActivityData;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.ServiceFamily;
 import tech.illuin.wombat.core.connector.ecologits.connector.EcologitsClient;
 import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationRequest;
 import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationResponse;
@@ -31,7 +30,7 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
     @Override
     public boolean accept(Asset asset)
     {
-        return asset.type().family() == ServiceFamily.LLM;
+        return asset.profile() instanceof LLMProfile;
     }
 
     @Override
@@ -40,6 +39,10 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
         LLMProfile profile = (LLMProfile) asset.profile();
         LLMActivityData llmActivityData = (LLMActivityData) activity;
         EcologitsEstimationResponse estimation = this.estimate(profile, llmActivityData.outputTokenCount());
+        if (!validate(estimation))
+            throw new WombatEvaluationException("Ecologits returned no impact estimation for model " + profile.model() + " of provider "
+                + profile.provider() + " (asset " + asset.id() + "), the model may not be registered in Ecologits");
+
         Footprint estimationFootprint = this.convert(estimation);
 
         ServiceImpact llmImpact = new LLMImpact(
@@ -60,8 +63,6 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
             List.of(llmImpact),
             ImpactProvider.ECOLOGITS
         );
-
-
     }
 
     private EcologitsEstimationResponse estimate(LLMProfile profile, long outputTokenCount)
@@ -76,6 +77,14 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
             profile.location()
         );
         return this.client.estimate(request);
+    }
+
+    private static boolean validate(EcologitsEstimationResponse response)
+    {
+        if (response == null || response.impacts() == null)
+            return false;
+        EcologitsEstimationResponse.Impacts impacts = response.impacts();
+        return impacts.gwp() != null && impacts.pe() != null && impacts.adpe() != null;
     }
 
     private Footprint convert(EcologitsEstimationResponse response)

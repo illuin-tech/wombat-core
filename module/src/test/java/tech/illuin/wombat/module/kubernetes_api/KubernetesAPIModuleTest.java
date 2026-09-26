@@ -10,7 +10,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class KubernetesAPIModuleTest
+public class KubernetesAPIModuleTest
 {
     private final KubernetesAPIModule module = new KubernetesAPIModule();
 

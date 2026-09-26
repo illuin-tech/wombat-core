@@ -9,7 +9,7 @@ If you want to learn more about Quarkus, please visit its website: <https://quar
 You can run your application in dev mode that enables live coding using:
 
 ```shell script
-./mvnw -f app quarkus:dev
+./mvnw quarkus:dev -pl app
 ```
 
 > **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
@@ -52,6 +52,18 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 You can then execute your native executable with: `./app/target/wombat-app-1.0-SNAPSHOT-runner`
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+
+## Extensions
+
+Custom modules (e.g. `wombat-simulator`) are loaded at startup from every JAR found in `module.extension.path`
+(defaults to `extensions`, relative to the working directory, i.e. `app/extensions` when running from `app/`). Override it
+with `-Dmodule.extension.path=...` or `MODULE_EXTENSION_PATH=...`.
+
+Extensions are loaded through a single parent-first classloader whose parent is the one that defined `wombat-core`, so
+extension objects are always castable to core types in dev mode, as a packaged JAR and in Docker. If core types ever
+resolve to another copy, loading fails fast with both classloaders named. An extension relying on a family default
+impact resolver must use a profile implementing that family's contract (`LLMProfile` for `LLM`, `ServerProfile` for
+`KUBERNETES_CONTAINER`); otherwise a warning is logged at load time and its assets are skipped during evaluation.
 
 ## Related Guides
 

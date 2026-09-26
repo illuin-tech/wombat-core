@@ -6,7 +6,9 @@ import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.module.AssetProcessor;
 
+import java.util.Optional;
+
 public interface WombatActivityResolver extends AssetProcessor
 {
-    ActivityData resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException;
+    Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException;
 }

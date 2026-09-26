@@ -1,21 +1,25 @@
 package tech.illuin.wombat.module.llm_prometheus;
 
-import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusMultiClientConfig;
-import tech.illuin.wombat.module.llm_prometheus.source.LLMPrometheusSource;
+import tech.illuin.wombat.core.asset.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetType;
+import tech.illuin.wombat.core.asset.ServiceFamily;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.source.WombatSource;
+import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusMultiClientConfig;
+import tech.illuin.wombat.module.llm_prometheus.source.LLMPrometheusSource;
 
 import java.util.Optional;
 
 public class LLMPrometheusModule implements WombatModule
 {
+    public static final AssetType TYPE = AssetType.of("tech.illuin", "wombat-module", "llm-prometheus", ActivityRegime.MEASURED, ServiceFamily.LLM);
+
     @Override
     public AssetType type()
     {
-        return AssetType.LLM_PROMETHEUS;
+        return TYPE;
     }
 
     @Override

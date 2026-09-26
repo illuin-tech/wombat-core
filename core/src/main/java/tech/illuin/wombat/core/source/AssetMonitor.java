@@ -3,7 +3,6 @@ package tech.illuin.wombat.core.source;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 import tech.illuin.wombat.core.source.data.MetricData;
@@ -22,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class AssetMonitor implements AutoCloseable
 {
     private final WombatContextProvider contextProvider;
-    private final Map<AssetType, WombatSource> sources;
+    private final Map<String, WombatSource> sources;
     private final WombatMetricPersister persister;
     private final AtomicInteger heartbeatCount;
     private final ExecutorService executorService;
@@ -45,15 +44,17 @@ public class AssetMonitor implements AutoCloseable
         this.semaphores = new ConcurrentHashMap<>();
     }
 
-    public AssetMonitor register(Asset properties, WombatSource source)
+    public AssetMonitor register(Asset asset, WombatSource source)
     {
-        if (this.sources.containsKey(properties.type()))
+        if (this.sources.containsKey(asset.type().name()))
         {
-            logger.warn("Source for {} was already registered with type {}", properties.type(), this.sources.get(properties.type()).getClass().getSimpleName());
+            logger.trace("Source for {} was already registered with type {}", asset.type(), this.sources.get(asset.type().name()).getClass().getSimpleName());
             return this;
         }
-        this.sources.put(properties.type(), source);
+        this.sources.put(asset.type().name(), source);
         this.semaphores.computeIfAbsent(source, s -> new Semaphore(1, true));
+
+        logger.debug("Registered wombat source {} for asset-type {}", source.getClass().getSimpleName(), asset.type().name());
         return this;
     }
 
@@ -65,17 +66,17 @@ public class AssetMonitor implements AutoCloseable
         for (Environment environment : this.contextProvider.provide().environments())
         {
             environment.assets().stream()
-                .filter(properties -> properties instanceof Monitorable)
-                .filter(properties -> this.sources.containsKey(properties.type()))
-                .filter(properties -> this.sources.get(properties.type()).accept(properties))
-                .filter(properties -> this.acceptHeartbeat((Monitorable) properties, beat))
-                .forEach(properties -> {
-                    WombatSource source = this.sources.get(properties.type());
+                .filter(asset -> asset instanceof Monitorable)
+                .filter(asset -> this.sources.containsKey(asset.type().name()))
+                .filter(asset -> this.sources.get(asset.type().name()).accept(asset))
+                .filter(asset -> this.acceptHeartbeat((Monitorable) asset, beat))
+                .forEach(asset -> {
+                    WombatSource source = this.sources.get(asset.type().name());
                     Semaphore semaphore = this.semaphores.computeIfAbsent(source, s -> new Semaphore(1, true));
                     this.executorService.execute(() -> {
                         semaphore.acquireUninterruptibly();
                         try {
-                            this.runSource(heartbeat, properties, source);
+                            this.runSource(heartbeat, asset, source);
                         }
                         finally {
                             semaphore.release();
@@ -92,15 +93,15 @@ public class AssetMonitor implements AutoCloseable
         return skip <= 1 || beat % skip == 0;
     }
 
-    private void runSource(Instant heartbeat, Asset properties, WombatSource source)
+    private void runSource(Instant heartbeat, Asset asset, WombatSource source)
     {
         try {
-            logger.debug("Monitor triggered for asset {}", properties.id());
-            List<MetricData> data = source.source(heartbeat, properties);
+            logger.debug("Monitor triggered for asset {}", asset.id());
+            List<MetricData> data = source.source(heartbeat, asset);
             this.persister.persist(data);
         }
         catch (WombatSourceException | WombatPersistenceException e) {
-            logger.error("Monitoring failed for asset {}: {}", properties.id(), e.getMessage(), e);
+            logger.error("Monitoring failed for asset {}: {}", asset.id(), e.getMessage(), e);
         }
     }
 

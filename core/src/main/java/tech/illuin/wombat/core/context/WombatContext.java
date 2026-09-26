@@ -27,7 +27,7 @@ public interface WombatContext
             this.environments().stream()
                 .map(e -> {
                     List<Asset> filtered = e.assets().stream()
-                        .filter(p -> p.type() == type)
+                        .filter(p -> p.type().equals(type))
                         .toList();
                     return new Environment(e.id(), filtered);
                 })

@@ -1,6 +1,8 @@
 package tech.illuin.wombat.module.llm_prometheus;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetType;
 import tech.illuin.wombat.core.secret.SecretAware;
@@ -8,23 +10,22 @@ import tech.illuin.wombat.core.source.Monitorable;
 
 import java.util.Set;
 
-
 public record LLMPrometheusAsset(
-    @JsonProperty("id") String id,
-    @JsonProperty("environment-id") String environmentId,
-    @JsonProperty("name") String name,
-    @JsonProperty("prometheus-url") String prometheusUrl,
+    @NotBlank @JsonProperty("id") String id,
+    @NotBlank @JsonProperty("environment-id") String environmentId,
+    @NotBlank @JsonProperty("name") String name,
+    @NotBlank @JsonProperty("prometheus-url") String prometheusUrl,
     @JsonProperty("proxy-url") String proxyUrl,
     @JsonProperty("username") String username,
     @JsonProperty("password-key") String passwordKey,
     @JsonProperty("heartbeat-skip") int heartbeatSkip,
-    @JsonProperty("profile") LLMPrometheusProfile profile
+    @NotNull @JsonProperty("profile") LLMPrometheusProfile profile
 ) implements Asset, SecretAware, Monitorable
 {
     @Override
     public AssetType type()
     {
-        return AssetType.LLM_PROMETHEUS;
+        return LLMPrometheusModule.TYPE;
     }
 
     @Override
