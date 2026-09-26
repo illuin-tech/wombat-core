@@ -1,9 +1,11 @@
 package tech.illuin.wombat.core.source.monitor;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.asset.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
+import tech.illuin.wombat.core.asset.ServiceFamily;
 import tech.illuin.wombat.core.asset.profile.Profile;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
@@ -28,6 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AssetMonitorTest
 {
+    private static final AssetType TYPE_LLM = AssetType.of("tech.illuin", "wombat-module", "llm-prometheus", ActivityRegime.MEASURED, ServiceFamily.LLM);
+    private static final AssetType TYPE_K8S = AssetType.of("tech.illuin", "wombat-module", "kubernetes-api", ActivityRegime.MEASURED, ServiceFamily.KUBERNETES_CONTAINER);
+
     public static void main(String[] args) throws Exception
     {
         AssetMonitorTest test = new AssetMonitorTest();
@@ -44,10 +49,10 @@ class AssetMonitorTest
     void sameSourceTasksAreQueuedAndNeverRunSimultaneously()
     {
         ConcurrentCheckingSource source = new ConcurrentCheckingSource(30);
-        TestAsset a1 = new TestAsset("a1", AssetType.LLM_PROMETHEUS, 1);
-        TestAsset a2 = new TestAsset("a2", AssetType.LLM_PROMETHEUS, 1);
-        TestAsset a3 = new TestAsset("a3", AssetType.LLM_PROMETHEUS, 1);
-        TestAsset a4 = new TestAsset("a4", AssetType.LLM_PROMETHEUS, 1);
+        TestAsset a1 = new TestAsset("a1", TYPE_LLM, 1);
+        TestAsset a2 = new TestAsset("a2", TYPE_LLM, 1);
+        TestAsset a3 = new TestAsset("a3", TYPE_LLM, 1);
+        TestAsset a4 = new TestAsset("a4", TYPE_LLM, 1);
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(a1, a2, a3, a4), noopPersister()))
         {
@@ -100,8 +105,8 @@ class AssetMonitorTest
             return Collections.emptyList();
         };
 
-        TestAsset a1 = new TestAsset("a1", AssetType.LLM_PROMETHEUS, 1);
-        TestAsset a2 = new TestAsset("a2", AssetType.KUBERNETES_API, 1);
+        TestAsset a1 = new TestAsset("a1", TYPE_LLM, 1);
+        TestAsset a2 = new TestAsset("a2", TYPE_K8S, 1);
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(a1, a2), noopPersister()))
         {
@@ -129,8 +134,8 @@ class AssetMonitorTest
             return Collections.emptyList();
         };
 
-        TestAsset errorAsset = new TestAsset("error-asset", AssetType.LLM_PROMETHEUS, 1);
-        TestAsset nextAsset = new TestAsset("next-asset", AssetType.LLM_PROMETHEUS, 1);
+        TestAsset errorAsset = new TestAsset("error-asset", TYPE_LLM, 1);
+        TestAsset nextAsset = new TestAsset("next-asset", TYPE_LLM, 1);
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(errorAsset, nextAsset), noopPersister()))
         {

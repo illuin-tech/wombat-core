@@ -2,6 +2,7 @@ package tech.illuin.wombat.core.asset;
 
 public enum ActivityRegime
 {
+    UNKNOWN("Unknown"),
     MEASURED("Measured"),
     MODELED("Modeled"),
     ;

@@ -95,16 +95,27 @@ public class AssetEvaluator implements AutoCloseable
             logger.debug("Skipping asset {}: no activity resolver accepts asset-type {}", asset.id(), asset.type());
             return Optional.empty();
         }
-        return Optional.of(resolver.resolve(asset, range, filter));
+        return resolver.resolve(asset, range, filter);
     }
 
     public Optional<AssetEvaluation> computeImpact(Asset asset, ActivityData activity) throws WombatEvaluationException
     {
         WombatEvaluationResolver resolver = this.impactResolvers.get(asset.type());
 
-        if (resolver == null || !resolver.accept(asset))
+        if (resolver == null)
         {
-            logger.debug("Skipping impact of asset {}: no impact resolver accepts asset-type {}", asset.id(), asset.type());
+            logger.debug("Skipping impact of asset {}: no impact resolver registered for asset-type {}", asset.id(), asset.type());
+            return Optional.empty();
+        }
+        if (!resolver.accept(asset))
+        {
+            logger.warn(
+                "Skipping impact of asset {}: impact resolver {} rejects asset-type {} with profile {}",
+                asset.id(),
+                resolver.getClass().getSimpleName(),
+                asset.type().name(),
+                asset.profile().getClass().getName()
+            );
             return Optional.empty();
         }
         return Optional.of(resolver.resolve(asset, activity));

@@ -103,10 +103,7 @@
                 <configuration>
                     <argLine>@{argLine} --enable-native-access=ALL-UNNAMED</argLine>
                     <systemPropertyVariables>
-                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
-                        <quarkus.profile>test</quarkus.profile>
-                        <backup.enabled>false</backup.enabled>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -125,7 +122,6 @@
                     <argLine>@{argLine} --enable-native-access=ALL-UNNAMED</argLine>
                     <systemPropertyVariables>
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
-                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
                 </configuration>

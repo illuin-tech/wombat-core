@@ -12,8 +12,8 @@ import tech.illuin.wombat.module.llm_static.LLMStaticAsset;
 import tech.illuin.wombat.module.llm_static.LLMStaticProfile;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.Set;
-
 
 public class LLMStaticActivityResolver implements WombatActivityResolver
 {
@@ -25,18 +25,18 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
     }
 
     @Override
-    public ActivityData resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
+    public Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
     {
         LLMStaticProfile profile = (LLMStaticProfile) asset.profile();
         LLMStaticProfile.RequestProfile requestProfile = profile.requestProfile();
         int requestCount = requestCountOver(requestProfile.requestPerYear(), range);
-        return new LLMActivityData(
+        return Optional.of(new LLMActivityData(
             ActivityRegime.MODELED,
             Set.of(asset.id()),
             range,
             (long) requestProfile.outputTokenCount() * requestCount,
             requestCount
-        );
+        ));
     }
 
     private static int requestCountOver(int requestsPerYear, TimeRange timeRange)

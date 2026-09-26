@@ -40,6 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WombatCoreTest
 {
+    private static final AssetType TYPE_PROMETHEUS = AssetType.of("tech.illuin", "wombat-module", "llm-prometheus", ActivityRegime.MEASURED, ServiceFamily.LLM);
+    private static final AssetType TYPE_STATIC = AssetType.of("tech.illuin", "wombat-module", "llm-static", ActivityRegime.MODELED, ServiceFamily.LLM);
 
     @Test
     void createMonitor_registersASourceForEverySourceableAsset()
@@ -86,7 +88,7 @@ class WombatCoreTest
         // asset's own module as the only thing able to resolve an impact.
         Consumer<WombatCore.CoreDefaults> defaults = registry -> registry.register(
             ServiceFamily.LLM,
-            (asset, range, filter) -> new LLMActivityData(ActivityRegime.MODELED, Set.of(asset.id()), range, 0L, 0),
+            (asset, range, filter) -> Optional.of(new LLMActivityData(ActivityRegime.MODELED, Set.of(asset.id()), range, 0L, 0)),
             SERVES_NOTHING,
             SERVES_NOTHING
         );
@@ -109,7 +111,7 @@ class WombatCoreTest
             () -> core(context(sourceable("a1")), new SourcingModule(), new SourcingModule())
         );
 
-        assertTrue(error.getMessage().contains(AssetType.LLM_PROMETHEUS.name()), error.getMessage());
+        assertTrue(error.getMessage().contains(TYPE_PROMETHEUS.name()), error.getMessage());
     }
 
     @Test
@@ -187,7 +189,7 @@ class WombatCoreTest
         @Override
         public AssetType type()
         {
-            return AssetType.LLM_PROMETHEUS;
+            return TYPE_PROMETHEUS;
         }
 
         @Override
@@ -221,7 +223,7 @@ class WombatCoreTest
         @Override
         public AssetType type()
         {
-            return AssetType.LLM_STATIC;
+            return TYPE_STATIC;
         }
 
         @Override
@@ -241,7 +243,7 @@ class WombatCoreTest
         @Override
         public AssetType type()
         {
-            return AssetType.LLM_PROMETHEUS;
+            return TYPE_PROMETHEUS;
         }
 
         @Override
@@ -270,7 +272,7 @@ class WombatCoreTest
         @Override
         public AssetType type()
         {
-            return AssetType.LLM_STATIC;
+            return TYPE_STATIC;
         }
 
         @Override

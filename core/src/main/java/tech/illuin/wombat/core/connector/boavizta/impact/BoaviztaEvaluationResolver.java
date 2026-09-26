@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.ServiceFamily;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 import tech.illuin.wombat.core.connector.boavizta.connector.BoaviztaClient;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
@@ -43,7 +42,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     @Override
     public boolean accept(Asset asset)
     {
-        return asset.type().family() == ServiceFamily.KUBERNETES_CONTAINER;
+        return asset.profile() instanceof ServerProfile;
     }
 
     @Override

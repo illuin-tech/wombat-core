@@ -7,7 +7,6 @@ import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
-import tech.illuin.wombat.core.asset.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.ClusterInfo;
@@ -37,25 +36,21 @@ public class KubernetesActivityResolver implements WombatActivityResolver
     }
 
     @Override
-    public ActivityData resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
+    public Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
     {
-        try {
-            List<String> clusters = List.of(asset.id());
-            Set<String> serviceIds = serviceIds(asset, filter);
-            long start = toEpochMs(range.start());
-            long end = toEpochMs(range.end());
+        List<String> clusters = List.of(asset.id());
+        Set<String> serviceIds = serviceIds(asset, filter);
+        long start = toEpochMs(range.start());
+        long end = toEpochMs(range.end());
 
-            double cpuUsage = this.metricResolver.averageCpuPerInstant(start, end, clusters)
-                .orElseThrow(() -> new NoCPUUsageException("Could not compute CPU Usage"));
-            Map<String, Double> containerShares = this.metricResolver.containerShares(start, end, clusters);
-            Map<String, ClusterInfo> containerLocations = toClusterInfo(this.metricResolver.containerLocations(start, end, clusters));
+        return this.metricResolver.averageCpuPerInstant(start, end, clusters)
+            .map(cpuUsage -> {
+                Map<String, Double> containerShares = this.metricResolver.containerShares(start, end, clusters);
+                Map<String, ClusterInfo> containerLocations = toClusterInfo(this.metricResolver.containerLocations(start, end, clusters));
 
-            return new KubernetesActivityData(ActivityRegime.MEASURED, serviceIds, range, cpuUsage, containerShares, containerLocations);
-        }
-        catch (NoCPUUsageException e) {
-            throw new WombatActivityException("An error occurred while computing Kubernetes activity", e);
-        }
-
+                return (ActivityData) new KubernetesActivityData(asset.type().regime(), serviceIds, range, cpuUsage, containerShares, containerLocations);
+            })
+            .or(Optional::empty);
     }
 
     private static Set<String> serviceIds(Asset asset, AssetFilter filter)

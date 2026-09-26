@@ -39,17 +39,14 @@ nb-configuration.xml
 
 # Local environment
 .env
-app/src/main/resources/application-local.yaml
-app/src/main/resources/application-dev.yaml
-**/monitored-environments-dev.yaml
-
-pulumi/node_modules
 
 # Plugin directory
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
 /data/
+
+.gitattributes
 
 # local claude stuff (for graphify)
 .claude/

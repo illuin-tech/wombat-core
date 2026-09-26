@@ -1,23 +1,21 @@
 package tech.illuin.wombat.module.llm_static;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.asset.AssetType;
 import tech.illuin.wombat.module.llm_static.activity.LLMStaticActivityResolver;
-import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LLMStaticModuleTest
+public class LLMStaticModuleTest
 {
     private final LLMStaticModule module = new LLMStaticModule();
 
     @Test
     void declaresTheStaticLLMAssetType()
     {
-        assertEquals(AssetType.LLM_STATIC, this.module.type());
+        assertEquals(LLMStaticModule.TYPE, this.module.type());
         assertEquals(LLMStaticAsset.class, this.module.assetClass());
     }
 

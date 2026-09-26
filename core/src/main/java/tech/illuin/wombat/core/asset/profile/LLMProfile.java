@@ -1,5 +1,8 @@
 package tech.illuin.wombat.core.asset.profile;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 public interface LLMProfile extends Profile
 {
     @Override
@@ -8,9 +11,12 @@ public interface LLMProfile extends Profile
         return this.model();
     }
 
+    @NotNull
     LLMProvider provider();
 
+    @NotBlank
     String model();
 
+    @NotBlank
     String location();
 }

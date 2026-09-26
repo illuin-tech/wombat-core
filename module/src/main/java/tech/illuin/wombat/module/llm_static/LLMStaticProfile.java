@@ -1,18 +1,22 @@
 package tech.illuin.wombat.module.llm_static;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import tech.illuin.wombat.core.asset.profile.LLMProfile;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 
 public record LLMStaticProfile(
-    @JsonProperty("provider") LLMProvider provider,
-    @JsonProperty("model") String model,
-    @JsonProperty("location") String location,
-    @JsonProperty("request-profile") RequestProfile requestProfile
+    @NotNull @JsonProperty("provider") LLMProvider provider,
+    @NotBlank @JsonProperty("model") String model,
+    @NotBlank @JsonProperty("location") String location,
+    @NotNull @Valid @JsonProperty("request-profile") RequestProfile requestProfile
 ) implements LLMProfile
 {
     public record RequestProfile(
-        @JsonProperty("output-token-count") int outputTokenCount,
-        @JsonProperty("request-per-year") int requestPerYear
+        @Positive @JsonProperty("output-token-count") int outputTokenCount,
+        @Positive @JsonProperty("request-per-year") int requestPerYear
     ) {}
 }
