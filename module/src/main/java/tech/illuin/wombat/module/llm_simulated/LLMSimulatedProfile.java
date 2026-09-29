@@ -13,4 +13,5 @@ public record LLMSimulatedProfile(
     @NotBlank @JsonProperty("model") String model,
     @NotBlank @JsonProperty("location") String location,
     @NotNull @Valid @JsonProperty("request-profile") LLMStaticProfile.RequestProfile requestProfile
-) implements LLMProfile {}
+) implements LLMProfile
+{}

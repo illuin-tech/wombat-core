@@ -29,7 +29,7 @@ class BoaviztaEvaluationResolverTest
     @Test
     void accept_kubernetesFamilyWithPlainProfile_returnsFalse()
     {
-        assertFalse(this.resolver.accept(new TestAsset(K8S_TYPE, () -> "plain")));
+        assertFalse(this.resolver.accept(new TestAsset(K8S_TYPE, new AssetProfile() {})));
     }
 
     @Test

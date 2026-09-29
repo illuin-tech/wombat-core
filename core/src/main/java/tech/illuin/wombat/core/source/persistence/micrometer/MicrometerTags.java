@@ -16,7 +16,9 @@ public final class MicrometerTags
     public static final String TAG_K8S_CONTAINER = "wombat.k8s.container";
 
     public static final String METRIC_LLM_OUTPUT_TOKENS = "wombat.llm.output-tokens";
+    public static final String TAG_LLM_PROVIDER = "wombat.llm.provider";
     public static final String TAG_LLM_MODEL = "wombat.llm.model";
+    public static final String TAG_LLM_LOCATION = "wombat.llm.location";
 
     private MicrometerTags() {}
 }

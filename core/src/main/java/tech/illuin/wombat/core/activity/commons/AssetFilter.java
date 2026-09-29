@@ -40,6 +40,16 @@ public record AssetFilter(
         return this.environments.stream().map(Environment::id).collect(Collectors.toSet());
     }
 
+    public Set<String> filterServiceIds(tech.illuin.wombat.core.asset.Asset asset)
+    {
+        return this.environment(asset.identity().environmentId())
+            .map(environment -> environment.assets().stream()
+                .filter(filtered -> filtered.id().equals(asset.identity().id()))
+                .flatMap(filtered -> filtered.serviceIds().stream())
+                .collect(Collectors.toSet()))
+            .orElseGet(Set::of);
+    }
+
     public static AssetFilter none()
     {
         return new AssetFilter(Set.of());

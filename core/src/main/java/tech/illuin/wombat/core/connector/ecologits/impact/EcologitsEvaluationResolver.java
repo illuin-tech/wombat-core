@@ -1,8 +1,13 @@
 package tech.illuin.wombat.core.connector.ecologits.impact;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.llm.LLMActivityData;
+import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
 import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.profile.LLMProfile;
+import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.connector.ecologits.connector.EcologitsClient;
 import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationRequest;
 import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationResponse;
@@ -10,17 +15,18 @@ import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
-import tech.illuin.wombat.core.asset.profile.LLMProfile;
 import tech.illuin.wombat.core.evaluation.impact.commons.Footprint;
 import tech.illuin.wombat.core.evaluation.impact.commons.ImpactProvider;
 import tech.illuin.wombat.core.evaluation.impact.commons.ServiceImpact;
 import tech.illuin.wombat.core.evaluation.impact.llm.LLMImpact;
 
-import java.util.List;
+import java.util.*;
 
 public class EcologitsEvaluationResolver implements WombatEvaluationResolver
 {
     private final EcologitsClient client;
+
+    private static final Logger logger = LoggerFactory.getLogger(EcologitsEvaluationResolver.class);
 
     public EcologitsEvaluationResolver(EcologitsClient client)
     {
@@ -38,43 +44,84 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
     {
         LLMProfile profile = (LLMProfile) asset.profile();
         LLMActivityData llmActivityData = (LLMActivityData) activity;
-        EcologitsEstimationResponse estimation = this.estimate(profile, llmActivityData.outputTokenCount());
-        if (!validate(estimation))
-            throw new WombatEvaluationException("Ecologits returned no impact estimation for model " + profile.model() + " of provider "
-                + profile.provider() + " (asset " + asset.identity() + "), the model may not be registered in Ecologits");
 
-        Footprint estimationFootprint = this.convert(estimation);
+        Map<String, LLMServiceActivity> targetServices = new LinkedHashMap<>();
+        Set<String> serviceFilter = llmActivityData.serviceIds();
+        llmActivityData.services().forEach((serviceId, serviceActivity) -> {
+            if (serviceFilter == null || serviceFilter.isEmpty() || serviceFilter.contains(serviceId) || (serviceActivity.model() != null && serviceFilter.contains(serviceActivity.model())))
+                targetServices.put(serviceId, serviceActivity);
+        });
 
-        ServiceImpact llmImpact = new LLMImpact(
-            profile.model(),
-            asset.type(),
-            profile,
-            1.0,
-            estimationFootprint,
-            estimation,
-            llmActivityData.outputTokenCount(),
-            llmActivityData.requestCount()
+        long totalTokens = targetServices.values().stream().mapToLong(LLMServiceActivity::outputTokenCount).sum();
+
+        List<ServiceImpact> serviceImpacts = new ArrayList<>();
+        for (Map.Entry<String, LLMServiceActivity> entry : targetServices.entrySet())
+        {
+            String serviceId = entry.getKey();
+            LLMServiceActivity serviceActivity = entry.getValue();
+
+            LLMProvider provider = serviceActivity.provider();
+            String model = serviceActivity.model() != null ? serviceActivity.model() : serviceId;
+            String location = serviceActivity.location();
+
+            if (provider == null)
+                throw new WombatEvaluationException("No provider specified for LLM service " + serviceId + " (asset " + asset.identity().id() + ")");
+
+            EcologitsEstimationResponse estimation = this.estimate(provider, model, location, serviceActivity.outputTokenCount());
+            if (!validate(estimation))
+            {
+                logger.error("Ecologits returned no impact estimation for model {} of provider {} (asset {}), the model may not be registered in Ecologits", model, provider, asset.identity().id());
+                continue;
+            }
+
+            Footprint serviceFootprint = this.convert(estimation);
+            double share = totalTokens > 0
+                ? (double) serviceActivity.outputTokenCount() / totalTokens
+                : (targetServices.isEmpty() ? 0.0 : 1.0 / targetServices.size());
+
+            ServiceImpact serviceImpact = new LLMImpact(
+                serviceId,
+                asset.type(),
+                profile,
+                provider,
+                model,
+                location,
+                share,
+                serviceFootprint,
+                estimation,
+                serviceActivity.outputTokenCount(),
+                serviceActivity.requestCount()
+            );
+            serviceImpacts.add(serviceImpact);
+        }
+
+        Comparator<ServiceImpact> comparator = Comparator.comparingDouble(
+            si -> si.footprint().gwp().totalValue()
         );
+        serviceImpacts.sort(comparator.reversed());
+
+        List<Footprint> footprints = serviceImpacts.stream().map(ServiceImpact::footprint).toList();
+        Footprint globalFootprint = Footprint.sum(footprints);
 
         return new AssetImpact(
             asset.identity().environmentId(),
             asset.identity().id(),
-            estimationFootprint,
-            List.of(llmImpact),
+            globalFootprint,
+            serviceImpacts,
             ImpactProvider.ECOLOGITS
         );
     }
 
-    private EcologitsEstimationResponse estimate(LLMProfile profile, long outputTokenCount)
+    private EcologitsEstimationResponse estimate(LLMProvider provider, String model, String location, long outputTokenCount)
     {
-        EcologitsEstimationRequest.Provider ecologitsProvider = EcologitsEstimationRequest.Provider.forName(profile.provider())
-            .orElseThrow(() -> new IllegalArgumentException("Unsupported LLM provider: " + profile.provider()));
+        EcologitsEstimationRequest.Provider ecologitsProvider = EcologitsEstimationRequest.Provider.forName(provider)
+            .orElseThrow(() -> new IllegalArgumentException("Unsupported LLM provider: " + provider));
 
         EcologitsEstimationRequest request = new EcologitsEstimationRequest(
             ecologitsProvider,
-            profile.model(),
+            model,
             outputTokenCount,
-            profile.location()
+            location
         );
         return this.client.estimate(request);
     }
