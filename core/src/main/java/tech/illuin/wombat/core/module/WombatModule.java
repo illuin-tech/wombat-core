@@ -2,7 +2,7 @@ package tech.illuin.wombat.core.module;
 
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.source.WombatSource;

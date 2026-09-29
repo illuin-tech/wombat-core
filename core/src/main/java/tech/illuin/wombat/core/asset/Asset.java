@@ -3,24 +3,19 @@ package tech.illuin.wombat.core.asset;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import tech.illuin.wombat.core.asset.profile.Profile;
+import jakarta.validation.constraints.NotNull;
+import tech.illuin.wombat.core.asset.profile.AssetProfile;
+import tech.illuin.wombat.core.asset.type.AssetType;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 public interface Asset
 {
-    @NotBlank
-    String id();
-
-    @NotBlank
-    String environmentId();
-
-    @NotBlank
-    String name();
+    @NotNull @Valid
+    AssetIdentity identity();
 
     @JsonIgnore
     AssetType type();
 
-    @Valid
-    Profile profile();
+    @NotNull @Valid
+    AssetProfile profile();
 }

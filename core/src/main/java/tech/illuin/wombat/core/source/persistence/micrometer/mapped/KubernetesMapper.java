@@ -1,6 +1,8 @@
 package tech.illuin.wombat.core.source.persistence.micrometer.mapped;
 
 import io.micrometer.core.instrument.Tag;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.source.data.KubernetesData;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.core.source.persistence.micrometer.mapped.MappedMicrometerMetricPersister.Value;
@@ -8,21 +10,19 @@ import tech.illuin.wombat.core.source.persistence.micrometer.mapped.MappedMicrom
 import java.util.List;
 
 import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTags.*;
-import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTags.TAG_K8S_CLUSTER;
-import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTags.TAG_K8S_CONTAINER;
-import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTags.TAG_K8S_NAMESPACE;
-import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTags.TAG_K8S_POD;
 
 public class KubernetesMapper implements MappedMicrometerMetricPersister.Mapper
 {
     @Override
-    public List<Tag> mapTags(MetricData data)
+    public List<Tag> mapTags(AssetIdentity identity, AssetType type, MetricData data)
     {
         KubernetesData k8sData = asKubernetesData(data);
 
         return List.of(
-            Tag.of(TAG_ENVIRONMENT, data.environmentId()),
-            Tag.of(TAG_ASSET, data.assetId()),
+            Tag.of(TAG_ENVIRONMENT, identity.environmentId()),
+            Tag.of(TAG_ASSET, identity.id()),
+            Tag.of(TAG_ASSET_NAME, identity.name()),
+            Tag.of(TAG_ASSET_TYPE, type.name()),
             Tag.of(TAG_SERVICE, data.serviceId()),
             Tag.of(TAG_K8S_CLUSTER, k8sData.cluster()),
             Tag.of(TAG_K8S_NAMESPACE, k8sData.namespace()),

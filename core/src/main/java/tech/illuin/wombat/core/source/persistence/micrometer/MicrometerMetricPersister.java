@@ -1,7 +1,9 @@
 package tech.illuin.wombat.core.source.persistence.micrometer;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.core.source.persistence.CompositeMetricPersister;
 import tech.illuin.wombat.core.source.persistence.WombatMetricPersister;
@@ -25,8 +27,8 @@ public class MicrometerMetricPersister implements WombatMetricPersister
     }
 
     @Override
-    public void persist(Collection<MetricData> metrics) throws WombatPersistenceException
+    public void persist(AssetIdentity identity, AssetType type, Collection<MetricData> metrics) throws WombatPersistenceException
     {
-        this.composite.persist(metrics);
+        this.composite.persist(identity, type, metrics);
     }
 }

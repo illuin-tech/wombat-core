@@ -1,7 +1,7 @@
 package tech.illuin.wombat.core.evaluation.impact.commons;
 
-import tech.illuin.wombat.core.asset.AssetType;
-import tech.illuin.wombat.core.asset.profile.Profile;
+import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.profile.AssetProfile;
 
 public interface ServiceImpact
 {
@@ -11,7 +11,7 @@ public interface ServiceImpact
 
     Footprint footprint();
 
-    Profile profile();
+    AssetProfile profile();
 
     AssetType assetType();
 }

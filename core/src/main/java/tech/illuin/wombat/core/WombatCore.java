@@ -3,7 +3,7 @@ package tech.illuin.wombat.core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
-import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;

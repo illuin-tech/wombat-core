@@ -1,6 +1,9 @@
 package tech.illuin.wombat.core.asset;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;

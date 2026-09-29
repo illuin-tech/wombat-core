@@ -13,7 +13,7 @@ public record Environment(
     public Asset get(String assetId)
     {
         return this.assets.stream()
-            .filter(a -> a.id().equals(assetId))
+            .filter(a -> a.identity().id().equals(assetId))
             .findFirst()
             .orElseThrow();
     }

@@ -1,15 +1,14 @@
 package tech.illuin.wombat.module.llm_static;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import jakarta.validation.constraints.NotNull;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.AssetType;
 
 public record LLMStaticAsset(
-    @NotBlank @JsonProperty("id") String id,
-    @NotBlank @JsonProperty("environment-id") String environmentId,
-    @NotBlank @JsonProperty("name") String name,
+    @JsonUnwrapped AssetIdentity identity,
     @NotNull @JsonProperty("profile") LLMStaticProfile profile
 ) implements Asset
 {

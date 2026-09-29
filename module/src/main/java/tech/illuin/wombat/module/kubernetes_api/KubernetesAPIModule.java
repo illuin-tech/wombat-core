@@ -1,9 +1,9 @@
 package tech.illuin.wombat.module.kubernetes_api;
 
-import tech.illuin.wombat.core.asset.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
-import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.source.WombatSource;

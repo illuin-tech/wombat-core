@@ -17,7 +17,7 @@ public class KubernetesMultiClusterClientConfig
         context.assets().stream()
             .filter(KubernetesAPIAsset.class::isInstance)
             .map(KubernetesAPIAsset.class::cast)
-            .forEach(cluster -> multi.register(cluster.id(), createClient(cluster)));
+            .forEach(cluster -> multi.register(cluster.identity().id(), createClient(cluster)));
         return multi;
     }
 

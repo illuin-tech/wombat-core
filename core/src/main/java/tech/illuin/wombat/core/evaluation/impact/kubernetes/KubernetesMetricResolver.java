@@ -4,11 +4,11 @@ import java.util.*;
 
 public interface KubernetesMetricResolver
 {
-    Optional<Double> averageCpuPerInstant(long startMs, long endMs, List<String> clusterIds);
+    Optional<Double> averageCpuPerInstant(long startMs, long endMs, List<String> assetIds);
 
-    Map<String, Double> containerShares(long startMs, long endMs, List<String> clusterIds);
+    Map<String, Double> containerShares(long startMs, long endMs, List<String> assetIds);
 
-    Map<String, List<ContainerLocation>> containerLocations(long startMs, long endMs, List<String> clusterIds);
+    Map<String, List<ContainerLocation>> containerLocations(long startMs, long endMs, List<String> assetIds);
 
-    Map<Long, Double> cpuTimePerBucket(long startMs, long endMs, long stepMs, List<String> clusterIds, Collection<String> serviceIds);
+    Map<Long, Double> cpuTimePerBucket(long startMs, long endMs, long stepMs, List<String> assetIds, Collection<String> serviceIds);
 }

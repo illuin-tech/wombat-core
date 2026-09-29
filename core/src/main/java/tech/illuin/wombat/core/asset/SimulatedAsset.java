@@ -9,20 +9,8 @@ public interface SimulatedAsset extends Asset
     ActivityData activity();
 
     @Override
-    default String id()
+    default AssetIdentity identity()
     {
-        return "simulated-asset";
-    }
-
-    @Override
-    default String environmentId()
-    {
-        return "simulated-environment";
-    }
-
-    @Override
-    default String name()
-    {
-        return this.id();
+        return AssetIdentity.of("simulated-asset", "simulated-environment", "simulated-asset");
     }
 }

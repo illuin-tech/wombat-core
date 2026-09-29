@@ -6,7 +6,7 @@ import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.llm.LLMActivityData;
-import tech.illuin.wombat.core.asset.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.module.llm_static.LLMStaticAsset;
 import tech.illuin.wombat.module.llm_static.LLMStaticProfile;
@@ -32,7 +32,7 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
         int requestCount = requestCountOver(requestProfile.requestPerYear(), range);
         return Optional.of(new LLMActivityData(
             ActivityRegime.MODELED,
-            Set.of(asset.id()),
+            Set.of(asset.identity().id()),
             range,
             (long) requestProfile.outputTokenCount() * requestCount,
             requestCount

@@ -39,7 +39,7 @@ public class LLMPrometheusSource implements WombatSource
     {
         LLMPrometheusAsset prometheusAsset = (LLMPrometheusAsset) asset;
 
-        String assetId = asset.id();
+        String assetId = asset.identity().id();
         PrometheusClient prometheusClient = this.client.get(assetId)
             .orElseThrow(() -> new IllegalStateException("No Prometheus client registered for asset " + assetId));
 
@@ -52,8 +52,6 @@ public class LLMPrometheusSource implements WombatSource
             .map(value -> Math.max(0L, Math.round(value)))
             .map(outputTokens -> new LLMData(
                 prometheusAsset.profile().model(),
-                asset.id(),
-                asset.environmentId(),
                 prometheusAsset.profile().model(),
                 outputTokens
             ));

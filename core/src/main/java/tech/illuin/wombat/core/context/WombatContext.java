@@ -1,7 +1,7 @@
 package tech.illuin.wombat.core.context;
 
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.secret.SecretResolver;
 

@@ -41,7 +41,7 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
         EcologitsEstimationResponse estimation = this.estimate(profile, llmActivityData.outputTokenCount());
         if (!validate(estimation))
             throw new WombatEvaluationException("Ecologits returned no impact estimation for model " + profile.model() + " of provider "
-                + profile.provider() + " (asset " + asset.id() + "), the model may not be registered in Ecologits");
+                + profile.provider() + " (asset " + asset.identity() + "), the model may not be registered in Ecologits");
 
         Footprint estimationFootprint = this.convert(estimation);
 
@@ -57,8 +57,8 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
         );
 
         return new AssetImpact(
-            asset.environmentId(),
-            asset.id(),
+            asset.identity().environmentId(),
+            asset.identity().id(),
             estimationFootprint,
             List.of(llmImpact),
             ImpactProvider.ECOLOGITS

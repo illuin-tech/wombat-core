@@ -1,11 +1,12 @@
 package tech.illuin.wombat.core.connector.boavizta.impact;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.asset.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
-import tech.illuin.wombat.core.asset.ServiceFamily;
-import tech.illuin.wombat.core.asset.profile.Profile;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
+import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 
@@ -39,24 +40,12 @@ class BoaviztaEvaluationResolverTest
 
     private record TestServerProfile(ServerProvider provider, String instanceType, String location, int lifespan) implements ServerProfile {}
 
-    private record TestAsset(AssetType type, Profile profile) implements Asset
+    private record TestAsset(AssetType type, AssetProfile profile) implements Asset
     {
         @Override
-        public String id()
+        public AssetIdentity identity()
         {
-            return "asset";
-        }
-
-        @Override
-        public String environmentId()
-        {
-            return "env";
-        }
-
-        @Override
-        public String name()
-        {
-            return "Asset";
+            return AssetIdentity.of("asset", "env", "Asset");
         }
     }
 }

@@ -1,11 +1,9 @@
 package tech.illuin.wombat.core.source.data;
 
-import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
 
 public record LLMData(
     String serviceId,
-    String assetId,
-    String environmentId,
     String model,
     long outputTokens
 ) implements MetricData {

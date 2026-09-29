@@ -1,6 +1,6 @@
 package tech.illuin.wombat.core.evaluation.impact.llm;
 
-import tech.illuin.wombat.core.asset.AssetType;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.profile.LLMProfile;
 import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationResponse;
 import tech.illuin.wombat.core.evaluation.impact.commons.Footprint;

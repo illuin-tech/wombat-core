@@ -39,10 +39,10 @@ public class KubernetesAPISource implements WombatSource
     {
         KubernetesAPIAsset kubernetesAsset = (KubernetesAPIAsset) asset;
 
-        String clusterId = asset.id();
-        logger.trace("Persisting pods usages for kubernetes config {}", asset.id());
+        String clusterId = asset.identity().id();
+        logger.trace("Persisting pods usages for kubernetes config {}", asset.identity().id());
 
-        List<PodMetrics> podMetricsList = this.multiClusterApi.get(asset.id())
+        List<PodMetrics> podMetricsList = this.multiClusterApi.get(asset.identity().id())
             .orElseThrow(() -> new IllegalStateException("No client registered for cluster " + clusterId))
             .top()
             .pods()
@@ -50,14 +50,13 @@ public class KubernetesAPISource implements WombatSource
             .metrics()
             .getItems();
 
-        return this.outputToTarget(podMetricsList, asset.environmentId(), kubernetesAsset);
+        return this.outputToTarget(podMetricsList, kubernetesAsset);
     }
 
-    private List<MetricData> outputToTarget(List<PodMetrics> podMetricsList, String environmentId, KubernetesAPIAsset properties)
+    private List<MetricData> outputToTarget(List<PodMetrics> podMetricsList, KubernetesAPIAsset properties)
     {
-        String clusterId = properties.id();
+        String clusterId = properties.identity().id();
         String namespace = properties.namespace();
-        String assetId = properties.id();
 
         logger.trace("Recording metrics for {} pods in {}/{}", podMetricsList.size(), clusterId, namespace);
         List<MetricData> metricData = new ArrayList<>();
@@ -70,8 +69,6 @@ public class KubernetesAPISource implements WombatSource
                 Map<String, Quantity> usage = cm.getUsage();
                 metricData.add(new KubernetesData(
                     cm.getName(),
-                    assetId,
-                    environmentId,
                     clusterId,
                     namespace,
                     podName,

@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
-public interface ServerProfile extends Profile
+public interface ServerProfile extends AssetProfile
 {
     @Override
     default String id()

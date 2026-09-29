@@ -1,12 +1,13 @@
 package tech.illuin.wombat.core.source.monitor;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.asset.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
-import tech.illuin.wombat.core.asset.ServiceFamily;
-import tech.illuin.wombat.core.asset.profile.Profile;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
+import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 import tech.illuin.wombat.core.source.AssetMonitor;
@@ -125,12 +126,12 @@ class AssetMonitorTest
         AtomicBoolean threw = new AtomicBoolean(false);
 
         WombatSource source = (heartbeat, asset) -> {
-            if ("error-asset".equals(asset.id()))
+            if ("error-asset".equals(asset.identity().id()))
             {
                 threw.set(true);
                 throw new WombatSourceException("Simulated failure");
             }
-            processed.add(asset.id());
+            processed.add(asset.identity().id());
             return Collections.emptyList();
         };
 
@@ -154,7 +155,7 @@ class AssetMonitorTest
 
     private static WombatMetricPersister noopPersister()
     {
-        return metrics -> {};
+        return (asset, type, metrics) -> {};
     }
 
     private static final class ConcurrentCheckingSource implements WombatSource
@@ -176,7 +177,7 @@ class AssetMonitorTest
             this.maxConcurrent.accumulateAndGet(current, Math::max);
             try {
                 Thread.sleep(this.sleepMs);
-                this.processed.add(asset.id());
+                this.processed.add(asset.identity().id());
             }
             catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -188,22 +189,16 @@ class AssetMonitorTest
         }
     }
 
-    private record TestAsset(String id, AssetType type, int heartbeatSkip) implements Asset, Monitorable
+    private record TestAsset(String assetId, AssetType type, int heartbeatSkip) implements Asset, Monitorable
     {
         @Override
-        public String environmentId()
+        public AssetIdentity identity()
         {
-            return "env";
+            return AssetIdentity.of(this.assetId, "env", this.assetId);
         }
 
         @Override
-        public String name()
-        {
-            return this.id;
-        }
-
-        @Override
-        public Profile profile()
+        public AssetProfile profile()
         {
             return null;
         }

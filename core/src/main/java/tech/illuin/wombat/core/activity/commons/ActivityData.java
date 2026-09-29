@@ -1,7 +1,7 @@
 package tech.illuin.wombat.core.activity.commons;
 
-import tech.illuin.wombat.core.asset.ActivityRegime;
-import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
 
 import java.util.Set;
 

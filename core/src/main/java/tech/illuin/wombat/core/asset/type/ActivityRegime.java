@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.asset;
+package tech.illuin.wombat.core.asset.type;
 
 public enum ActivityRegime
 {
