@@ -89,7 +89,7 @@ class WombatCoreTest
         // asset's own module as the only thing able to resolve an impact.
         Consumer<WombatCore.CoreDefaults> defaults = registry -> registry.register(
             ServiceFamily.LLM,
-            (asset, range, filter) -> Optional.of(new LLMActivityData(ActivityRegime.MODELED, Set.of(asset.identity().id()), range, 0L, 0)),
+            (asset, range, filter) -> Optional.of(new LLMActivityData(ActivityRegime.MODELED, asset.identity().id(), range, 0L, 0)),
             SERVES_NOTHING,
             SERVES_NOTHING
         );
@@ -222,7 +222,7 @@ class WombatCoreTest
         }
     }
 
-    private static final AssetProfile PROFILE = () -> "profile";
+    private static final AssetProfile PROFILE = new AssetProfile() {};
 
     private static final class SourcingModule implements WombatModule
     {

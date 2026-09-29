@@ -14,7 +14,6 @@ import tech.illuin.wombat.core.evaluation.impact.kubernetes.ContainerLocation;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static tech.illuin.wombat.core.activity.commons.TimeRange.toEpochMs;
 
@@ -39,7 +38,7 @@ public class KubernetesActivityResolver implements WombatActivityResolver
     public Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
     {
         List<String> assetIds = List.of(asset.identity().id());
-        Set<String> serviceIds = serviceIds(asset, filter);
+        Set<String> serviceIds = filter == null ? Set.of() : filter.filterServiceIds(asset);
         long start = toEpochMs(range.start());
         long end = toEpochMs(range.end());
 
@@ -51,19 +50,6 @@ public class KubernetesActivityResolver implements WombatActivityResolver
                 return (ActivityData) new KubernetesActivityData(asset.type().regime(), serviceIds, range, cpuUsage, containerShares, containerLocations);
             })
             .or(Optional::empty);
-    }
-
-    private static Set<String> serviceIds(Asset asset, AssetFilter filter)
-    {
-        if (filter == null)
-            return Set.of();
-
-        return filter.environment(asset.identity().environmentId())
-            .map(environment -> environment.assets().stream()
-                .filter(filtered -> filtered.id().equals(asset.identity().id()))
-                .flatMap(filtered -> filtered.serviceIds().stream())
-                .collect(Collectors.toSet()))
-            .orElseGet(Set::of);
     }
 
     private static Map<String, ClusterInfo> toClusterInfo(Map<String, List<ContainerLocation>> locations)

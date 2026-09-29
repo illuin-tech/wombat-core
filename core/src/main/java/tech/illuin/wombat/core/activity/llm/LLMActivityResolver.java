@@ -9,8 +9,7 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
 
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static tech.illuin.wombat.core.activity.commons.TimeRange.toEpochMs;
 
@@ -31,12 +30,24 @@ public class LLMActivityResolver implements WombatActivityResolver
     @Override
     public Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
     {
-        //TODO: use filters
-        long summedTokens = this.metricResolver.sumOutputTokens(
+        Set<String> filteredServiceIds = filter == null ? Set.of() : filter.filterServiceIds(asset);
+        Map<String, LLMServiceActivity> activities = this.metricResolver.serviceActivities(
             toEpochMs(range.start()),
             toEpochMs(range.end()),
             asset.identity().id()
         );
-        return Optional.of(new LLMActivityData(asset.type().regime(), Set.of(asset.identity().id()), range, summedTokens, 1));
+
+        if (!filteredServiceIds.isEmpty())
+        {
+            Map<String, LLMServiceActivity> filtered = new LinkedHashMap<>();
+            activities.forEach((key, activity) -> {
+                if (filteredServiceIds.contains(key) || filteredServiceIds.contains(activity.model()))
+                    filtered.put(key, activity);
+            });
+            activities = filtered;
+        }
+
+        Set<String> resolvedServiceIds = filteredServiceIds.isEmpty() ? activities.keySet() : filteredServiceIds;
+        return Optional.of(new LLMActivityData(asset.type().regime(), resolvedServiceIds, range, activities));
     }
 }

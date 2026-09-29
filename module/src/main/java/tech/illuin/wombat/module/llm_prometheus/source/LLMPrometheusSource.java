@@ -52,7 +52,9 @@ public class LLMPrometheusSource implements WombatSource
             .map(value -> Math.max(0L, Math.round(value)))
             .map(outputTokens -> new LLMData(
                 prometheusAsset.profile().model(),
+                prometheusAsset.profile().provider(),
                 prometheusAsset.profile().model(),
+                prometheusAsset.profile().location(),
                 outputTokens
             ));
 
