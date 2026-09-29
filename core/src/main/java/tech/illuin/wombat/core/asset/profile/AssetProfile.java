@@ -2,7 +2,7 @@ package tech.illuin.wombat.core.asset.profile;
 
 import jakarta.validation.constraints.NotBlank;
 
-public interface Profile
+public interface AssetProfile
 {
     @NotBlank
     String id();

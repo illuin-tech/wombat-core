@@ -96,12 +96,12 @@ public class AssetMonitor implements AutoCloseable
     private void runSource(Instant heartbeat, Asset asset, WombatSource source)
     {
         try {
-            logger.debug("Monitor triggered for asset {}", asset.id());
+            logger.debug("Monitor triggered for asset {}", asset.identity().id());
             List<MetricData> data = source.source(heartbeat, asset);
-            this.persister.persist(data);
+            this.persister.persist(asset.identity(), asset.type(), data);
         }
         catch (WombatSourceException | WombatPersistenceException e) {
-            logger.error("Monitoring failed for asset {}: {}", asset.id(), e.getMessage(), e);
+            logger.error("Monitoring failed for asset {}: {}", asset.identity().id(), e.getMessage(), e);
         }
     }
 

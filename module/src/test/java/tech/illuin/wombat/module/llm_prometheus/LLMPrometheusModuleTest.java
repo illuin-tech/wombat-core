@@ -1,6 +1,7 @@
 package tech.illuin.wombat.module.llm_prometheus;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.context.ResolvedContext;
@@ -43,7 +44,7 @@ public class LLMPrometheusModuleTest
     {
         // Proves the module builds its clients from the context's resolver: the credential is read from the
         // environment at source creation, never from the asset the reconciler persisted.
-        LLMPrometheusAsset asset = new LLMPrometheusAsset("p", "env", "P", "http://prometheus", null, "user",
+        LLMPrometheusAsset asset = new LLMPrometheusAsset(AssetIdentity.of("p", "env", "P"), "http://prometheus", null, "user",
             "PROM_PASSWORD", 0,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", "FRA", new LLMPrometheusProfile.DynamicProfile("q")));
         ResolvedContext context = new ResolvedContext(

@@ -5,6 +5,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.core.source.persistence.WombatMetricPersister;
 import tech.illuin.wombat.core.source.persistence.WombatPersistenceException;
@@ -26,13 +28,13 @@ public class MappedMicrometerMetricPersister implements WombatMetricPersister
     }
 
     @Override
-    public void persist(Collection<MetricData> metrics) throws WombatPersistenceException
+    public void persist(AssetIdentity identity, AssetType type, Collection<MetricData> metrics) throws WombatPersistenceException
     {
-        logger.trace("Recording {} metrics points", metrics.size());
+        logger.trace("Recording {} metrics points for asset {} of type {}", metrics.size(), identity.id(), type.name());
         for (MetricData data : metrics)
         {
             logger.trace("Current metrics {}", data);
-            List<Tag> tags = this.mapper.mapTags(data);
+            List<Tag> tags = this.mapper.mapTags(identity, type, data);
             for (Value value : this.mapper.mapValues(data))
                 this.record(value, tags);
         }
@@ -48,7 +50,7 @@ public class MappedMicrometerMetricPersister implements WombatMetricPersister
 
     public interface Mapper
     {
-        List<Tag> mapTags(MetricData data);
+        List<Tag> mapTags(AssetIdentity asset, AssetType type, MetricData data);
 
         List<Value> mapValues(MetricData data);
     }

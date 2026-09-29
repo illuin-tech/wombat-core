@@ -20,7 +20,7 @@ public class PrometheusMultiClientConfig
         context.assets().stream()
             .filter(LLMPrometheusAsset.class::isInstance)
             .map(LLMPrometheusAsset.class::cast)
-            .forEach(asset -> multi.register(asset.id(), createClient(asset, secrets)));
+            .forEach(asset -> multi.register(asset.identity().id(), createClient(asset, secrets)));
         return multi;
     }
 

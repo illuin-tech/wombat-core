@@ -1,12 +1,13 @@
 package tech.illuin.wombat.core;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.asset.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
-import tech.illuin.wombat.core.asset.ServiceFamily;
-import tech.illuin.wombat.core.asset.profile.Profile;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
+import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
@@ -88,7 +89,7 @@ class WombatCoreTest
         // asset's own module as the only thing able to resolve an impact.
         Consumer<WombatCore.CoreDefaults> defaults = registry -> registry.register(
             ServiceFamily.LLM,
-            (asset, range, filter) -> Optional.of(new LLMActivityData(ActivityRegime.MODELED, Set.of(asset.id()), range, 0L, 0)),
+            (asset, range, filter) -> Optional.of(new LLMActivityData(ActivityRegime.MODELED, Set.of(asset.identity().id()), range, 0L, 0)),
             SERVES_NOTHING,
             SERVES_NOTHING
         );
@@ -135,7 +136,7 @@ class WombatCoreTest
 
     private static WombatCore core(WombatContextProvider context, Consumer<WombatCore.CoreDefaults> defaults, WombatModule... modules)
     {
-        return new WombatCore(context, metrics -> {}, List.of(modules), defaults);
+        return new WombatCore(context, (asset, type, metrics) -> {}, List.of(modules), defaults);
     }
 
     /**
@@ -172,18 +173,12 @@ class WombatCoreTest
         return new ModeledAsset(id);
     }
 
-    private record SourceableAsset(String id) implements Asset, Monitorable
+    private record SourceableAsset(String assetId) implements Asset, Monitorable
     {
         @Override
-        public String environmentId()
+        public AssetIdentity identity()
         {
-            return "env";
-        }
-
-        @Override
-        public String name()
-        {
-            return this.id;
+            return AssetIdentity.of(this.assetId, "env", this.assetId);
         }
 
         @Override
@@ -193,7 +188,7 @@ class WombatCoreTest
         }
 
         @Override
-        public Profile profile()
+        public AssetProfile profile()
         {
             return PROFILE;
         }
@@ -206,18 +201,12 @@ class WombatCoreTest
     }
 
     /** Deliberately NOT a MonitoredAsset: its activity is modeled, so there is nothing to sample. */
-    private record ModeledAsset(String id) implements Asset
+    private record ModeledAsset(String assetId) implements Asset
     {
         @Override
-        public String environmentId()
+        public AssetIdentity identity()
         {
-            return "env";
-        }
-
-        @Override
-        public String name()
-        {
-            return this.id;
+            return AssetIdentity.of(this.assetId, "env", this.assetId);
         }
 
         @Override
@@ -227,13 +216,13 @@ class WombatCoreTest
         }
 
         @Override
-        public Profile profile()
+        public AssetProfile profile()
         {
             return PROFILE;
         }
     }
 
-    private static final Profile PROFILE = () -> "profile";
+    private static final AssetProfile PROFILE = () -> "profile";
 
     private static final class SourcingModule implements WombatModule
     {
@@ -285,8 +274,8 @@ class WombatCoreTest
         public Optional<WombatEvaluationResolver> createImpactResolver()
         {
             return Optional.of((resolved, data) -> new AssetImpact(
-                resolved.environmentId(),
-                resolved.id(),
+                resolved.identity().environmentId(),
+                resolved.identity().id(),
                 null,
                 emptyList(),
                 null
@@ -308,7 +297,7 @@ class WombatCoreTest
         @Override
         public List<MetricData> source(Instant heartbeat, Asset asset)
         {
-            this.sampled.add(asset.id());
+            this.sampled.add(asset.identity().id());
             return emptyList();
         }
     }

@@ -7,7 +7,7 @@ import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 
@@ -68,7 +68,7 @@ public class AssetEvaluator implements AutoCloseable
             {
                 for (Asset asset : environment.assets())
                 {
-                    if (filter != null && !filter.accepts(environment.id(), asset.id()))
+                    if (filter != null && !filter.accepts(environment.id(), asset.identity().id()))
                         continue;
 
                     Optional<ActivityData> activity = this.computeActivity(asset, range, filter);
@@ -92,7 +92,7 @@ public class AssetEvaluator implements AutoCloseable
 
         if (resolver == null || !resolver.accept(asset))
         {
-            logger.debug("Skipping asset {}: no activity resolver accepts asset-type {}", asset.id(), asset.type());
+            logger.debug("Skipping asset {}: no activity resolver accepts asset-type {}", asset.identity(), asset.type());
             return Optional.empty();
         }
         return resolver.resolve(asset, range, filter);
@@ -104,14 +104,14 @@ public class AssetEvaluator implements AutoCloseable
 
         if (resolver == null)
         {
-            logger.debug("Skipping impact of asset {}: no impact resolver registered for asset-type {}", asset.id(), asset.type());
+            logger.debug("Skipping impact of asset {}: no impact resolver registered for asset-type {}", asset.identity().id(), asset.type());
             return Optional.empty();
         }
         if (!resolver.accept(asset))
         {
             logger.warn(
                 "Skipping impact of asset {}: impact resolver {} rejects asset-type {} with profile {}",
-                asset.id(),
+                asset.identity().id(),
                 resolver.getClass().getSimpleName(),
                 asset.type().name(),
                 asset.profile().getClass().getName()
@@ -127,7 +127,7 @@ public class AssetEvaluator implements AutoCloseable
 
         if (resolver == null || !resolver.accept(asset))
         {
-            logger.debug("Skipping cost of asset {}: no cost resolver accepts asset-type {}", asset.id(), asset.type());
+            logger.debug("Skipping cost of asset {}: no cost resolver accepts asset-type {}", asset.identity().id(), asset.type());
             return Optional.empty();
         }
         return Optional.of(resolver.resolve(asset, activity));

@@ -2,8 +2,8 @@ package tech.illuin.wombat.core.activity.kubernetes;
 
 import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
-import tech.illuin.wombat.core.asset.ActivityRegime;
-import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.ClusterInfo;
 
 import java.util.Map;

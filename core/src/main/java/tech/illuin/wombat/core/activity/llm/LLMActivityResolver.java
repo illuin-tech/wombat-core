@@ -6,7 +6,7 @@ import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
 
 import java.util.Optional;
@@ -35,8 +35,8 @@ public class LLMActivityResolver implements WombatActivityResolver
         long summedTokens = this.metricResolver.sumOutputTokens(
             toEpochMs(range.start()),
             toEpochMs(range.end()),
-            asset.id()
+            asset.identity().id()
         );
-        return Optional.of(new LLMActivityData(asset.type().regime(), Set.of(asset.id()), range, summedTokens, 1));
+        return Optional.of(new LLMActivityData(asset.type().regime(), Set.of(asset.identity().id()), range, summedTokens, 1));
     }
 }

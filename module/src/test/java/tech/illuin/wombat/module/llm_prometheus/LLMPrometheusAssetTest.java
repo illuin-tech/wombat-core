@@ -1,6 +1,7 @@
 package tech.illuin.wombat.module.llm_prometheus;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 
 import java.util.Set;
@@ -44,7 +45,7 @@ public class LLMPrometheusAssetTest
 
     private static LLMPrometheusAsset asset(String username, String passwordEnv)
     {
-        return new LLMPrometheusAsset("p", "env", "P", "http://prometheus", null, username, passwordEnv, 0,
+        return new LLMPrometheusAsset(AssetIdentity.of("p", "env", "P"), "http://prometheus", null, username, passwordEnv, 0,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", "FRA", new LLMPrometheusProfile.DynamicProfile("q")));
     }
 }

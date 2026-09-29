@@ -1,13 +1,14 @@
 package tech.illuin.wombat.core.connector.ecologits.impact;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.asset.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.AssetType;
-import tech.illuin.wombat.core.asset.ServiceFamily;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.ServiceFamily;
+import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.asset.profile.LLMProfile;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
-import tech.illuin.wombat.core.asset.profile.Profile;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,24 +40,12 @@ class EcologitsEvaluationResolverTest
 
     private record TestLLMProfile(LLMProvider provider, String model, String location) implements LLMProfile {}
 
-    private record TestAsset(AssetType type, Profile profile) implements Asset
+    private record TestAsset(AssetType type, AssetProfile profile) implements Asset
     {
         @Override
-        public String id()
+        public AssetIdentity identity()
         {
-            return "asset";
-        }
-
-        @Override
-        public String environmentId()
-        {
-            return "env";
-        }
-
-        @Override
-        public String name()
-        {
-            return "Asset";
+            return AssetIdentity.of("asset", "env", "Asset");
         }
     }
 }
