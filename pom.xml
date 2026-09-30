@@ -3,15 +3,18 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>tech.illuin</groupId>
     <artifactId>wombat-parent</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <modules>
         <module>core</module>
         <module>module</module>
-        <module>app</module>
         <module>report</module>
     </modules>
+
+    <name>Wombat Core</name>
+    <description>Core libraries for Wombat sustainability monitoring</description>
+    <url>https://github.com/illuin-tech/wombat-core</url>
 
     <organization>
         <name>Illuin Technology</name>
@@ -33,7 +36,27 @@
         </developer>
     </developers>
 
+    <licenses>
+        <license>
+            <name>LGPLv3</name>
+            <url>https://github.com/illuin-tech/wombat-core/blob/main/LICENSE</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/illuin-tech/wombat-core/issues</url>
+    </issueManagement>
+
+    <scm>
+        <connection>scm:git:git://github.com/illuin-tech/wombat-core.git</connection>
+        <developerConnection>scm:git:ssh://github.com/illuin-tech/wombat-core.git</developerConnection>
+        <url>https://github.com/illuin-tech/wombat-core</url>
+    </scm>
+
     <properties>
+        <revision>1.0.0-SNAPSHOT</revision>
         <compiler-plugin.version>3.16.0</compiler-plugin.version>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -60,7 +83,11 @@
         <!-- Maven deps -->
         <maven.compiler.release>21</maven.compiler.release>
         <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
-        <maven-source.version>3.3.0</maven-source.version>
+        <maven-source.version>3.4.0</maven-source.version>
+        <maven-javadoc.version>3.12.0</maven-javadoc.version>
+        <maven-gpg.version>3.2.8</maven-gpg.version>
+        <maven-sonatype-publishing.version>0.11.0</maven-sonatype-publishing.version>
+        <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
         <download-maven-plugin.version>1.13.0</download-maven-plugin.version>
     </properties>
 
@@ -161,6 +188,42 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>${flatten-maven-plugin.version}</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>central</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        </snapshotRepository>
+        <repository>
+            <id>central</id>
+            <url>https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 </project>

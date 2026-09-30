@@ -4,16 +4,16 @@
     <parent>
         <groupId>tech.illuin</groupId>
         <artifactId>wombat-parent</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
-    <artifactId>wombat-module</artifactId>
+    <artifactId>wombat-core-module</artifactId>
     <packaging>jar</packaging>
 
     <properties>
         <jackson-annotations.version>2.22</jackson-annotations.version>
-        <kubernetes-client.version>8.0.0</kubernetes-client.version>
-        <jandex.version>3.6.0</jandex.version>
+        <fabric8-kubernetes-client.version>7.5.2</fabric8-kubernetes-client.version>
+        <mockito.version>5.24.0</mockito.version>
     </properties>
 
     <dependencyManagement>
@@ -35,10 +35,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!--
-          Compile-only: WombatModuleProperties is a @ConfigMapping interface. Kept `provided` so the SDK jar does not
-          put SmallRye Config on the classpath of a consumer that wires its modules without it.
-        -->
         <dependency>
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config-core</artifactId>
@@ -50,7 +46,6 @@
             <artifactId>feign-core</artifactId>
             <version>${feign.version}</version>
         </dependency>
-
         <dependency>
             <groupId>io.github.openfeign</groupId>
             <artifactId>feign-jackson</artifactId>
@@ -66,19 +61,20 @@
         <dependency>
             <groupId>io.fabric8</groupId>
             <artifactId>kubernetes-client</artifactId>
-            <version>${kubernetes-client.version}</version>
+            <version>${fabric8-kubernetes-client.version}</version>
         </dependency>
 
+        <!-- Test deps -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit-jupiter.version}</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -86,10 +82,9 @@
     <build>
         <plugins>
             <plugin>
-                <!-- Generates META-INF/jandex.idx so Quarkus indexes this jar and finds WombatModuleProperties -->
                 <groupId>io.smallrye</groupId>
                 <artifactId>jandex-maven-plugin</artifactId>
-                <version>${jandex.version}</version>
+                <version>3.2.7</version>
                 <executions>
                     <execution>
                         <id>make-index</id>
@@ -102,7 +97,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.4.0</version>
+                <version>${maven-source.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -115,7 +110,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.12.0</version>
+                <version>${maven-javadoc.version}</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -124,11 +119,14 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <additionalJOption>-Xdoclint:none</additionalJOption>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>3.2.8</version>
+                <version>${maven-gpg.version}</version>
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
@@ -136,17 +134,23 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
+                        <configuration>
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.11.0</version>
+                <version>${maven-sonatype-publishing.version}</version>
                 <extensions>true</extensions>
                 <configuration>
                     <publishingServerId>central</publishingServerId>
-                    <tokenAuth>true</tokenAuth>
+                    <autoPublish>true</autoPublish>
                 </configuration>
             </plugin>
         </plugins>

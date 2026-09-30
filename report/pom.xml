@@ -4,7 +4,7 @@
     <parent>
         <groupId>tech.illuin</groupId>
         <artifactId>wombat-parent</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>wombat-report</artifactId>
@@ -22,14 +22,8 @@
         </dependency>
         <dependency>
             <groupId>tech.illuin</groupId>
-            <artifactId>wombat-module</artifactId>
+            <artifactId>wombat-core-module</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>tech.illuin</groupId>
-            <artifactId>wombat-app</artifactId>
-            <version>${project.version}</version>
-            <type>quarkus</type>
         </dependency>
     </dependencies>
 
