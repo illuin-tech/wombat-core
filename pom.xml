@@ -56,13 +56,13 @@
     </scm>
 
     <properties>
-        <revision>1.0.0-SNAPSHOT</revision>
+        <revision>0.0.0-SNAPSHOT</revision>
         <compiler-plugin.version>3.16.0</compiler-plugin.version>
-        <java.version>25</java.version>
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <skipITs>true</skipITs>
-        <!-- -->
+        <!-- Core deps -->
         <quarkus.platform.version>3.39.5</quarkus.platform.version>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>

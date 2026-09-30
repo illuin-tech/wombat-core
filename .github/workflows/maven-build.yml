@@ -10,8 +10,8 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ ubuntu-latest, macOS-latest ]
-        java: [ 25, 27 ]
+        os: [ ubuntu-latest ]
+        java: [ 21, 25, latest ]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
