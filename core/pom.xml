@@ -10,6 +10,51 @@
     <artifactId>wombat-core</artifactId>
     <packaging>jar</packaging>
 
+
+    <name>Wombat Core</name>
+    <description>Core library for Wombat sustainability monitoring</description>
+    <url>https://github.com/illuin-tech/wombat-core</url>
+
+    <organization>
+        <name>Illuin Technology</name>
+        <url>https://www.illuin.tech</url>
+    </organization>
+
+    <developers>
+        <developer>
+            <name>Pierre Lecerf</name>
+            <email>pierre.lecerf@illuin.tech</email>
+            <organization>Illuin Technology</organization>
+            <organizationUrl>https://www.illuin.tech</organizationUrl>
+        </developer>
+        <developer>
+            <name>Théo Malka</name>
+            <email>theo.malka@illuin.tech</email>
+            <organization>Illuin Technology</organization>
+            <organizationUrl>https://www.illuin.tech</organizationUrl>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>LGPLv3</name>
+            <url>https://github.com/illuin-tech/wombat-core/blob/main/LICENSE</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/illuin-tech/wombat-core/issues</url>
+    </issueManagement>
+
+    <scm>
+        <connection>scm:git:git://github.com/illuin-tech/wombat-core.git</connection>
+        <developerConnection>scm:git:ssh://github.com/illuin-tech/wombat-core.git</developerConnection>
+        <url>https://github.com/illuin-tech/wombat-core</url>
+    </scm>
+
+
     <properties>
         <micrometer.version>1.17.1</micrometer.version>
         <jackson-annotations.version>2.22</jackson-annotations.version>

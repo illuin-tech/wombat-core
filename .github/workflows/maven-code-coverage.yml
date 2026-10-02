@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        java: [ 25 ]
+        java: [ 21 ]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -24,9 +24,8 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
-          cache: 'maven'
       - name: Test with Maven
-        run: mvn clean test jacoco:report -Dgpg.skip=true
+        run: mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install jacoco:report -Dgpg.skip=true
       - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
