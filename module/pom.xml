@@ -15,7 +15,7 @@
 
     <properties>
         <jackson-annotations.version>2.22</jackson-annotations.version>
-        <fabric8-kubernetes-client.version>7.5.2</fabric8-kubernetes-client.version>
+        <fabric8-kubernetes-client.version>8.0.0</fabric8-kubernetes-client.version>
         <mockito.version>5.24.0</mockito.version>
     </properties>
 
