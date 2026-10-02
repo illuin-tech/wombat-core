@@ -1,4 +1,4 @@
-# Wombat Core <img src="https://github.com/illuin-tech/wombat/tree/master/doc/resources/wombat/medium-mask.png" align="top" height="40"/>
+# Wombat Core <img src="https://github.com/illuin-tech/wombat/blob/master/doc/resources/wombat/medium-mask.png?raw=true" align="top" height="40"/>
 
 [![Maven Build](https://github.com/illuin-tech/wombat-core/actions/workflows/maven-build.yml/badge.svg?branch=master)](https://github.com/illuin-tech/wombat-core/actions/workflows/maven-build.yml)
 [![Maven Central Version](https://img.shields.io/maven-central/v/tech.illuin/wombat-core)](https://central.sonatype.com/artifact/tech.illuin/wombat-core)
