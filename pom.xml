@@ -71,7 +71,7 @@
         <slf4j.version>2.0.20</slf4j.version>
         <!-- Test deps -->
         <junit-jupiter.version>6.1.3</junit-jupiter.version>
-        <logback.version>1.6.4</logback.version>
+        <logback.version>1.6.5</logback.version>
         <junit4.version>4.13.2</junit4.version>
         <checkstyle.version>14.3.0</checkstyle.version>
         <checkstyle.config.location>checkstyle.xml</checkstyle.config.location>
