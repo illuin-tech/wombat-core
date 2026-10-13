@@ -23,7 +23,7 @@
         <dependency>
             <groupId>tech.illuin</groupId>
             <artifactId>wombat-core</artifactId>
-            <version>${project.version}</version>
+            <version>${revision}</version>
         </dependency>
 
         <dependency>
