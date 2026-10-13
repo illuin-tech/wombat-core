@@ -7,8 +7,6 @@ public interface ServiceImpact
 {
     String serviceId();
 
-    double share();
-
     Footprint footprint();
 
     AssetProfile profile();

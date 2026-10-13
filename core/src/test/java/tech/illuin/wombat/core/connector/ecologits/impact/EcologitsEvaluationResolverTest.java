@@ -80,7 +80,6 @@ class EcologitsEvaluationResolverTest
             .map(LLMImpact.class::cast)
             .findFirst()
             .orElseThrow();
-        assertEquals(0.25, impact1.share(), 1e-4);
         assertEquals(LLMProvider.mistralai, impact1.provider());
         assertEquals("mistral-large", impact1.model());
 
@@ -89,7 +88,6 @@ class EcologitsEvaluationResolverTest
             .map(LLMImpact.class::cast)
             .findFirst()
             .orElseThrow();
-        assertEquals(0.75, impact2.share(), 1e-4);
         assertEquals(LLMProvider.openai, impact2.provider());
         assertEquals("gpt-4o", impact2.model());
 

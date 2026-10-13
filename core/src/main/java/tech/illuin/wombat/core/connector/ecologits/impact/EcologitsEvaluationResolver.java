@@ -52,8 +52,6 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
                 targetServices.put(serviceId, serviceActivity);
         });
 
-        long totalTokens = targetServices.values().stream().mapToLong(LLMServiceActivity::outputTokenCount).sum();
-
         List<ServiceImpact> serviceImpacts = new ArrayList<>();
         for (Map.Entry<String, LLMServiceActivity> entry : targetServices.entrySet())
         {
@@ -74,11 +72,6 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
                 continue;
             }
 
-            Footprint serviceFootprint = this.convert(estimation);
-            double share = totalTokens > 0
-                ? (double) serviceActivity.outputTokenCount() / totalTokens
-                : (targetServices.isEmpty() ? 0.0 : 1.0 / targetServices.size());
-
             ServiceImpact serviceImpact = new LLMImpact(
                 serviceId,
                 asset.type(),
@@ -86,8 +79,7 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
                 provider,
                 model,
                 location,
-                share,
-                serviceFootprint,
+                this.convert(estimation),
                 estimation,
                 serviceActivity.outputTokenCount(),
                 serviceActivity.requestCount()

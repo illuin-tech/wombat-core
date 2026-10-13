@@ -14,7 +14,6 @@ public record LLMImpact(
     LLMProvider provider,
     String model,
     String location,
-    double share,
     Footprint footprint,
     EcologitsEstimationResponse estimation,
     long outputTokenCount,
