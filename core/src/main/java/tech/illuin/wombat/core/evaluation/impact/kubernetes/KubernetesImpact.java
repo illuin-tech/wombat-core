@@ -16,10 +16,4 @@ public record KubernetesImpact(
     ServerSpecification serverSpecification,
     double loadPercent,
     int nodeCount
-) implements ServiceImpact
-{
-    public ServiceFamily profileFamily()
-    {
-        return ServiceFamily.KUBERNETES_CONTAINER;
-    }
-}
+) implements ServiceImpact {}
