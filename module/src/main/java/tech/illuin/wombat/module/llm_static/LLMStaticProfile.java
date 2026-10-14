@@ -1,5 +1,6 @@
 package tech.illuin.wombat.module.llm_static;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -25,7 +26,7 @@ public record LLMStaticProfile(
     ) {}
 
     public record RequestProfile(
-        @PositiveOrZero @JsonProperty("output-token-count") int outputTokenCount,
+        @PositiveOrZero @JsonProperty("output-token-per-request") @JsonAlias("output-token-count") int outputTokenPerRequest,
         @PositiveOrZero @JsonProperty("request-per-year") int requestPerYear
     ) {}
 }
