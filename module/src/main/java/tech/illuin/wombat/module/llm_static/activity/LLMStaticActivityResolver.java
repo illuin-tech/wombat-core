@@ -1,6 +1,5 @@
 package tech.illuin.wombat.module.llm_static.activity;
 
-import tech.illuin.wombat.core.activity.WombatActivityException;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
@@ -25,7 +24,7 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
     }
 
     @Override
-    public Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
+    public Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter)
     {
         LLMStaticProfile profile = (LLMStaticProfile) asset.profile();
         Set<String> serviceIds = filter == null ? Collections.emptySet() : filter.filterServiceIds(asset);
@@ -38,7 +37,7 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
                 continue;
 
             int requestCount = requestCountOver(modelConfig.requestProfile().requestPerYear(), range);
-            long outputTokenCount = (long) modelConfig.requestProfile().outputTokenCount() * requestCount;
+            long outputTokenCount = (long) modelConfig.requestProfile().outputTokenPerRequest() * requestCount;
             activities.put(serviceId, new LLMServiceActivity(
                 modelConfig.provider(),
                 modelConfig.model(),
