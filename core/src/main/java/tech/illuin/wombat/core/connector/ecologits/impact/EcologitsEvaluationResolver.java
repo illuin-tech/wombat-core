@@ -61,7 +61,10 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
 
             if (serviceActivity.requestCount() <= 0 || serviceActivity.outputTokenCount() <= 0)
             {
-                logger.warn("Provided activity data for service {} was measured at 0 on one or more key metrics (requestCount={}, outputTokenCount={})", serviceId, serviceActivity.requestCount(), serviceActivity.outputTokenCount());
+                logger.warn(
+                    "Provided activity data for service {} was measured at 0 on one or more key metrics (requestCount={}, outputTokenCount={})",
+                    serviceId, serviceActivity.requestCount(), serviceActivity.outputTokenCount()
+                );
                 continue;
             }
 
