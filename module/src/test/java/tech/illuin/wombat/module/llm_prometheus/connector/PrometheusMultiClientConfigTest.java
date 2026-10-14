@@ -17,6 +17,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 public class PrometheusMultiClientConfigTest
 {
@@ -24,8 +25,8 @@ public class PrometheusMultiClientConfigTest
     void buildsAClientPerAssetWithoutAuthentication()
     {
         PrometheusMultiClient multi = PrometheusMultiClientConfig.create(
-            context(Map.of(), asset("p", null, null)));
-
+            context(Map.of(), asset("p", null, null))
+        );
         assertTrue(multi.get("p").isPresent());
     }
 
@@ -33,8 +34,8 @@ public class PrometheusMultiClientConfigTest
     void readsTheBasicAuthPasswordFromTheDeclaredVariable()
     {
         PrometheusMultiClient multi = PrometheusMultiClientConfig.create(
-            context(Map.of("PROM_PASSWORD", "s3cret"), asset("p", "user", "PROM_PASSWORD")));
-
+            context(Map.of("PROM_PASSWORD", "s3cret"), asset("p", "user", "PROM_PASSWORD"))
+        );
         assertTrue(multi.get("p").isPresent());
     }
 
@@ -44,9 +45,7 @@ public class PrometheusMultiClientConfigTest
         // create() runs at source creation, so an unset variable stops the module wiring rather than producing a
         // client that would 401 on every scrape.
         WombatContext context = context(Map.of(), asset("p", "user", "PROM_PASSWORD"));
-
-        MissingSecretException e = assertThrows(MissingSecretException.class,
-            () -> PrometheusMultiClientConfig.create(context));
+        MissingSecretException e = assertThrows(MissingSecretException.class, () -> PrometheusMultiClientConfig.create(context));
 
         assertEquals("PROM_PASSWORD", e.key());
     }
@@ -55,12 +54,16 @@ public class PrometheusMultiClientConfigTest
     {
         return new ResolvedContext(
             List.of(new Environment("env", List.of(asset))),
-            new EnvironmentSecretResolver(environment::get));
+            new EnvironmentSecretResolver(environment::get)
+        );
     }
 
     private static LLMPrometheusAsset asset(String id, String username, String passwordEnv)
     {
-        return new LLMPrometheusAsset(AssetIdentity.of(id, "env", id), "http://prometheus", null, username, passwordEnv, 0,
-            new LLMPrometheusProfile(LLMProvider.mistralai, "m", "FRA", new LLMPrometheusProfile.DynamicProfile("q")));
+        return new LLMPrometheusAsset(
+            AssetIdentity.of(id, "env", id),
+            "http://prometheus", null, username, passwordEnv, 0,
+            new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
+        );
     }
 }

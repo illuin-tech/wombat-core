@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 class LLMActivityDataTest
 {
@@ -19,8 +20,8 @@ class LLMActivityDataTest
     @Test
     void multiServiceActivityData_computesTotalsCorrectly()
     {
-        LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", "FRA", 500L, 10.0);
-        LLMServiceActivity s2 = new LLMServiceActivity(LLMProvider.openai, "gpt-4o", "USA", 1500L, 30.0);
+        LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
+        LLMServiceActivity s2 = new LLMServiceActivity(LLMProvider.openai, "gpt-4o", FRANCE, 1500L, 30.0);
 
         LLMActivityData activityData = new LLMActivityData(
             ActivityRegime.MODELED,
@@ -43,6 +44,9 @@ class LLMActivityDataTest
             ActivityRegime.MEASURED,
             "model-1",
             RANGE,
+            LLMProvider.mistralai,
+            "mistral-large",
+            FRANCE,
             1234L,
             5
         );

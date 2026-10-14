@@ -26,7 +26,7 @@ public class LLMMapper implements MappedMicrometerMetricPersister.Mapper
             Tag.of(TAG_SERVICE, data.serviceId()),
             Tag.of(TAG_LLM_PROVIDER, llmData.provider().name()),
             Tag.of(TAG_LLM_MODEL, llmData.model()),
-            Tag.of(TAG_LLM_LOCATION, llmData.location())
+            Tag.of(TAG_LLM_LOCATION, llmData.location().alpha3())
         );
     }
 
@@ -36,7 +36,8 @@ public class LLMMapper implements MappedMicrometerMetricPersister.Mapper
         LLMData llmData = asLLMData(data);
 
         return List.of(
-            new Value(METRIC_LLM_OUTPUT_TOKENS, llmData.outputTokens())
+            new Value(METRIC_LLM_OUTPUT_TOKENS, llmData.outputTokens()),
+            new Value(METRIC_LLM_REQUEST_COUNT, llmData.requests())
         );
     }
 

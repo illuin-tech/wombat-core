@@ -2,6 +2,7 @@ package tech.illuin.wombat.module.llm_static.activity;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.llm.LLMActivityData;
 import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
@@ -26,13 +27,13 @@ class LLMStaticActivityResolverTest
         LLMStaticProfile.ModelConfig m1 = new LLMStaticProfile.ModelConfig(
             LLMProvider.mistralai,
             "mistral-large-latest",
-            "FRA",
+            Country.FRANCE,
             new LLMStaticProfile.RequestProfile(500, 31536000) // 1 req/sec -> 31536000 req/year
         );
         LLMStaticProfile.ModelConfig m2 = new LLMStaticProfile.ModelConfig(
             LLMProvider.openai,
             "gpt-4o",
-            "USA",
+            Country.US,
             new LLMStaticProfile.RequestProfile(1000, 63072000) // 2 req/sec
         );
 

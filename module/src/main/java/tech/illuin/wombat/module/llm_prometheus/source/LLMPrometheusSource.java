@@ -2,6 +2,7 @@ package tech.illuin.wombat.module.llm_prometheus.source;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
 import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusClient;
 import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusMultiClient;
@@ -55,7 +56,8 @@ public class LLMPrometheusSource implements WombatSource
                 prometheusAsset.profile().provider(),
                 prometheusAsset.profile().model(),
                 prometheusAsset.profile().location(),
-                outputTokens
+                outputTokens,
+                1 //TODO: this should be modeled, at least as an optional metric ; we could use different strategies such "as-reported" or "inferred based on typical output-token sizes"
             ));
 
         if (data.isPresent())

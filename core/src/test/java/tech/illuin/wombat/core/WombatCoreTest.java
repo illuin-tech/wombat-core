@@ -1,6 +1,7 @@
 package tech.illuin.wombat.core;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 class WombatCoreTest
 {
@@ -51,8 +53,7 @@ class WombatCoreTest
         try (WombatCore core = core(context(sourceable("a1"), sourceable("a2")), module) ; AssetMonitor monitor = core.createMonitor()) {
             monitor.trigger();
         }
-        // The monitor dispatches one task per asset, so what it guarantees is that each was sampled once — not the
-        // order in which the executor got to them.
+        // The monitor dispatches one task per asset, so what it guarantees is that each was sampled once — not the order in which the executor got to them.
         assertEquals(2, module.source.sampled.size());
         assertEquals(Set.of("a1", "a2"), Set.copyOf(module.source.sampled));
     }
@@ -60,9 +61,6 @@ class WombatCoreTest
     @Test
     void createMonitor_skipsModulesThatOnlyResolveImpacts()
     {
-        // Regression: the MonitoredAsset guard used to run before the source-provider check, so a modeled asset —
-        // an Asset that is deliberately not monitorable, served by an impact-only module — threw here instead of
-        // being skipped, which aborted application startup.
         try (WombatCore core = core(context(modeled("static-1")), new ResolvingModule()) ; AssetMonitor monitor = assertDoesNotThrow(() -> core.createMonitor())) {
             assertDoesNotThrow(monitor::trigger);
         }
@@ -89,7 +87,16 @@ class WombatCoreTest
         // asset's own module as the only thing able to resolve an impact.
         Consumer<WombatCore.CoreDefaults> defaults = registry -> registry.register(
             ServiceFamily.LLM,
-            (asset, range, filter) -> Optional.of(new LLMActivityData(ActivityRegime.MODELED, asset.identity().id(), range, 0L, 0)),
+            (asset, range, filter) -> Optional.of(new LLMActivityData(
+                ActivityRegime.MODELED,
+                asset.identity().id(),
+                range,
+                LLMProvider.mistralai,
+                "test",
+                FRANCE,
+                0L,
+                0
+            )),
             SERVES_NOTHING,
             SERVES_NOTHING
         );

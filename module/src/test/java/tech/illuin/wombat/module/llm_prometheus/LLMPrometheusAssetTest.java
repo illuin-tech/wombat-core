@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 public class LLMPrometheusAssetTest
 {
@@ -37,7 +38,6 @@ public class LLMPrometheusAssetTest
         // Nothing downstream could resolve a credential for this asset, so the configuration is wrong however the
         // environment is set — surfacing it at startup beats an empty password reaching Prometheus.
         LLMPrometheusAsset asset = asset("user", "  ");
-
         IllegalStateException e = assertThrows(IllegalStateException.class, asset::requiredSecretKeys);
 
         assertTrue(e.getMessage().contains("password-key"), e.getMessage());
@@ -45,7 +45,9 @@ public class LLMPrometheusAssetTest
 
     private static LLMPrometheusAsset asset(String username, String passwordEnv)
     {
-        return new LLMPrometheusAsset(AssetIdentity.of("p", "env", "P"), "http://prometheus", null, username, passwordEnv, 0,
-            new LLMPrometheusProfile(LLMProvider.mistralai, "m", "FRA", new LLMPrometheusProfile.DynamicProfile("q")));
+        return new LLMPrometheusAsset(
+            AssetIdentity.of("p", "env", "P"), "http://prometheus", null, username, passwordEnv, 0,
+            new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
+        );
     }
 }

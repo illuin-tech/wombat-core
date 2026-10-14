@@ -2,6 +2,7 @@ package tech.illuin.wombat.module.llm_prometheus.source;
 
 import com.fasterxml.jackson.databind.node.TextNode;
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 class LLMPrometheusSourceTest
 {
@@ -30,7 +32,7 @@ class LLMPrometheusSourceTest
         LLMPrometheusProfile profile = new LLMPrometheusProfile(
             LLMProvider.mistralai,
             "mistral-large-latest",
-            "FRA",
+            FRANCE,
             new LLMPrometheusProfile.DynamicProfile("sum(vllm:num_tokens_total)")
         );
         LLMPrometheusAsset asset = new LLMPrometheusAsset(
@@ -58,7 +60,7 @@ class LLMPrometheusSourceTest
         assertEquals("mistral-large-latest", llmData.serviceId());
         assertEquals(LLMProvider.mistralai, llmData.provider());
         assertEquals("mistral-large-latest", llmData.model());
-        assertEquals("FRA", llmData.location());
+        assertEquals(Country.FRANCE, llmData.location());
         assertEquals(420L, llmData.outputTokens());
     }
 }

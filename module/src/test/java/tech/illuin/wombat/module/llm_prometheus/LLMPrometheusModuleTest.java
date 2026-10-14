@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 public class LLMPrometheusModuleTest
 {
@@ -44,13 +45,15 @@ public class LLMPrometheusModuleTest
     {
         // Proves the module builds its clients from the context's resolver: the credential is read from the
         // environment at source creation, never from the asset the reconciler persisted.
-        LLMPrometheusAsset asset = new LLMPrometheusAsset(AssetIdentity.of("p", "env", "P"), "http://prometheus", null, "user",
-            "PROM_PASSWORD", 0,
-            new LLMPrometheusProfile(LLMProvider.mistralai, "m", "FRA", new LLMPrometheusProfile.DynamicProfile("q")));
+        LLMPrometheusAsset asset = new LLMPrometheusAsset(
+            AssetIdentity.of("p", "env", "P"),
+            "http://prometheus", null, "user", "PROM_PASSWORD", 0,
+            new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
+        );
         ResolvedContext context = new ResolvedContext(
             List.of(new Environment("env", List.of(asset))),
-            new EnvironmentSecretResolver(Map.<String, String>of()::get));
-
+            new EnvironmentSecretResolver(Map.<String, String>of()::get)
+        );
         MissingSecretException e = assertThrows(MissingSecretException.class, () -> this.module.createSource(context));
 
         assertEquals("PROM_PASSWORD", e.key());

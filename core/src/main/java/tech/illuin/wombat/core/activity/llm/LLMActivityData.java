@@ -1,7 +1,9 @@
 package tech.illuin.wombat.core.activity.llm;
 
 import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
+import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 
@@ -19,6 +21,9 @@ public record LLMActivityData(
         ActivityRegime regime,
         String serviceId,
         TimeRange range,
+        LLMProvider provider,
+        String model,
+        Country location,
         long outputTokenCount,
         double requestCount
     ) {
@@ -26,7 +31,7 @@ public record LLMActivityData(
             regime,
             Set.of(serviceId),
             range,
-            Map.of(serviceId, new LLMServiceActivity(null, null, null, outputTokenCount, requestCount))
+            Map.of(serviceId, new LLMServiceActivity(provider, model, location, outputTokenCount, requestCount))
         );
     }
 
