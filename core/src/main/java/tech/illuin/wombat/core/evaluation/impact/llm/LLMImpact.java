@@ -1,5 +1,6 @@
 package tech.illuin.wombat.core.evaluation.impact.llm;
 
+import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.profile.LLMProfile;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
@@ -13,7 +14,7 @@ public record LLMImpact(
     LLMProfile profile,
     LLMProvider provider,
     String model,
-    String location,
+    Country location,
     Footprint footprint,
     EcologitsEstimationResponse estimation,
     long outputTokenCount,

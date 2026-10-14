@@ -1,6 +1,7 @@
 package tech.illuin.wombat.core.connector.ecologits.impact;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.llm.LLMActivityData;
 import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 class EcologitsEvaluationResolverTest
 {
@@ -34,7 +36,7 @@ class EcologitsEvaluationResolverTest
     @Test
     void accept_llmFamilyWithLLMProfile_returnsTrue()
     {
-        assertTrue(this.resolver.accept(new TestAsset(LLM_TYPE, new TestLLMProfile(LLMProvider.mistralai, "mistral-large", "FRA"))));
+        assertTrue(this.resolver.accept(new TestAsset(LLM_TYPE, new TestLLMProfile(LLMProvider.mistralai, "mistral-large", FRANCE))));
     }
 
     @Test
@@ -52,11 +54,11 @@ class EcologitsEvaluationResolverTest
     @Test
     void resolve_multiServiceActivity_calculatesSharesAndAggregatesFootprint() throws Exception
     {
-        TestLLMProfile profile = new TestLLMProfile(LLMProvider.mistralai, "group-profile", "FRA");
+        TestLLMProfile profile = new TestLLMProfile(LLMProvider.mistralai, "group-profile", FRANCE);
         TestAsset asset = new TestAsset(LLM_TYPE, profile);
 
-        LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", "FRA", 1000L, 10.0);
-        LLMServiceActivity s2 = new LLMServiceActivity(LLMProvider.openai, "gpt-4o", "USA", 3000L, 30.0);
+        LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 1000L, 10.0);
+        LLMServiceActivity s2 = new LLMServiceActivity(LLMProvider.openai, "gpt-4o", FRANCE, 3000L, 30.0);
 
         TimeRange range = new TimeRange(Instant.ofEpochMilli(0), Instant.ofEpochMilli(1000));
         LLMActivityData activity = new LLMActivityData(
@@ -107,7 +109,7 @@ class EcologitsEvaluationResolverTest
         return new EcologitsEstimationResponse(impacts);
     }
 
-    private record TestLLMProfile(LLMProvider provider, String model, String location) implements LLMProfile
+    private record TestLLMProfile(LLMProvider provider, String model, Country location) implements LLMProfile
     {
     }
 

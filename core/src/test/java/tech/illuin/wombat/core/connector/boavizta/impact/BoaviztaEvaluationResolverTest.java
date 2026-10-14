@@ -1,6 +1,7 @@
 package tech.illuin.wombat.core.connector.boavizta.impact;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
@@ -12,6 +13,7 @@ import tech.illuin.wombat.core.asset.profile.ServerProvider;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 class BoaviztaEvaluationResolverTest
 {
@@ -23,7 +25,7 @@ class BoaviztaEvaluationResolverTest
     @Test
     void accept_kubernetesFamilyWithServerProfile_returnsTrue()
     {
-        assertTrue(this.resolver.accept(new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", "FRA", 43800))));
+        assertTrue(this.resolver.accept(new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", FRANCE, 43800))));
     }
 
     @Test
@@ -38,7 +40,7 @@ class BoaviztaEvaluationResolverTest
         assertFalse(this.resolver.accept(new TestAsset(K8S_TYPE, null)));
     }
 
-    private record TestServerProfile(ServerProvider provider, String instanceType, String location, int lifespan) implements ServerProfile {}
+    private record TestServerProfile(ServerProvider provider, String instanceType, Country location, int lifespan) implements ServerProfile {}
 
     private record TestAsset(AssetType type, AssetProfile profile) implements Asset
     {

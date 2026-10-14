@@ -156,7 +156,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             new BoaviztaInstanceImpactRequest(
                 getProvider(profile.provider()),
                 profile.instanceType(),
-                new BoaviztaInstanceImpactRequest.Usage(profile.location(), List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)))
+                new BoaviztaInstanceImpactRequest.Usage(profile.location().alpha3(), List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)))
             ),
             profile.lifespan()
         );

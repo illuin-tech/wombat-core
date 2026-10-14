@@ -8,6 +8,15 @@ public record Footprint(
     FootprintImpact pe,
     FootprintImpact adp
 ) {
+    public Footprint multiply(double factor)
+    {
+        return new Footprint(
+            this.gwp != null ? this.gwp.multiply(factor) : null,
+            this.pe != null ? this.pe.multiply(factor) : null,
+            this.adp != null ? this.adp.multiply(factor) : null
+        );
+    }
+
     public static Footprint sum(List<Footprint> footprints)
     {
         if (footprints.isEmpty())
@@ -36,6 +45,16 @@ public record Footprint(
             return this.embedded.value() + this.use.value();
         }
 
+        public FootprintImpact multiply(double factor)
+        {
+            return new FootprintImpact(
+                this.unit,
+                this.description,
+                this.embedded != null ? this.embedded.multiply(factor) : null,
+                this.use != null ? this.use.multiply(factor) : null
+            );
+        }
+
         public static FootprintImpact sum(List<FootprintImpact> impacts)
         {
             List<FootprintImpact> present = impacts.stream().filter(Objects::nonNull).toList();
@@ -60,6 +79,11 @@ public record Footprint(
         public record FootprintImpactItem(
             float value,
             List<String> warnings
-        ) {}
+        ) {
+            public FootprintImpactItem multiply(double factor)
+            {
+                return new FootprintImpactItem((float) (this.value * factor), this.warnings);
+            }
+        }
     }
 }

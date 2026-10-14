@@ -1,7 +1,6 @@
 package tech.illuin.wombat.core.evaluation.impact.kubernetes;
 
 import tech.illuin.wombat.core.asset.type.AssetType;
-import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.evaluation.impact.commons.Footprint;
 import tech.illuin.wombat.core.evaluation.impact.commons.ServiceImpact;
