@@ -57,7 +57,7 @@ public class LLMPrometheusSource implements WombatSource
                 prometheusAsset.profile().model(),
                 prometheusAsset.profile().location(),
                 outputTokens,
-                1
+                1 //TODO: this should be modeled, at least as an optional metric ; we could use different strategies such "as-reported" or "inferred based on typical output-token sizes"
             ));
 
         if (data.isPresent())
