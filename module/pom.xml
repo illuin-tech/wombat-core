@@ -16,6 +16,7 @@
     <properties>
         <jackson-annotations.version>2.22</jackson-annotations.version>
         <fabric8-kubernetes-client.version>8.0.0</fabric8-kubernetes-client.version>
+        <google-auth-library.version>1.37.1</google-auth-library.version>
         <mockito.version>5.24.0</mockito.version>
     </properties>
 
@@ -47,6 +48,13 @@
             <groupId>io.fabric8</groupId>
             <artifactId>kubernetes-client</artifactId>
             <version>${fabric8-kubernetes-client.version}</version>
+        </dependency>
+
+        <!-- Google Cloud auth (OAuth2 access tokens for the Cloud Monitoring API, used by llm_google) -->
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+            <version>${google-auth-library.version}</version>
         </dependency>
 
         <!-- Test deps -->
