@@ -41,8 +41,17 @@ public class KubernetesActivityResolver implements WombatActivityResolver
         List<String> assetIds = List.of(asset.identity().id());
         Set<String> serviceIds = filter == null ? Set.of() : filter.filterServiceIds(asset);
 
-        List<ActivityData> activities = range.split().stream()
-            .map(slot -> resolveSlot(asset, slot, serviceIds, assetIds))
+        List<TimeRange> slots = range.split();
+
+        Map<Long, Double> cpuPerSlot = this.metricResolver.averageCpuPerBucket(range, assetIds);
+        if (cpuPerSlot.isEmpty())
+            return Optional.empty();
+
+        Map<Long, Map<String, Double>> sharesPerSlot = this.metricResolver.containerSharesPerBucket(range, assetIds);
+        Map<String, ClusterInfo> containerLocations = toClusterInfo(this.metricResolver.containerLocations(range, assetIds));
+
+        List<ActivityData> activities = slots.stream()
+            .map(slot -> resolveSlot(asset, slot, serviceIds, cpuPerSlot, sharesPerSlot, containerLocations))
             .flatMap(Optional::stream)
             .toList();
 
@@ -51,25 +60,25 @@ public class KubernetesActivityResolver implements WombatActivityResolver
             : Optional.of(new AssetActivity(asset.identity(), activities));
     }
 
-    private Optional<ActivityData> resolveSlot(Asset asset, TimeRange range, Set<String> serviceIds, List<String> assetIds)
-    {
+    private static Optional<ActivityData> resolveSlot(
+        Asset asset,
+        TimeRange range,
+        Set<String> serviceIds,
+        Map<Long, Double> cpuPerSlot,
+        Map<Long, Map<String, Double>> sharesPerSlot,
+        Map<String, ClusterInfo> containerLocations
+    ) {
         long start = toEpochMs(range.start());
-        long end = toEpochMs(range.end());
 
-        return this.metricResolver.averageCpuPerInstant(start, end, assetIds)
-            .map(cpuUsage -> {
-                Map<String, Double> containerShares = this.metricResolver.containerShares(start, end, assetIds);
-                Map<String, ClusterInfo> containerLocations = toClusterInfo(this.metricResolver.containerLocations(start, end, assetIds));
-
-                return new KubernetesActivityData(
-                    asset.type().regime(),
-                    serviceIds,
-                    range,
-                    CPUUsage.nanocores(cpuUsage),
-                    containerShares,
-                    containerLocations
-                );
-            });
+        return Optional.ofNullable(cpuPerSlot.get(start))
+            .map(cpuUsage -> new KubernetesActivityData(
+                asset.type().regime(),
+                serviceIds,
+                range,
+                CPUUsage.nanocores(cpuUsage),
+                sharesPerSlot.getOrDefault(start, Map.of()),
+                containerLocations
+            ));
     }
 
     private static Map<String, ClusterInfo> toClusterInfo(Map<String, List<ContainerLocation>> locations)

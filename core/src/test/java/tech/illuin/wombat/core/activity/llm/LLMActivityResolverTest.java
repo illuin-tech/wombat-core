@@ -79,7 +79,7 @@ class LLMActivityResolverTest
     {
         TimeRange range = new TimeRange(START, END, RESOLUTION);
         when(asset.identity().id()).thenReturn(ASSET_ID);
-        when(metricResolver.serviceActivities(anyLong(), anyLong(), eq(ASSET_ID))).thenReturn(Map.of());
+        when(metricResolver.serviceActivitiesPerBucket(any(), eq(ASSET_ID))).thenReturn(Map.of());
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, filter);
 
@@ -98,13 +98,12 @@ class LLMActivityResolverTest
         when(asset.identity().id()).thenReturn(ASSET_ID);
         when(filter.filterServiceIds(asset)).thenReturn(Set.of("mistral-large", "gpt-4o"));
 
-        // Slot 1 activities
         LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
-        when(metricResolver.serviceActivities(t0, t1, ASSET_ID)).thenReturn(Map.of("mistral-large", s1));
-
-        // Slot 2 activities
         LLMServiceActivity s2 = new LLMServiceActivity(LLMProvider.openai, "gpt-4o", FRANCE, 1500L, 30.0);
-        when(metricResolver.serviceActivities(t1, t2, ASSET_ID)).thenReturn(Map.of("gpt-4o", s2));
+        when(metricResolver.serviceActivitiesPerBucket(range, ASSET_ID)).thenReturn(Map.of(
+            t0, Map.of("mistral-large", s1),
+            t1, Map.of("gpt-4o", s2)
+        ));
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, filter);
 
@@ -140,14 +139,12 @@ class LLMActivityResolverTest
         TimeRange range = new TimeRange(START, END, RESOLUTION); // 2 slots
         Instant mid = START.plus(RESOLUTION);
         long t0 = toEpochMs(START);
-        long t1 = toEpochMs(mid);
         long t2 = toEpochMs(END);
 
         when(asset.identity().id()).thenReturn(ASSET_ID);
 
         LLMServiceActivity activity = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
-        when(metricResolver.serviceActivities(t0, t1, ASSET_ID)).thenReturn(Map.of("mistral-large", activity));
-        when(metricResolver.serviceActivities(t1, t2, ASSET_ID)).thenReturn(Map.of());
+        when(metricResolver.serviceActivitiesPerBucket(range, ASSET_ID)).thenReturn(Map.of(t0, Map.of("mistral-large", activity)));
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, null);
 
@@ -173,7 +170,7 @@ class LLMActivityResolverTest
         LLMServiceActivity s2 = new LLMServiceActivity(LLMProvider.openai, "gpt-4o", FRANCE, 1500L, 30.0);
         Map<String, LLMServiceActivity> reported = Map.of("svc-1", s1, "svc-2", s2);
 
-        when(metricResolver.serviceActivities(t0, t1, ASSET_ID)).thenReturn(reported);
+        when(metricResolver.serviceActivitiesPerBucket(range, ASSET_ID)).thenReturn(Map.of(t0, reported));
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, null);
 
@@ -211,7 +208,7 @@ class LLMActivityResolverTest
             "unrelated-key", s3
         );
 
-        when(metricResolver.serviceActivities(t0, t1, ASSET_ID)).thenReturn(reported);
+        when(metricResolver.serviceActivitiesPerBucket(range, ASSET_ID)).thenReturn(Map.of(t0, reported));
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, filter);
 
@@ -238,10 +235,32 @@ class LLMActivityResolverTest
         when(filter.filterServiceIds(asset)).thenReturn(Set.of("non-existent-filter"));
 
         LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
-        when(metricResolver.serviceActivities(t0, t1, ASSET_ID)).thenReturn(Map.of("svc-1", s1));
+        when(metricResolver.serviceActivitiesPerBucket(range, ASSET_ID)).thenReturn(Map.of(t0, Map.of("svc-1", s1)));
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, filter);
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void resolve_ignoresBucketsBeyondTheLastFullSlot() throws WombatActivityException
+    {
+        TimeRange range = new TimeRange(START, END.plus(Duration.ofMinutes(30)), RESOLUTION); // 2 full slots, the trailing half hour is dropped
+        long t0 = toEpochMs(START);
+        long t2 = toEpochMs(END);
+
+        when(asset.identity().id()).thenReturn(ASSET_ID);
+
+        LLMServiceActivity activity = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
+        when(metricResolver.serviceActivitiesPerBucket(range, ASSET_ID)).thenReturn(Map.of(
+            t0, Map.of("mistral-large", activity),
+            t2, Map.of("mistral-large", activity)
+        ));
+
+        Optional<AssetActivity> result = resolver.resolve(asset, range, null);
+
+        assertEquals(1, result.orElseThrow().activity().size());
+        assertEquals(START, result.get().activity().getFirst().range().start());
+        verify(metricResolver, times(1)).serviceActivitiesPerBucket(any(), anyString());
     }
 }
