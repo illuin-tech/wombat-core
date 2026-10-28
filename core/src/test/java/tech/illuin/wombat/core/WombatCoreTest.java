@@ -22,6 +22,7 @@ import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.source.Monitorable;
+import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.core.source.WombatSource;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.core.source.AssetMonitor;
@@ -201,9 +202,9 @@ class WombatCoreTest
         }
 
         @Override
-        public int heartbeatSkip()
+        public Period period()
         {
-            return 1;
+            return Period.ONE_SECOND;
         }
     }
 

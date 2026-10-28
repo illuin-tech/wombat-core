@@ -16,16 +16,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class AssetMonitor implements AutoCloseable
 {
     private final WombatContextProvider contextProvider;
     private final Map<String, WombatSource> sources;
     private final WombatMetricPersister persister;
-    private final AtomicInteger heartbeatCount;
     private final ExecutorService executorService;
     private final Map<WombatSource, Semaphore> semaphores;
+    private final Map<WombatSource, Instant> lastActivation;
 
     private static final Logger logger = LoggerFactory.getLogger(AssetMonitor.class);
 
@@ -39,9 +38,9 @@ public class AssetMonitor implements AutoCloseable
         this.sources = new ConcurrentHashMap<>();
         this.contextProvider = contextProvider;
         this.persister = persister;
-        this.heartbeatCount = new AtomicInteger(0);
         this.executorService = executorService;
         this.semaphores = new ConcurrentHashMap<>();
+        this.lastActivation = new ConcurrentHashMap<>();
     }
 
     public AssetMonitor register(Asset asset, WombatSource source)
@@ -52,7 +51,8 @@ public class AssetMonitor implements AutoCloseable
             return this;
         }
         this.sources.put(asset.type().name(), source);
-        this.semaphores.computeIfAbsent(source, s -> new Semaphore(1, true));
+        this.semaphores.put(source, new Semaphore(1, true));
+        this.lastActivation.put(source, Instant.MIN);
 
         logger.debug("Registered wombat source {} for asset-type {}", source.getClass().getSimpleName(), asset.type().name());
         return this;
@@ -61,7 +61,6 @@ public class AssetMonitor implements AutoCloseable
     public void trigger()
     {
         Instant heartbeat = Instant.now();
-        int beat = this.heartbeatCount.incrementAndGet();
 
         for (Environment environment : this.contextProvider.provide().environments())
         {
@@ -69,10 +68,14 @@ public class AssetMonitor implements AutoCloseable
                 .filter(asset -> asset instanceof Monitorable)
                 .filter(asset -> this.sources.containsKey(asset.type().name()))
                 .filter(asset -> this.sources.get(asset.type().name()).accept(asset))
-                .filter(asset -> this.acceptHeartbeat((Monitorable) asset, beat))
                 .forEach(asset -> {
                     WombatSource source = this.sources.get(asset.type().name());
-                    Semaphore semaphore = this.semaphores.computeIfAbsent(source, s -> new Semaphore(1, true));
+                    Instant lastActivated = this.lastActivation.get(source);
+
+                    if (!lastActivated.plus(((Monitorable) asset).period().asDuration()).isBefore(heartbeat))
+                        return;
+
+                    Semaphore semaphore = this.semaphores.get(source);
                     this.executorService.execute(() -> {
                         semaphore.acquireUninterruptibly();
                         try {
@@ -84,13 +87,6 @@ public class AssetMonitor implements AutoCloseable
                     });
                 });
         }
-    }
-
-    private boolean acceptHeartbeat(Monitorable monitorable, int beat)
-    {
-        int skip = monitorable.heartbeatSkip();
-        // A skip of 0 or 1 means "run on every heartbeat"; guards against divide-by-zero.
-        return skip <= 1 || beat % skip == 0;
     }
 
     private void runSource(Instant heartbeat, Asset asset, WombatSource source)

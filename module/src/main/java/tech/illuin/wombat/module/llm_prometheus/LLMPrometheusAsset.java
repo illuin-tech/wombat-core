@@ -9,6 +9,7 @@ import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.secret.SecretAware;
 import tech.illuin.wombat.core.source.Monitorable;
+import tech.illuin.wombat.core.source.Period;
 
 import java.util.Set;
 
@@ -18,7 +19,7 @@ public record LLMPrometheusAsset(
     @JsonProperty("proxy-url") String proxyUrl,
     @JsonProperty("username") String username,
     @JsonProperty("password-key") String passwordKey,
-    @JsonProperty("heartbeat-skip") int heartbeatSkip,
+    @JsonProperty("period") Period period,
     @NotNull @JsonProperty("profile") LLMPrometheusProfile profile
 ) implements Asset, SecretAware, Monitorable
 {

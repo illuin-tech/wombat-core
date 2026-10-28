@@ -16,6 +16,7 @@
     <properties>
         <micrometer.version>1.17.1</micrometer.version>
         <jackson-annotations.version>2.22</jackson-annotations.version>
+        <jackson.version>2.22.4</jackson.version>
         <jakarta-validation.version>3.1.1</jakarta-validation.version>
     </properties>
 
@@ -30,6 +31,13 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>${jackson-annotations.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>

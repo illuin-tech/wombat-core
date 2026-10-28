@@ -8,6 +8,7 @@ import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
+import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusProfile;
 
@@ -62,7 +63,7 @@ public class PrometheusMultiClientConfigTest
     {
         return new LLMPrometheusAsset(
             AssetIdentity.of(id, "env", id),
-            "http://prometheus", null, username, passwordEnv, 0,
+            "http://prometheus", null, username, passwordEnv, Period.ZERO,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
         );
     }

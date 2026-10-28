@@ -7,6 +7,7 @@ import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
+import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.core.source.WombatSource;
 import tech.illuin.wombat.module.llm_prometheus.source.LLMPrometheusSource;
 
@@ -47,7 +48,7 @@ public class LLMPrometheusModuleTest
         // environment at source creation, never from the asset the reconciler persisted.
         LLMPrometheusAsset asset = new LLMPrometheusAsset(
             AssetIdentity.of("p", "env", "P"),
-            "http://prometheus", null, "user", "PROM_PASSWORD", 0,
+            "http://prometheus", null, "user", "PROM_PASSWORD", Period.ZERO,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
         );
         ResolvedContext context = new ResolvedContext(
