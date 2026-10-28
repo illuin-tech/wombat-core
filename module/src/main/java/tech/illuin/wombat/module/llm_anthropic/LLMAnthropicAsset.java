@@ -2,7 +2,6 @@ package tech.illuin.wombat.module.llm_anthropic;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import tech.illuin.wombat.core.asset.Asset;
@@ -17,7 +16,7 @@ public record LLMAnthropicAsset(
     @JsonProperty("api-url") String apiUrl,
     @JsonProperty("proxy-url") String proxyUrl,
     @NotBlank @JsonProperty("admin-key") String adminKey,
-    @NotNull @Valid @JsonProperty("profile") LLMAnthropicProfile profile
+    @NotNull @JsonProperty("profile") LLMAnthropicProfile profile
 ) implements Asset, SecretAware
 {
     public static final String DEFAULT_API_URL = "https://api.anthropic.com";
