@@ -70,7 +70,7 @@ class AssetMonitorTest
         AtomicInteger activeConcurrentSources = new AtomicInteger(0);
         AtomicInteger maxConcurrentSources = new AtomicInteger(0);
 
-        WombatSource sourceA = (heartbeat, asset) -> {
+        WombatSource sourceA = (heartbeat, lastActivation, asset) -> {
             int current = activeConcurrentSources.incrementAndGet();
             maxConcurrentSources.accumulateAndGet(current, Math::max);
             latchAStarted.countDown();
@@ -86,7 +86,7 @@ class AssetMonitorTest
             return Collections.emptyList();
         };
 
-        WombatSource sourceB = (heartbeat, asset) -> {
+        WombatSource sourceB = (heartbeat, lastActivation, asset) -> {
             int current = activeConcurrentSources.incrementAndGet();
             maxConcurrentSources.accumulateAndGet(current, Math::max);
             latchBStarted.countDown();
@@ -121,7 +121,7 @@ class AssetMonitorTest
         List<String> processed = Collections.synchronizedList(new ArrayList<>());
         AtomicBoolean threw = new AtomicBoolean(false);
 
-        WombatSource source = (heartbeat, asset) -> {
+        WombatSource source = (heartbeat, lastActivation, asset) -> {
             if ("error-asset".equals(asset.identity().id()))
             {
                 threw.set(true);
@@ -167,7 +167,7 @@ class AssetMonitorTest
         }
 
         @Override
-        public List<MetricData> source(Instant heartbeat, Asset asset)
+        public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset)
         {
             int current = this.currentConcurrent.incrementAndGet();
             this.maxConcurrent.accumulateAndGet(current, Math::max);

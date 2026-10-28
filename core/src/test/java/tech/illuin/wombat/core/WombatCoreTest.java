@@ -303,7 +303,7 @@ class WombatCoreTest
         private final List<String> sampled = Collections.synchronizedList(new ArrayList<>());
 
         @Override
-        public List<MetricData> source(Instant heartbeat, Asset asset)
+        public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset)
         {
             this.sampled.add(asset.identity().id());
             return emptyList();

@@ -54,7 +54,7 @@ class LLMPrometheusSourceTest
         multiClient.register("llm-prom", client);
         LLMPrometheusSource source = new LLMPrometheusSource(multiClient);
 
-        List<MetricData> dataList = source.source(Instant.now(), (Asset) asset);
+        List<MetricData> dataList = source.source(Instant.now(), null, asset);
         assertEquals(1, dataList.size());
         assertInstanceOf(LLMData.class, dataList.getFirst());
 

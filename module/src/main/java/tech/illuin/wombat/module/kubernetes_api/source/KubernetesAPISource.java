@@ -35,7 +35,7 @@ public class KubernetesAPISource implements WombatSource
     }
 
     @Override
-    public List<MetricData> source(Instant heartbeat, Asset asset)
+    public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset)
     {
         KubernetesAPIAsset kubernetesAsset = (KubernetesAPIAsset) asset;
 

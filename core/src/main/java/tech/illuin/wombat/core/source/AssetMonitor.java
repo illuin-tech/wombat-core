@@ -79,7 +79,12 @@ public class AssetMonitor implements AutoCloseable
                     this.executorService.execute(() -> {
                         semaphore.acquireUninterruptibly();
                         try {
-                            this.runSource(heartbeat, asset, source);
+                            this.runSource(
+                                heartbeat,
+                                lastActivated != Instant.MIN ? lastActivated : null,
+                                asset,
+                                source
+                            );
                         }
                         finally {
                             semaphore.release();
@@ -89,11 +94,11 @@ public class AssetMonitor implements AutoCloseable
         }
     }
 
-    private void runSource(Instant heartbeat, Asset asset, WombatSource source)
+    private void runSource(Instant heartbeat, Instant lastActivation, Asset asset, WombatSource source)
     {
         try {
             logger.debug("Monitor triggered for asset {}", asset.identity().id());
-            List<MetricData> data = source.source(heartbeat, asset);
+            List<MetricData> data = source.source(heartbeat, lastActivation, asset);
             this.persister.persist(asset.identity(), asset.type(), data);
         }
         catch (WombatSourceException | WombatPersistenceException e) {
