@@ -3,7 +3,9 @@ package tech.illuin.wombat.core.source;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.core.source.persistence.WombatMetricPersister;
@@ -20,11 +22,11 @@ import java.util.concurrent.Semaphore;
 public class AssetMonitor implements AutoCloseable
 {
     private final WombatContextProvider contextProvider;
-    private final Map<String, WombatSource> sources;
+    private final Map<AssetType, WombatSource> sources;
     private final WombatMetricPersister persister;
     private final ExecutorService executorService;
-    private final Map<WombatSource, Semaphore> semaphores;
-    private final Map<WombatSource, Instant> lastActivation;
+    private final Map<AssetIdentity, Semaphore> semaphores;
+    private final Map<AssetIdentity, Instant> lastActivation;
 
     private static final Logger logger = LoggerFactory.getLogger(AssetMonitor.class);
 
@@ -43,18 +45,16 @@ public class AssetMonitor implements AutoCloseable
         this.lastActivation = new ConcurrentHashMap<>();
     }
 
-    public AssetMonitor register(Asset asset, WombatSource source)
+    public AssetMonitor register(AssetType type, WombatSource source)
     {
-        if (this.sources.containsKey(asset.type().name()))
+        if (this.sources.containsKey(type))
         {
-            logger.trace("Source for {} was already registered with type {}", asset.type(), this.sources.get(asset.type().name()).getClass().getSimpleName());
+            logger.trace("Source for {} was already registered with type {}", type.name(), this.sources.get(type).getClass().getSimpleName());
             return this;
         }
-        this.sources.put(asset.type().name(), source);
-        this.semaphores.put(source, new Semaphore(1, true));
-        this.lastActivation.put(source, Instant.MIN);
+        this.sources.put(type, source);
 
-        logger.debug("Registered wombat source {} for asset-type {}", source.getClass().getSimpleName(), asset.type().name());
+        logger.debug("Registered wombat source {} for asset-type {}", source.getClass().getSimpleName(), type.name());
         return this;
     }
 
@@ -66,16 +66,20 @@ public class AssetMonitor implements AutoCloseable
         {
             environment.assets().stream()
                 .filter(asset -> asset instanceof Monitorable)
-                .filter(asset -> this.sources.containsKey(asset.type().name()))
-                .filter(asset -> this.sources.get(asset.type().name()).accept(asset))
+                .filter(asset -> this.sources.containsKey(asset.type()))
+                .filter(asset -> this.sources.get(asset.type()).accept(asset))
                 .forEach(asset -> {
-                    WombatSource source = this.sources.get(asset.type().name());
-                    Instant lastActivated = this.lastActivation.get(source);
+                    WombatSource source = this.sources.get(asset.type());
+                    Instant lastActivated = this.lastActivation.computeIfAbsent(asset.identity(), id -> Instant.MIN);
 
                     if (!lastActivated.plus(((Monitorable) asset).period().asDuration()).isBefore(heartbeat))
+                    {
+                        logger.trace("Asset {} not ready to be triggered", asset);
                         return;
+                    }
+                    this.lastActivation.put(asset.identity(), heartbeat);
 
-                    Semaphore semaphore = this.semaphores.get(source);
+                    Semaphore semaphore = this.semaphores.computeIfAbsent(asset.identity(), id -> new Semaphore(1, true));
                     this.executorService.execute(() -> {
                         semaphore.acquireUninterruptibly();
                         try {
