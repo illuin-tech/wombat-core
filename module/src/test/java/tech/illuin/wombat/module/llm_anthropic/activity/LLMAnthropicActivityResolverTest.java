@@ -111,16 +111,19 @@ class LLMAnthropicActivityResolverTest
     }
 
     @Test
-    void activityPerBucket_sumsSelectedServicesPerStep() throws WombatActivityException
+    void activityPerBucket_returnsOneCurvePerSelectedModel() throws WombatActivityException
     {
         this.stubTwoPages();
 
         assertEquals(
-            Map.of(ms(H0), 1250.0, ms(H1), 500.0, ms(H2), 1000.0),
+            Map.of(
+                "claude-opus-5-5", Map.of(ms(H0), 1000.0, ms(H1), 500.0, ms(H2), 1000.0),
+                "claude-haiku-5-5", Map.of(ms(H0), 250.0)
+            ),
             this.resolver.activityPerBucket(this.asset, THREE_HOURS, Duration.ofHours(1).toMillis(), Set.of())
         );
         assertEquals(
-            Map.of(ms(H0), 250.0),
+            Map.of("claude-haiku-5-5", Map.of(ms(H0), 250.0)),
             this.resolver.activityPerBucket(this.asset, THREE_HOURS, Duration.ofHours(1).toMillis(), Set.of("claude-haiku-5-5"))
         );
     }

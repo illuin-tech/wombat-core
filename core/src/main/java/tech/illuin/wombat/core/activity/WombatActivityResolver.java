@@ -19,7 +19,7 @@ public interface WombatActivityResolver extends AssetProcessor
         return ActivityResolverType.INTERNAL_STORAGE;
     }
 
-    default Map<Long, Double> activityPerBucket(Asset asset, TimeRange range, long stepMs, Collection<String> serviceIds) throws WombatActivityException
+    default Map<String, Map<Long, Double>> activityPerBucket(Asset asset, TimeRange range, long stepMs, Collection<String> serviceIds) throws WombatActivityException
     {
         throw new UnsupportedOperationException(this.getClass().getSimpleName() + " does not provide per-bucket activity");
     }

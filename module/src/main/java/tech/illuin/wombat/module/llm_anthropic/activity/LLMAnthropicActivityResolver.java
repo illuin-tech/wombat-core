@@ -72,19 +72,20 @@ public class LLMAnthropicActivityResolver implements WombatActivityResolver
     }
 
     @Override
-    public Map<Long, Double> activityPerBucket(Asset asset, TimeRange range, long stepMs, Collection<String> serviceIds) throws WombatActivityException
+    public Map<String, Map<Long, Double>> activityPerBucket(Asset asset, TimeRange range, long stepMs, Collection<String> serviceIds) throws WombatActivityException
     {
         Map<String, Map<Long, Long>> usage = this.usage((LLMAnthropicAsset) asset, range, BucketWidth.forStep(stepMs));
 
-        Map<Long, Double> perStep = new TreeMap<>();
+        Map<String, Map<Long, Double>> perModel = new TreeMap<>();
         usage.forEach((model, perBucket) -> {
             if (serviceIds != null && !serviceIds.isEmpty() && !serviceIds.contains(model))
                 return;
+            Map<Long, Double> perStep = perModel.computeIfAbsent(model, m -> new TreeMap<>());
             perBucket.forEach((bucketStart, tokens) ->
                 perStep.merge(bucketStart - Math.floorMod(bucketStart, stepMs), tokens.doubleValue(), Double::sum)
             );
         });
-        return perStep;
+        return perModel;
     }
 
     private Map<String, Map<Long, Long>> usage(LLMAnthropicAsset asset, TimeRange range, BucketWidth width) throws WombatActivityException

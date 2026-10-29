@@ -54,9 +54,9 @@ class AssetEvaluatorTest
     @Test
     void externalAssets_getTheirPerBucketActivityFromTheirResolver() throws WombatActivityException
     {
-        Optional<Map<Long, Double>> activity = this.evaluator.activityPerBucket(impact("prod", EXTERNAL_TYPE), RANGE, HOUR_MS, List.of("claude"));
+        Optional<Map<String, Map<Long, Double>>> activity = this.evaluator.activityPerBucket(impact("prod", EXTERNAL_TYPE), RANGE, HOUR_MS, List.of("claude"));
 
-        assertEquals(Map.of(HOUR_MS, 1.0), activity.orElseThrow());
+        assertEquals(Map.of("claude", Map.of(HOUR_MS, 1.0)), activity.orElseThrow());
         assertEquals(List.of(new Call(this.prodAsset, RANGE, HOUR_MS, List.of("claude"))), this.externalResolver.calls);
     }
 
@@ -116,10 +116,10 @@ class AssetEvaluatorTest
         }
 
         @Override
-        public Map<Long, Double> activityPerBucket(Asset asset, TimeRange range, long stepMs, Collection<String> serviceIds)
+        public Map<String, Map<Long, Double>> activityPerBucket(Asset asset, TimeRange range, long stepMs, Collection<String> serviceIds)
         {
             this.calls.add(new Call(asset, range, stepMs, serviceIds));
-            return Map.of(HOUR_MS, 1.0);
+            return Map.of("claude", Map.of(HOUR_MS, 1.0));
         }
     }
 }

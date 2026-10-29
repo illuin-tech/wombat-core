@@ -39,7 +39,7 @@ public class AssetEvaluator implements AutoCloseable
         this.contextProvider = contextProvider;
     }
 
-    public Optional<Map<Long, Double>> activityPerBucket(AssetImpact impact, TimeRange range, long stepMs, Collection<String> serviceIds) throws WombatActivityException
+    public Optional<Map<String, Map<Long, Double>>> activityPerBucket(AssetImpact impact, TimeRange range, long stepMs, Collection<String> serviceIds) throws WombatActivityException
     {
         Optional<WombatActivityResolver> resolver = impact.serviceImpacts().stream()
             .map(ServiceImpact::assetType)
