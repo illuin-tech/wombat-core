@@ -10,6 +10,6 @@ import tech.illuin.wombat.core.asset.profile.LLMProvider;
 public record LLMSimulatedProfile(
     @NotNull @JsonProperty("provider") LLMProvider provider,
     @NotBlank @JsonProperty("model") String model,
-    @NotBlank @JsonProperty("location") Country location
+    @NotNull @JsonProperty("location") Country location
 ) implements LLMProfile
 {}
