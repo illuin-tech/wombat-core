@@ -6,6 +6,7 @@ import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
+import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.core.source.data.LLMData;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
@@ -36,7 +37,8 @@ class LLMPrometheusSourceTest
             new LLMPrometheusProfile.DynamicProfile("sum(vllm:num_tokens_total)")
         );
         LLMPrometheusAsset asset = new LLMPrometheusAsset(
-            AssetIdentity.of("llm-prom", "prod", "Prom LLM"), "http://localhost:9090", null, null, null, 0, profile
+            AssetIdentity.of("llm-prom", "prod", "Prom LLM"),
+            "http://localhost:9090", null, null, null, Period.ZERO, profile
         );
 
         PrometheusQueryResponse.Result res = new PrometheusQueryResponse.Result(
@@ -52,7 +54,7 @@ class LLMPrometheusSourceTest
         multiClient.register("llm-prom", client);
         LLMPrometheusSource source = new LLMPrometheusSource(multiClient);
 
-        List<MetricData> dataList = source.source(Instant.now(), (Asset) asset);
+        List<MetricData> dataList = source.source(Instant.now(), null, asset);
         assertEquals(1, dataList.size());
         assertInstanceOf(LLMData.class, dataList.getFirst());
 

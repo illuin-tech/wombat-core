@@ -8,6 +8,7 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.source.Monitorable;
+import tech.illuin.wombat.core.source.Period;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -18,7 +19,7 @@ public record KubernetesAPIAsset(
     @JsonProperty("namespace") String namespace,
     @JsonProperty("context") Optional<String> context,
     @JsonProperty("read-timeout") Optional<Duration> readTimeout,
-    @JsonProperty("heartbeat-skip") int heartbeatSkip,
+    @JsonProperty("period") Period period,
     @NotNull @JsonProperty("profile") KubernetesAPIServerProfile profile
 ) implements Asset, Monitorable
 {

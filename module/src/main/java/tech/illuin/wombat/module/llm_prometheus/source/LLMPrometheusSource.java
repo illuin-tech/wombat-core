@@ -2,7 +2,6 @@ package tech.illuin.wombat.module.llm_prometheus.source;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
 import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusClient;
 import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusMultiClient;
@@ -36,7 +35,7 @@ public class LLMPrometheusSource implements WombatSource
     }
 
     @Override
-    public List<MetricData> source(Instant heartbeat, Asset asset)
+    public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset)
     {
         LLMPrometheusAsset prometheusAsset = (LLMPrometheusAsset) asset;
 

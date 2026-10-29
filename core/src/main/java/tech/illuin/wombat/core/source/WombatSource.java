@@ -9,5 +9,5 @@ import java.util.List;
 
 public interface WombatSource extends AssetProcessor
 {
-    List<MetricData> source(Instant heartbeat, Asset asset) throws WombatSourceException;
+    List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset) throws WombatSourceException;
 }

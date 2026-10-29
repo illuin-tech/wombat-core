@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.source.monitor;
+package tech.illuin.wombat.core.source;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
@@ -10,10 +10,6 @@ import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
-import tech.illuin.wombat.core.source.AssetMonitor;
-import tech.illuin.wombat.core.source.Monitorable;
-import tech.illuin.wombat.core.source.WombatSource;
-import tech.illuin.wombat.core.source.WombatSourceException;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.core.source.persistence.WombatMetricPersister;
 
@@ -50,10 +46,10 @@ class AssetMonitorTest
     void sameSourceTasksAreQueuedAndNeverRunSimultaneously()
     {
         ConcurrentCheckingSource source = new ConcurrentCheckingSource(30);
-        TestAsset a1 = new TestAsset("a1", TYPE_LLM, 1);
-        TestAsset a2 = new TestAsset("a2", TYPE_LLM, 1);
-        TestAsset a3 = new TestAsset("a3", TYPE_LLM, 1);
-        TestAsset a4 = new TestAsset("a4", TYPE_LLM, 1);
+        TestAsset a1 = new TestAsset("a1", TYPE_LLM, Period.ONE_SECOND);
+        TestAsset a2 = new TestAsset("a2", TYPE_LLM, Period.ONE_SECOND);
+        TestAsset a3 = new TestAsset("a3", TYPE_LLM, Period.ONE_SECOND);
+        TestAsset a4 = new TestAsset("a4", TYPE_LLM, Period.ONE_SECOND);
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(a1, a2, a3, a4), noopPersister()))
         {
@@ -74,7 +70,7 @@ class AssetMonitorTest
         AtomicInteger activeConcurrentSources = new AtomicInteger(0);
         AtomicInteger maxConcurrentSources = new AtomicInteger(0);
 
-        WombatSource sourceA = (heartbeat, asset) -> {
+        WombatSource sourceA = (heartbeat, lastActivation, asset) -> {
             int current = activeConcurrentSources.incrementAndGet();
             maxConcurrentSources.accumulateAndGet(current, Math::max);
             latchAStarted.countDown();
@@ -90,7 +86,7 @@ class AssetMonitorTest
             return Collections.emptyList();
         };
 
-        WombatSource sourceB = (heartbeat, asset) -> {
+        WombatSource sourceB = (heartbeat, lastActivation, asset) -> {
             int current = activeConcurrentSources.incrementAndGet();
             maxConcurrentSources.accumulateAndGet(current, Math::max);
             latchBStarted.countDown();
@@ -106,8 +102,8 @@ class AssetMonitorTest
             return Collections.emptyList();
         };
 
-        TestAsset a1 = new TestAsset("a1", TYPE_LLM, 1);
-        TestAsset a2 = new TestAsset("a2", TYPE_K8S, 1);
+        TestAsset a1 = new TestAsset("a1", TYPE_LLM, Period.ONE_SECOND);
+        TestAsset a2 = new TestAsset("a2", TYPE_K8S, Period.ONE_SECOND);
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(a1, a2), noopPersister()))
         {
@@ -125,7 +121,7 @@ class AssetMonitorTest
         List<String> processed = Collections.synchronizedList(new ArrayList<>());
         AtomicBoolean threw = new AtomicBoolean(false);
 
-        WombatSource source = (heartbeat, asset) -> {
+        WombatSource source = (heartbeat, lastActivation, asset) -> {
             if ("error-asset".equals(asset.identity().id()))
             {
                 threw.set(true);
@@ -135,8 +131,8 @@ class AssetMonitorTest
             return Collections.emptyList();
         };
 
-        TestAsset errorAsset = new TestAsset("error-asset", TYPE_LLM, 1);
-        TestAsset nextAsset = new TestAsset("next-asset", TYPE_LLM, 1);
+        TestAsset errorAsset = new TestAsset("error-asset", TYPE_LLM, Period.ONE_SECOND);
+        TestAsset nextAsset = new TestAsset("next-asset", TYPE_LLM, Period.ONE_SECOND);
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(errorAsset, nextAsset), noopPersister()))
         {
@@ -171,7 +167,7 @@ class AssetMonitorTest
         }
 
         @Override
-        public List<MetricData> source(Instant heartbeat, Asset asset)
+        public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset)
         {
             int current = this.currentConcurrent.incrementAndGet();
             this.maxConcurrent.accumulateAndGet(current, Math::max);
@@ -189,7 +185,7 @@ class AssetMonitorTest
         }
     }
 
-    private record TestAsset(String assetId, AssetType type, int heartbeatSkip) implements Asset, Monitorable
+    private record TestAsset(String assetId, AssetType type, Period period) implements Asset, Monitorable
     {
         @Override
         public AssetIdentity identity()
