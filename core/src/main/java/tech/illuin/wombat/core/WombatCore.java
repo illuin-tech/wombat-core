@@ -69,7 +69,7 @@ public final class WombatCore implements AutoCloseable
                 WombatContext scoped = context.scope(asset.type());
 
                 module.createSource(scoped).ifPresentOrElse(
-                    src -> monitor.register(asset, src),
+                    src -> monitor.register(asset.type(), src),
                     () -> logger.debug("Skipping monitor registration for asset-type {}", asset.type().name())
                 );
             });

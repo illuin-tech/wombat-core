@@ -33,8 +33,8 @@ class AssetMonitorTest
     public static void main(String[] args) throws Exception
     {
         AssetMonitorTest test = new AssetMonitorTest();
-        test.sameSourceTasksAreQueuedAndNeverRunSimultaneously();
-        System.out.println("PASS: sameSourceTasksAreQueuedAndNeverRunSimultaneously");
+        test.sameSourceTasksAreRunSimultaneously();
+        System.out.println("PASS: sameSourceTasksAreRunSimultaneously");
         test.differentSourcesRunConcurrently();
         System.out.println("PASS: differentSourcesRunConcurrently");
         test.errorInOneTaskDoesNotHaltSubsequentQueuedTasks();
@@ -43,7 +43,7 @@ class AssetMonitorTest
     }
 
     @Test
-    void sameSourceTasksAreQueuedAndNeverRunSimultaneously()
+    void sameSourceTasksAreRunSimultaneously() throws InterruptedException
     {
         ConcurrentCheckingSource source = new ConcurrentCheckingSource(30);
         TestAsset a1 = new TestAsset("a1", TYPE_LLM, Period.ONE_SECOND);
@@ -53,11 +53,12 @@ class AssetMonitorTest
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(a1, a2, a3, a4), noopPersister()))
         {
-            monitor.register(a1, source);
+            monitor.register(a1.type(), source);
+            Thread.sleep(1050);
             monitor.trigger();
         }
 
-        assertEquals(1, source.maxConcurrent.get());
+        assertEquals(4, source.maxConcurrent.get());
         assertEquals(4, source.processed.size());
         assertTrue(source.processed.containsAll(List.of("a1", "a2", "a3", "a4")));
     }
@@ -107,8 +108,8 @@ class AssetMonitorTest
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(a1, a2), noopPersister()))
         {
-            monitor.register(a1, sourceA);
-            monitor.register(a2, sourceB);
+            monitor.register(a1.type(), sourceA);
+            monitor.register(a2.type(), sourceB);
             monitor.trigger();
         }
 
@@ -136,7 +137,7 @@ class AssetMonitorTest
 
         try (AssetMonitor monitor = new AssetMonitor(contextOf(errorAsset, nextAsset), noopPersister()))
         {
-            monitor.register(errorAsset, source);
+            monitor.register(errorAsset.type(), source);
             monitor.trigger();
         }
 
