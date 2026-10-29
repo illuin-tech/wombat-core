@@ -31,6 +31,26 @@ public record Period(
         HOURS,
     }
 
+    public static Period of(long value, Unit unit)
+    {
+        return new Period(value, unit);
+    }
+
+    public static Period ofSeconds(long value)
+    {
+        return new Period(value, Unit.SECONDS);
+    }
+
+    public static Period ofMinutes(long value)
+    {
+        return new Period(value, Unit.MINUTES);
+    }
+
+    public static Period ofHours(long value)
+    {
+        return new Period(value, Unit.HOURS);
+    }
+
     public Duration asDuration()
     {
         return switch (this.unit) {
