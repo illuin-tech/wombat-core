@@ -2,6 +2,7 @@ package tech.illuin.wombat.core.activity.commons;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -11,6 +12,8 @@ public record TimeRange(
     @JsonProperty("start") Instant start,
     @JsonProperty("end") Instant end
 ) {
+    public static final Duration HOURLY_MAX_SPAN = Duration.ofDays(7);
+
     public static long toEpochMs(Instant instant)
     {
         if (instant.equals(Instant.MIN))
