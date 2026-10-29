@@ -72,7 +72,9 @@ public class AssetMonitor implements AutoCloseable
                     WombatSource source = this.sources.get(asset.type());
                     Instant lastActivated = this.lastActivation.computeIfAbsent(asset.identity(), id -> Instant.MIN);
 
-                    if (!lastActivated.plus(((Monitorable) asset).period().asDuration()).isBefore(heartbeat))
+                    Monitorable monitorable = (Monitorable) asset;
+                    Period period = monitorable.period() != null ? monitorable.period() : Period.ZERO;
+                    if (!lastActivated.plus(period.asDuration()).isBefore(heartbeat))
                     {
                         logger.trace("Asset {} not ready to be triggered", asset);
                         return;
