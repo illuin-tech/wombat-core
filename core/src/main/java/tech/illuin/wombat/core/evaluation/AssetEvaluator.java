@@ -3,6 +3,7 @@ package tech.illuin.wombat.core.evaluation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.activity.*;
+import tech.illuin.wombat.core.activity.WombatActivityResolver.ActivityResolverType;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
@@ -10,11 +11,15 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.WombatContextProvider;
+import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
+import tech.illuin.wombat.core.evaluation.impact.commons.ServiceImpact;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class AssetEvaluator implements AutoCloseable
@@ -32,6 +37,23 @@ public class AssetEvaluator implements AutoCloseable
         this.impactResolvers = new HashMap<>();
         this.costResolvers = new HashMap<>();
         this.contextProvider = contextProvider;
+    }
+
+    public Optional<Map<String, Map<Long, Double>>> activityPerBucket(AssetImpact impact, TimeRange range, long stepMs, Collection<String> serviceIds) throws WombatActivityException
+    {
+        Optional<WombatActivityResolver> resolver = impact.serviceImpacts().stream()
+            .map(ServiceImpact::assetType)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .map(this.activityResolvers::get)
+            .filter(r -> r.activityResolverType() == ActivityResolverType.EXTERNAL_API);
+        if (resolver.isEmpty())
+            return Optional.empty();
+
+        Optional<Asset> asset = this.findAsset(impact.environmentId(), impact.assetId());
+        if (asset.isEmpty())
+            return Optional.empty();
+        return Optional.of(resolver.get().activityPerBucket(asset.get(), range, stepMs, serviceIds));
     }
 
     public AssetEvaluator registerActivityResolver(AssetType type, WombatActivityResolver resolver)
@@ -135,4 +157,13 @@ public class AssetEvaluator implements AutoCloseable
 
     @Override
     public void close() throws Exception {}
+
+    private Optional<Asset> findAsset(String environmentId, String assetId)
+    {
+        return this.contextProvider.provide().environments().stream()
+            .filter(environment -> environment.id().equals(environmentId))
+            .flatMap(environment -> environment.assets().stream())
+            .filter(asset -> asset.identity().id().equals(assetId))
+            .findFirst();
+    }
 }

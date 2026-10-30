@@ -27,6 +27,11 @@ public interface WombatModule
         return Optional.empty();
     }
 
+    default Optional<WombatActivityResolver> createActivityResolver(WombatContext context)
+    {
+        return this.createActivityResolver();
+    }
+
     default Optional<WombatEvaluationResolver> createImpactResolver()
     {
         return Optional.empty();

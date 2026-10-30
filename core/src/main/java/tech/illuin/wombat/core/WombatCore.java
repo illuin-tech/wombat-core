@@ -80,12 +80,16 @@ public final class WombatCore implements AutoCloseable
     {
         logger.info("Creating wombat impact-calculator out of {} registered modules", this.modules.size());
         AssetEvaluator calculator = new AssetEvaluator(this.contextProvider);
+        WombatContext context = this.contextProvider.provide();
 
         for (WombatModule module : this.modules.values())
         {
             ServiceFamily family = module.type().family();
 
-            WombatActivityResolver activityResolver = module.createActivityResolver().or(() -> this.defaults.getActivityResolver(family)).orElseThrow();
+            WombatActivityResolver activityResolver = module
+                .createActivityResolver(context.scope(module.type()))
+                .or(() -> this.defaults.getActivityResolver(family))
+                .orElseThrow();
             calculator.registerActivityResolver(module.type(), activityResolver);
             logger.debug("Registered wombat activity-resolver {} for asset-type {}", activityResolver.getClass().getSimpleName(), module.type().name());
 
