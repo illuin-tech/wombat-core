@@ -1,5 +1,6 @@
 package tech.illuin.wombat.core.activity.commons;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Duration;
@@ -18,6 +19,9 @@ public record TimeRange(
 ) {
     public TimeRange
     {
+        if (resolution == null)
+            resolution = Duration.between(start, end);
+
         if (Duration.between(start, end).compareTo(resolution) < 0)
             throw new IllegalArgumentException("Resolution must be less than or equal to the interval defined by the start and end timestamps.");
     }
@@ -95,6 +99,7 @@ public record TimeRange(
         return split(this.resolution);
     }
 
+    @JsonIgnore
     public double getCalendarFractionOfYear()
     {
         if (this.start.equals(Instant.MIN) || this.end.equals(Instant.MAX))
