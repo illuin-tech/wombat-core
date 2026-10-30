@@ -14,7 +14,7 @@
     <description>Core library for Wombat sustainability monitoring</description>
 
     <properties>
-        <micrometer.version>1.17.1</micrometer.version>
+        <micrometer.version>1.17.2</micrometer.version>
         <jackson-annotations.version>2.22</jackson-annotations.version>
         <jackson.version>2.22.4</jackson.version>
         <jakarta-validation.version>3.1.1</jakarta-validation.version>
