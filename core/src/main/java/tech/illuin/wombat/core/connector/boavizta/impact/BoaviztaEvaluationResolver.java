@@ -85,8 +85,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         Footprint globalFootprint = this.resolveGlobalFootprint(impactResponse, includedShares, kubernetesActivityData.range(), profile.lifespan());
 
         return new AssetImpact(
-            asset.identity().environmentId(),
-            asset.identity().id(),
+            asset.identity(),
             globalFootprint,
             serviceImpacts,
             ImpactProvider.BOAVIZTA

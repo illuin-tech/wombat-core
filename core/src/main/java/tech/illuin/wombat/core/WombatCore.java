@@ -80,20 +80,21 @@ public final class WombatCore implements AutoCloseable
     {
         logger.info("Creating wombat impact-calculator out of {} registered modules", this.modules.size());
         AssetEvaluator calculator = new AssetEvaluator(this.contextProvider);
+        WombatContext context = this.contextProvider.provide();
 
         for (WombatModule module : this.modules.values())
         {
             ServiceFamily family = module.type().family();
 
-            WombatActivityResolver activityResolver = module.createActivityResolver().or(() -> this.defaults.getActivityResolver(family)).orElseThrow();
+            WombatActivityResolver activityResolver = module.createActivityResolver(context).or(() -> this.defaults.getActivityResolver(family)).orElseThrow();
             calculator.registerActivityResolver(module.type(), activityResolver);
             logger.debug("Registered wombat activity-resolver {} for asset-type {}", activityResolver.getClass().getSimpleName(), module.type().name());
 
-            WombatEvaluationResolver impactResolver = module.createImpactResolver().or(() -> this.defaults.getImpactResolver(family)).orElseThrow();
+            WombatEvaluationResolver impactResolver = module.createImpactResolver(context).or(() -> this.defaults.getImpactResolver(family)).orElseThrow();
             calculator.registerImpactResolver(module.type(), impactResolver);
             logger.debug("Registered wombat impact-resolver {} for asset-type {}", impactResolver.getClass().getSimpleName(), module.type().name());
 
-            WombatEvaluationResolver costResolver = module.createCostResolver().or(() -> this.defaults.getCostResolver(family)).orElseThrow();
+            WombatEvaluationResolver costResolver = module.createCostResolver(context).or(() -> this.defaults.getCostResolver(family)).orElseThrow();
             calculator.registerCostResolver(module.type(), costResolver);
             logger.debug("Registered wombat cost-resolver {} for asset-type {}", costResolver.getClass().getSimpleName(), module.type().name());
         }

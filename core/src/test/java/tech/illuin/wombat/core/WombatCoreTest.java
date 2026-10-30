@@ -1,6 +1,7 @@
 package tech.illuin.wombat.core;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
@@ -88,15 +89,18 @@ class WombatCoreTest
         // asset's own module as the only thing able to resolve an impact.
         Consumer<WombatCore.CoreDefaults> defaults = registry -> registry.register(
             ServiceFamily.LLM,
-            (asset, range, filter) -> Optional.of(new LLMActivityData(
-                ActivityRegime.MODELED,
-                asset.identity().id(),
-                range,
-                LLMProvider.mistralai,
-                "test",
-                FRANCE,
-                0L,
-                0
+            (asset, range, filter) -> Optional.of(new AssetActivity(
+                asset.identity(),
+                List.of(new LLMActivityData(
+                    ActivityRegime.MODELED,
+                    asset.identity().id(),
+                    range,
+                    LLMProvider.mistralai,
+                    "test",
+                    FRANCE,
+                    0L,
+                    0
+                ))
             )),
             SERVES_NOTHING,
             SERVES_NOTHING
@@ -108,7 +112,7 @@ class WombatCoreTest
             List<AssetEvaluation> impacts = evaluator.evaluate(RANGE, AssetFilter.none());
 
             assertEquals(1, impacts.size());
-            assertEquals("static-1", impacts.getFirst().assetId());
+            assertEquals("static-1", impacts.getFirst().assetIdentity().id());
         }
     }
 
@@ -279,11 +283,10 @@ class WombatCoreTest
         }
 
         @Override
-        public Optional<WombatEvaluationResolver> createImpactResolver()
+        public Optional<WombatEvaluationResolver> createImpactResolver(WombatContext ctx)
         {
             return Optional.of((resolved, data) -> new AssetImpact(
-                resolved.identity().environmentId(),
-                resolved.identity().id(),
+                resolved.identity(),
                 null,
                 emptyList(),
                 null

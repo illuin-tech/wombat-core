@@ -110,8 +110,7 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
         Footprint globalFootprint = Footprint.sum(footprints);
 
         return new AssetImpact(
-            asset.identity().environmentId(),
-            asset.identity().id(),
+            asset.identity(),
             globalFootprint,
             serviceImpacts,
             ImpactProvider.ECOLOGITS
