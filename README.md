@@ -20,7 +20,7 @@ The library requires Java 21+ and adding the following in your `pom.xml`:
 <dependency>
     <groupId>tech.illuin</groupId>
     <artifactId>wombat-core</artifactId>
-    <version>0.11.0</version>
+    <version>0.14.0</version>
 </dependency>
 ```
 
