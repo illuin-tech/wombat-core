@@ -1,7 +1,7 @@
 package tech.illuin.wombat.module.llm_static.activity;
 
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
-import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.llm.LLMActivityData;
@@ -24,7 +24,7 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
     }
 
     @Override
-    public Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter)
+    public Optional<AssetActivity> resolve(Asset asset, TimeRange range, AssetFilter filter)
     {
         LLMStaticProfile profile = (LLMStaticProfile) asset.profile();
         Set<String> serviceIds = filter == null ? Collections.emptySet() : filter.filterServiceIds(asset);
@@ -48,11 +48,14 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
         }
 
         Set<String> resolvedServiceIds = serviceIds.isEmpty() ? activities.keySet() : serviceIds;
-        return Optional.of(new LLMActivityData(
-            ActivityRegime.MODELED,
-            resolvedServiceIds,
-            range,
-            activities
+        return Optional.of(new AssetActivity(
+            asset.identity(),
+            List.of(new LLMActivityData(
+                ActivityRegime.MODELED,
+                resolvedServiceIds,
+                TimeRange.cloneRescale(range),
+                activities
+            ))
         ));
     }
 

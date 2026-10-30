@@ -10,7 +10,7 @@ import java.util.Objects;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record AssetIdentity(
     @NotBlank @JsonProperty("id") String id,
-    @NotBlank @JsonProperty("environment-id") @JsonAlias("environmentId") String environmentId,
+    @NotBlank @JsonProperty("environmentId") @JsonAlias("environment-id") String environmentId,
     @NotBlank @JsonProperty("name") String name
 ) {
     public AssetIdentity

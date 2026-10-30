@@ -1,5 +1,6 @@
 package tech.illuin.wombat.module.kubernetes_api;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import jakarta.validation.constraints.NotBlank;
@@ -15,10 +16,10 @@ import java.util.Optional;
 
 public record KubernetesAPIAsset(
     @JsonUnwrapped AssetIdentity identity,
-    @NotBlank @JsonProperty("config-path") String configPath,
+    @NotBlank @JsonProperty("configPath") @JsonAlias("config-path") String configPath,
     @JsonProperty("namespace") String namespace,
     @JsonProperty("context") Optional<String> context,
-    @JsonProperty("read-timeout") Optional<Duration> readTimeout,
+    @JsonProperty("readTimeout") @JsonAlias("read-timeout") Optional<Duration> readTimeout,
     @JsonProperty("period") Period period,
     @NotNull @JsonProperty("profile") KubernetesAPIServerProfile profile
 ) implements Asset, Monitorable

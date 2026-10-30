@@ -1,12 +1,12 @@
 package tech.illuin.wombat.core.evaluation.impact.commons;
 
+import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 
 import java.util.List;
 
 public record AssetImpact(
-    String environmentId,
-    String assetId,
+    AssetIdentity assetIdentity,
     Footprint footprint,
     List<ServiceImpact> serviceImpacts,
     ImpactProvider provider

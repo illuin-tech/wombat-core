@@ -72,8 +72,8 @@ class EcologitsEvaluationResolverTest
         assertInstanceOf(AssetImpact.class, evaluation);
 
         AssetImpact impact = (AssetImpact) evaluation;
-        assertEquals("env", impact.environmentId());
-        assertEquals("asset", impact.assetId());
+        assertEquals("env", impact.assetIdentity().environmentId());
+        assertEquals("asset", impact.assetIdentity().id());
         assertEquals(2, impact.serviceImpacts().size());
 
         // Check shares (1000 / 4000 = 0.25, 3000 / 4000 = 0.75)

@@ -61,11 +61,6 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <skipITs>true</skipITs>
         <!-- Core deps -->
-        <quarkus.platform.version>3.39.5</quarkus.platform.version>
-        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-        <jdbc.sqlite.version>3.0.11</jdbc.sqlite.version>
-        <aws.sdk.version>2.55.8</aws.sdk.version>
         <record-builder.version>53</record-builder.version>
         <feign.version>13.17</feign.version>
         <slf4j.version>2.0.20</slf4j.version>
@@ -76,6 +71,7 @@
         <checkstyle.version>14.3.0</checkstyle.version>
         <checkstyle.config.location>checkstyle.xml</checkstyle.config.location>
         <testcontainers.version>1.21.4</testcontainers.version>
+        <mockito.version>5.24.0</mockito.version>
         <!-- Maven deps -->
         <maven-compiler.release>21</maven-compiler.release>
         <maven-compiler.version>3.16.0</maven-compiler.version>
@@ -99,9 +95,37 @@
         </dependency>
 
         <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-core</artifactId>
+            <version>${feign.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Test deps -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

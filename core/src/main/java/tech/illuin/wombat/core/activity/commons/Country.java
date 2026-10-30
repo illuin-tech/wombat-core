@@ -24,8 +24,13 @@ public final class Country
             indexAlpha2.put(country.alpha2(), country);
             indexAlpha3.put(country.alpha3(), country);
         }
+
+        var world = new Country(Locale.ROOT);
+        indexAlpha2.put("XX", world);
+        indexAlpha3.put("XXX", world);
     }
 
+    public static final Country WORLD = ofAlpha2("XX");
     public static final Country AUSTRALIA = ofAlpha2("AU");
     public static final Country BRAZIL = ofAlpha2("BR");
     public static final Country CANADA = ofAlpha2("CA");

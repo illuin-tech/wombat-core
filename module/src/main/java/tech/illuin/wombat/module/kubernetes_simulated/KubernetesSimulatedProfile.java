@@ -1,5 +1,6 @@
 package tech.illuin.wombat.module.kubernetes_simulated;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,7 +11,7 @@ import tech.illuin.wombat.core.asset.profile.ServerProvider;
 
 public record KubernetesSimulatedProfile(
     @NotNull @JsonProperty("provider") ServerProvider provider,
-    @NotBlank @JsonProperty("instance-type") String instanceType,
+    @NotBlank @JsonProperty("instanceType") @JsonAlias("instance-type") String instanceType,
     @NotNull @JsonProperty("location") Country location,
     @Positive @JsonProperty("lifespan") int lifespan
 ) implements ServerProfile {}

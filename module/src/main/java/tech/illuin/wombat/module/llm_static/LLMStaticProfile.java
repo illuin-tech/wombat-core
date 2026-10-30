@@ -23,11 +23,11 @@ public record LLMStaticProfile(
         @NotNull @JsonProperty("provider") LLMProvider provider,
         @NotBlank @JsonProperty("model") String model,
         @NotNull @JsonProperty("location") Country location,
-        @NotNull @Valid @JsonProperty("request-profile") RequestProfile requestProfile
+        @NotNull @Valid @JsonProperty("requestProfile") @JsonAlias("request-profile") RequestProfile requestProfile
     ) {}
 
     public record RequestProfile(
-        @PositiveOrZero @JsonProperty("output-token-per-request") @JsonAlias("output-token-count") int outputTokenPerRequest,
-        @PositiveOrZero @JsonProperty("request-per-year") int requestPerYear
+        @PositiveOrZero @JsonProperty("outputTokenPerRequest") @JsonAlias({"output-token-per-request", "output-token-count"}) int outputTokenPerRequest,
+        @PositiveOrZero @JsonProperty("requestPerYear") @JsonAlias("request-per-year") int requestPerYear
     ) {}
 }

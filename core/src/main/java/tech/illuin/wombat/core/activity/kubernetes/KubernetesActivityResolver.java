@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.activity.WombatActivityException;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
@@ -35,10 +36,23 @@ public class KubernetesActivityResolver implements WombatActivityResolver
     }
 
     @Override
-    public Optional<ActivityData> resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
+    public Optional<AssetActivity> resolve(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
     {
         List<String> assetIds = List.of(asset.identity().id());
         Set<String> serviceIds = filter == null ? Set.of() : filter.filterServiceIds(asset);
+
+        List<ActivityData> activities = range.split().stream()
+            .map(slot -> resolveSlot(asset, slot, serviceIds, assetIds))
+            .flatMap(Optional::stream)
+            .toList();
+
+        return activities.isEmpty()
+            ? Optional.empty()
+            : Optional.of(new AssetActivity(asset.identity(), activities));
+    }
+
+    private Optional<ActivityData> resolveSlot(Asset asset, TimeRange range, Set<String> serviceIds, List<String> assetIds)
+    {
         long start = toEpochMs(range.start());
         long end = toEpochMs(range.end());
 
@@ -47,9 +61,15 @@ public class KubernetesActivityResolver implements WombatActivityResolver
                 Map<String, Double> containerShares = this.metricResolver.containerShares(start, end, assetIds);
                 Map<String, ClusterInfo> containerLocations = toClusterInfo(this.metricResolver.containerLocations(start, end, assetIds));
 
-                return (ActivityData) new KubernetesActivityData(asset.type().regime(), serviceIds, range, cpuUsage, containerShares, containerLocations);
-            })
-            .or(Optional::empty);
+                return new KubernetesActivityData(
+                    asset.type().regime(),
+                    serviceIds,
+                    range,
+                    cpuUsage,
+                    containerShares,
+                    containerLocations
+                );
+            });
     }
 
     private static Map<String, ClusterInfo> toClusterInfo(Map<String, List<ContainerLocation>> locations)

@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.activity.*;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
@@ -71,12 +72,15 @@ public class AssetEvaluator implements AutoCloseable
                     if (filter != null && !filter.accepts(environment.id(), asset.identity().id()))
                         continue;
 
-                    Optional<ActivityData> activity = this.computeActivity(asset, range, filter);
+                    Optional<AssetActivity> activity = this.computeActivity(asset, range, filter);
                     if (activity.isEmpty())
                         continue;
 
-                    this.computeImpact(asset, activity.get()).ifPresent(outputs::add);
-                    this.computeCost(asset, activity.get()).ifPresent(outputs::add);
+                    for (ActivityData activityData : activity.get().activity())
+                    {
+                        this.computeImpact(asset, activityData).ifPresent(outputs::add);
+                        this.computeCost(asset, activityData).ifPresent(outputs::add);
+                    }
                 }
             }
             return outputs;
@@ -86,7 +90,7 @@ public class AssetEvaluator implements AutoCloseable
         }
     }
 
-    public Optional<ActivityData> computeActivity(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
+    public Optional<AssetActivity> computeActivity(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
     {
         WombatActivityResolver resolver = this.activityResolvers.get(asset.type());
 

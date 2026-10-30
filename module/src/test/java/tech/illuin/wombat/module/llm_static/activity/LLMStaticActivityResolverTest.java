@@ -1,7 +1,7 @@
 package tech.illuin.wombat.module.llm_static.activity;
 
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.llm.LLMActivityData;
@@ -43,29 +43,30 @@ class LLMStaticActivityResolverTest
         // 100 seconds range
         TimeRange range = new TimeRange(Instant.ofEpochSecond(0), Instant.ofEpochSecond(100));
 
-        Optional<ActivityData> activityOpt = this.resolver.resolve(asset, range, null);
+        Optional<AssetActivity> activityOpt = this.resolver.resolve(asset, range, null);
         assertTrue(activityOpt.isPresent());
-        assertInstanceOf(LLMActivityData.class, activityOpt.get());
+        assertInstanceOf(LLMActivityData.class, activityOpt.get().activity().getFirst());
 
-        LLMActivityData activity = (LLMActivityData) activityOpt.get();
-        assertEquals(2, activity.services().size());
+        AssetActivity activity = activityOpt.get();
+        LLMActivityData llmActivity = (LLMActivityData) activity.activity().getFirst();
+        assertEquals(2, llmActivity.services().size());
 
         // 100 seconds out of 365 days (31536000s in year)
-        LLMServiceActivity a1 = activity.services().get("mistral-large-latest");
+        LLMServiceActivity a1 = llmActivity.services().get("mistral-large-latest");
         assertNotNull(a1);
         assertEquals(LLMProvider.mistralai, a1.provider());
         assertEquals("mistral-large-latest", a1.model());
         assertEquals(100, (int) a1.requestCount());
         assertEquals(50000L, a1.outputTokenCount()); // 500 * 100
 
-        LLMServiceActivity a2 = activity.services().get("gpt-4o");
+        LLMServiceActivity a2 = llmActivity.services().get("gpt-4o");
         assertNotNull(a2);
         assertEquals(LLMProvider.openai, a2.provider());
         assertEquals("gpt-4o", a2.model());
         assertEquals(200, (int) a2.requestCount());
         assertEquals(200000L, a2.outputTokenCount()); // 1000 * 200
 
-        assertEquals(250000L, activity.outputTokenCount());
-        assertEquals(300.0, activity.requestCount());
+        assertEquals(250000L, llmActivity.outputTokenCount());
+        assertEquals(300.0, llmActivity.requestCount());
     }
 }

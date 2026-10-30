@@ -1,10 +1,10 @@
 package tech.illuin.wombat.core.evaluation;
 
+import tech.illuin.wombat.core.asset.AssetIdentity;
+
 public interface AssetEvaluation
 {
-    String environmentId();
-
-    String assetId();
+    AssetIdentity assetIdentity();
 
     EvaluationType type();
 
