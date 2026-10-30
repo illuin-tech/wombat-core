@@ -1,5 +1,6 @@
 package tech.illuin.wombat.module.llm_prometheus;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import jakarta.validation.constraints.NotBlank;
@@ -15,10 +16,10 @@ import java.util.Set;
 
 public record LLMPrometheusAsset(
     @JsonUnwrapped AssetIdentity identity,
-    @NotBlank @JsonProperty("prometheus-url") String prometheusUrl,
-    @JsonProperty("proxy-url") String proxyUrl,
+    @NotBlank @JsonProperty("prometheusUrl") @JsonAlias("prometheus-url") String prometheusUrl,
+    @JsonProperty("proxyUrl") @JsonAlias("proxy-url") String proxyUrl,
     @JsonProperty("username") String username,
-    @JsonProperty("password-key") String passwordKey,
+    @JsonProperty("passwordKey") @JsonAlias("password-key") String passwordKey,
     @JsonProperty("period") Period period,
     @NotNull @JsonProperty("profile") LLMPrometheusProfile profile
 ) implements Asset, SecretAware, Monitorable

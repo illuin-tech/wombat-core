@@ -1,5 +1,6 @@
 package tech.illuin.wombat.module.llm_prometheus;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -12,7 +13,7 @@ public record LLMPrometheusProfile(
     @NotNull @JsonProperty("provider") LLMProvider provider,
     @NotBlank @JsonProperty("model") String model,
     @NotNull @JsonProperty("location") Country location,
-    @NotNull @Valid @JsonProperty("dynamic-profile") DynamicProfile dynamicProfile
+    @NotNull @Valid @JsonProperty("dynamicProfile") @JsonAlias("dynamic-profile") DynamicProfile dynamicProfile
 ) implements LLMProfile
 {
     public record DynamicProfile(
