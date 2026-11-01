@@ -131,10 +131,11 @@ Core modules provide ready-to-use implementations of asset types and their assoc
 | Module                                           | Family                 | Class                       | Components          | Description                                                                                                          |
 |--------------------------------------------------|------------------------|-----------------------------|---------------------|----------------------------------------------------------------------------------------------------------------------|
 | `tech.illuin.wombat-module.kubernetes-api`       | `KUBERNETES_CONTAINER` | `KubernetesAPIModule`       | `source`            | Connects to Kubernetes cluster APIs to poll CPU and memory resource metrics.                                         |
+| `tech.illuin.wombat-module.kubernetes-static`    | `KUBERNETES_CONTAINER` | `KubernetesStaticModule`    | `activity-resolver` | Models static Kubernetes container workloads using node counts and superposed temporal scenarios. |
 | `tech.illuin.wombat-module.llm-static`           | `LLM`                  | `LLMStaticModule`           | `activity-resolver` | Models static LLM workloads based on annual request profiles.                                                        |
 | `tech.illuin.wombat-module.llm-prometheus`       | `LLM`                  | `LLMPrometheusModule`       | `source`            | Queries Prometheus via PromQL for LLM inference telemetry.                                                           |
 | `tech.illuin.wombat-module.kubernetes-simulated` | `KUBERNETES_CONTAINER` | `KubernetesSimulatedModule` |                     | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
-| `tech.illuin.wombat-module.lmm-simulated`        | `LLM`                  | `KubernetesSimulatedModule` |                     | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
+| `tech.illuin.wombat-module.llm-simulated`        | `LLM`                  | `KubernetesSimulatedModule` |                     | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
 
 #### Standalone & Default Components
 

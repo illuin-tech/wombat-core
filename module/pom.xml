@@ -15,6 +15,7 @@
 
     <properties>
         <jackson-annotations.version>2.22</jackson-annotations.version>
+        <jackson.version>2.22.4</jackson.version>
         <fabric8-kubernetes-client.version>8.0.0</fabric8-kubernetes-client.version>
     </properties>
 
@@ -41,6 +42,13 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>${jackson-annotations.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>

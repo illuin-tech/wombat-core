@@ -71,7 +71,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
                 asset.type(),
                 profile,
                 share.share(),
-                this.convert(impactResponse, share.share(), kubernetesActivityData.range(), profile.lifespan()),
+                this.convert(impactResponse, share.share(), kubernetesActivityData.range(), profile.lifespan().asHours()),
                 kubernetesActivityData.containerLocations().get(share.serviceId()),
                 specification,
                 loadPercent,
@@ -82,7 +82,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             .toList()
         ;
 
-        Footprint globalFootprint = this.resolveGlobalFootprint(impactResponse, includedShares, kubernetesActivityData.range(), profile.lifespan());
+        Footprint globalFootprint = this.resolveGlobalFootprint(impactResponse, includedShares, kubernetesActivityData.range(), profile.lifespan().asHours());
 
         return new AssetImpact(
             asset.identity(),
@@ -96,7 +96,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         BoaviztaImpactResponse providerResponse,
         List<Share> shares,
         TimeRange timeRange,
-        int lifespanHours
+        long lifespanHours
     ) {
         double globalShare = shares.stream().mapToDouble(Share::share).sum();
         return this.convert(providerResponse, globalShare, timeRange, lifespanHours);
@@ -157,7 +157,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
                 profile.instanceType(),
                 new BoaviztaInstanceImpactRequest.Usage(profile.location().alpha3(), List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)))
             ),
-            profile.lifespan()
+            (int) profile.lifespan().asHours()
         );
     }
 
@@ -215,7 +215,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         return new BoaviztaImpactResponse.Impact.ImpactItem(left.value() + right.value(), left.min() + right.min(), left.max() + right.max(), warnings);
     }
 
-    public Footprint convert(BoaviztaImpactResponse impact, Double share, TimeRange range, int lifespanHours)
+    public Footprint convert(BoaviztaImpactResponse impact, Double share, TimeRange range, long lifespanHours)
     {
         double prorationFactor = Duration.between(range.start(), range.end()).toSeconds() / (double) (lifespanHours * 3600L);
         return new Footprint(

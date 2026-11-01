@@ -8,6 +8,7 @@ import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
+import tech.illuin.wombat.core.asset.profile.Lifetime;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 
@@ -25,7 +26,7 @@ class BoaviztaEvaluationResolverTest
     @Test
     void accept_kubernetesFamilyWithServerProfile_returnsTrue()
     {
-        assertTrue(this.resolver.accept(new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", FRANCE, 43800))));
+        assertTrue(this.resolver.accept(new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", FRANCE, Lifetime.ofYears(5)))));
     }
 
     @Test
@@ -40,7 +41,7 @@ class BoaviztaEvaluationResolverTest
         assertFalse(this.resolver.accept(new TestAsset(K8S_TYPE, null)));
     }
 
-    private record TestServerProfile(ServerProvider provider, String instanceType, Country location, int lifespan) implements ServerProfile {}
+    private record TestServerProfile(ServerProvider provider, String instanceType, Country location, Lifetime lifespan) implements ServerProfile {}
 
     private record TestAsset(AssetType type, AssetProfile profile) implements Asset
     {
