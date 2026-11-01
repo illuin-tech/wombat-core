@@ -22,14 +22,15 @@ public record KubernetesStaticProfile(
     @NotBlank @JsonProperty("instanceType") @JsonAlias("instance-type") String instanceType,
     @NotNull @JsonProperty("location") Country location,
     @NotNull @JsonProperty("lifespan") Lifetime lifespan,
-    @Positive @JsonProperty("nodeCount") @JsonAlias("node-count") Integer nodeCount,
+    @Positive @JsonProperty("nodeCount") @JsonAlias("node-count") int nodeCount,
     @JsonProperty("zoneId") @JsonAlias("zone-id") ZoneId zoneId,
     @NotNull @NotEmpty @JsonProperty("scenarios") List<@Valid Scenario> scenarios
 ) implements ServerProfile
 {
     public KubernetesStaticProfile
     {
-        nodeCount = nodeCount != null ? nodeCount : 1;
+        if (nodeCount <= 0)
+            nodeCount = 1;
         zoneId = zoneId != null ? zoneId : ZoneOffset.UTC;
         scenarios = scenarios != null ? List.copyOf(scenarios) : List.of();
     }

@@ -33,6 +33,7 @@ class KubernetesAPIServerProfileTest
         assertEquals("m5.large", profile.instanceType());
         assertSame(Country.FRANCE, profile.location());
         assertEquals(Lifetime.ofYears(5), profile.lifespan());
+        assertEquals(1, profile.nodeCount());
     }
 
     @Test

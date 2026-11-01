@@ -17,4 +17,9 @@ public interface ServerProfile extends AssetProfile
 
     @NotNull
     Lifetime lifespan();
+
+    default int nodeCount()
+    {
+        return 1;
+    }
 }

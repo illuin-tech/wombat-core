@@ -5,6 +5,7 @@ import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
+import tech.illuin.wombat.core.activity.kubernetes.CPUUsage;
 import tech.illuin.wombat.core.activity.kubernetes.KubernetesActivityData;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
@@ -28,8 +29,6 @@ import java.util.Set;
 
 public class KubernetesStaticActivityResolver implements WombatActivityResolver
 {
-    public static final double NANOCORES_PER_CORE = 1_000_000_000.0;
-
     private final ScenarioEvaluator evaluator;
 
     public KubernetesStaticActivityResolver()
@@ -70,13 +69,12 @@ public class KubernetesStaticActivityResolver implements WombatActivityResolver
             ZonedDateTime zonedDateTime = midpoint.atZone(zone);
 
             double loadFactor = this.evaluator.evaluate(zonedDateTime, profile.scenarios());
-            double cpuNanocores = loadFactor * profile.nodeCount() * NANOCORES_PER_CORE;
 
             activities.add(new KubernetesActivityData(
                 ActivityRegime.MODELED,
                 resolvedServiceIds,
                 slot,
-                cpuNanocores,
+                CPUUsage.relative(loadFactor),
                 containerShares,
                 containerLocations
             ));

@@ -243,7 +243,6 @@ class KubernetesStaticProfileTest
             Country.FRANCE,
             Lifetime.ofYears(5),
             null,
-            null,
             null
         );
 

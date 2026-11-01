@@ -17,6 +17,8 @@ import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.impact.commons.*;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesImpact;
 import tech.illuin.wombat.core.activity.kubernetes.KubernetesActivityData;
+import tech.illuin.wombat.core.activity.kubernetes.NanocoresCPUUsage;
+import tech.illuin.wombat.core.activity.kubernetes.RelativeCPUUsage;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.ServerSpecification;
 
@@ -50,17 +52,37 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     {
         ServerProfile profile = (ServerProfile) asset.profile();
         KubernetesActivityData kubernetesActivityData = (KubernetesActivityData) activity;
-        logger.info("Used CPU load {}", kubernetesActivityData.cpuUsage() / NANOCORES_PER_CORE);
 
-        BoaviztaImpactResponse impactResponse = this.computeImpact(profile, kubernetesActivityData.cpuUsage());
+        BoaviztaImpactResponse impactResponse;
         ServerSpecification specification = this.computeSpecification(profile);
+        int vcpu = specification.vcpu() != null ? specification.vcpu() : 0;
+        double loadPercent;
+        int nodeCount;
+
+        if (kubernetesActivityData.cpuUsage() instanceof RelativeCPUUsage relativeUsage)
+        {
+            double ratio = relativeUsage.ratio();
+            loadPercent = ratio * FULL_LOAD;
+            nodeCount = profile.nodeCount();
+            logger.info("Relative CPU load {}% over {} node(s)", loadPercent, nodeCount);
+
+            BoaviztaImpactResponse singleNodeImpact = this.requestImpactFromPercentage(profile, loadPercent);
+            impactResponse = scale(singleNodeImpact, nodeCount);
+        }
+        else if (kubernetesActivityData.cpuUsage() instanceof NanocoresCPUUsage nanocoresUsage)
+        {
+            double nanocores = nanocoresUsage.nanocores();
+            double cpuUsageCore = nanocores / NANOCORES_PER_CORE;
+            loadPercent = vcpu > 0 ? cpuUsageCore / vcpu * 100.0 : 0.0;
+            nodeCount = specification.nodesRequired(cpuUsageCore);
+            logger.info("Used CPU load {} ({} node(s) required)", cpuUsageCore, nodeCount);
+
+            impactResponse = this.computeImpact(profile, nanocores);
+        }
+        else
+            throw new WombatEvaluationException("Unsupported CPUUsage type: " + (kubernetesActivityData.cpuUsage() != null ? kubernetesActivityData.cpuUsage().getClass() : "null"));
 
         List<Share> includedShares = includedShares(kubernetesActivityData.containerShares(), kubernetesActivityData.serviceIds());
-
-        int vcpu = specification.vcpu() != null ? specification.vcpu() : 0;
-        double cpuUsageCore = kubernetesActivityData.cpuUsage() / NANOCORES_PER_CORE;
-        double loadPercent = vcpu > 0 ? cpuUsageCore / vcpu * 100.0 : 0.0;
-        int nodeCount = specification.nodesRequired(cpuUsageCore);
 
         Comparator<KubernetesImpact> comparator = Comparator.comparingDouble(
             ki -> ki.footprint().gwp().totalValue()
@@ -227,6 +249,8 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
 
     private static Footprint.FootprintImpact convert(BoaviztaImpactResponse.Impact input, Double share, double prorationFactor)
     {
+        if (input == null)
+            return null;
         List<String> embeddedWarnings = new ArrayList<>(input.embedded().warnings() == null ? Collections.emptyList() : input.embedded().warnings());
         List<String> useWarnings = new ArrayList<>(input.use().warnings() == null ? Collections.emptyList() : input.use().warnings());
         if (share != 1.0d)

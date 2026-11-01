@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
+import tech.illuin.wombat.core.activity.kubernetes.CPUUsage;
 import tech.illuin.wombat.core.activity.kubernetes.KubernetesActivityData;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
@@ -28,7 +29,7 @@ public class KubernetesStaticActivityResolverTest
     private final KubernetesStaticActivityResolver resolver = new KubernetesStaticActivityResolver();
 
     @Test
-    void resolvesConstantLoadIntoNanocores()
+    void resolvesConstantLoadIntoRelativeUsage()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
             new AssetIdentity("k8s-static-1", "env-test", "Static Cluster 1"),
@@ -58,7 +59,7 @@ public class KubernetesStaticActivityResolverTest
             assertInstanceOf(KubernetesActivityData.class, actData);
             KubernetesActivityData k8sData = (KubernetesActivityData) actData;
             assertEquals(ActivityRegime.MODELED, k8sData.regime());
-            assertEquals(250_000_000.0, k8sData.cpuUsage(), 1e-4);
+            assertEquals(CPUUsage.relative(0.25), k8sData.cpuUsage());
             assertEquals(1.0, k8sData.containerShares().get("k8s-static-1"));
         }
     }
@@ -96,18 +97,18 @@ public class KubernetesStaticActivityResolverTest
 
         assertEquals(24, slots.size());
 
-        // Slot 2: 02:00-03:00 -> batch active (0.90 fraction = 900_000_000 nanocores)
-        assertEquals(900_000_000.0, slots.get(2).cpuUsage(), 1e-4);
+        // Slot 2: 02:00-03:00 -> batch active (0.90 fraction)
+        assertEquals(CPUUsage.relative(0.90), slots.get(2).cpuUsage());
 
-        // Slot 13: 13:00-14:00 (midpoint 13:30) -> peak user activity (0.75 fraction = 750_000_000 nanocores)
-        assertEquals(750_000_000.0, slots.get(13).cpuUsage(), 1e-4);
+        // Slot 13: 13:00-14:00 (midpoint 13:30) -> peak user activity (0.75 fraction)
+        assertEquals(CPUUsage.relative(0.75), slots.get(13).cpuUsage());
 
-        // Slot 22: 22:00-23:00 -> constant baseline (0.10 fraction = 100_000_000 nanocores)
-        assertEquals(100_000_000.0, slots.get(22).cpuUsage(), 1e-4);
+        // Slot 22: 22:00-23:00 -> constant baseline (0.10 fraction)
+        assertEquals(CPUUsage.relative(0.10), slots.get(22).cpuUsage());
     }
 
     @Test
-    void scalesActivityAcrossMultiNodeCluster()
+    void resolvesActivityForMultiNodeClusterWithoutPreMultiplyingLoad()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
             new AssetIdentity("k8s-static-3", "env-test", "Multi-Node Static Cluster"),
@@ -134,7 +135,7 @@ public class KubernetesStaticActivityResolverTest
 
         KubernetesActivityData k8sData = (KubernetesActivityData) activity.activity().get(0);
         assertEquals(ActivityRegime.MODELED, k8sData.regime());
-        // 0.50 load * 3 nodes * 1_000_000_000 = 1_500_000_000 nanocores (1.5 cores)
-        assertEquals(1_500_000_000.0, k8sData.cpuUsage(), 1e-4);
+        // Emits single-node relative load 0.50
+        assertEquals(CPUUsage.relative(0.50), k8sData.cpuUsage());
     }
 }
