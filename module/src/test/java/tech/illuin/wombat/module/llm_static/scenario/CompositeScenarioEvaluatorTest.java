@@ -51,8 +51,7 @@ public class CompositeScenarioEvaluatorTest
     {
         ApplicabilityFilter filter = new ApplicabilityFilter(
             Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
-            Set.of(Month.NOVEMBER),
-            UTC
+            Set.of(Month.NOVEMBER)
         );
         ConstantScenario scenario = new ConstantScenario(150, 20_000.0, filter);
 

@@ -60,15 +60,11 @@ public record UserActivityScenario(
         if (dateTime == null)
             return 0.0;
 
-        ZonedDateTime localDateTime = this.applicability.zoneId() != null
-            ? dateTime.withZoneSameInstant(this.applicability.zoneId())
-            : dateTime;
-
-        double progress = this.computeProgress(localDateTime.toLocalTime());
+        double progress = this.computeProgress(dateTime.toLocalTime());
         double factor = this.curve.calculateFactor(progress);
 
         double rawRequest = this.baselineRequestPerYear + (this.peakRequestPerYear - this.baselineRequestPerYear) * factor;
-        return DeterministicJitter.apply(rawRequest, this.jitter, localDateTime);
+        return DeterministicJitter.apply(rawRequest, this.jitter, dateTime);
     }
 
     @Override

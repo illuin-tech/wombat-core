@@ -9,7 +9,6 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.Month;
-import java.time.ZoneId;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,8 +26,7 @@ public class ScenarioSerializationTest
                 "load": 0.25,
                 "applicability": {
                     "daysOfWeek": ["MONDAY", "TUESDAY"],
-                    "months": ["JANUARY", "FEBRUARY"],
-                    "zoneId": "UTC"
+                    "months": ["JANUARY", "FEBRUARY"]
                 }
             }
             """;
@@ -41,7 +39,6 @@ public class ScenarioSerializationTest
         assertNotNull(constant.applicability());
         assertEquals(Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY), constant.applicability().daysOfWeek());
         assertEquals(Set.of(Month.JANUARY, Month.FEBRUARY), constant.applicability().months());
-        assertEquals(ZoneId.of("UTC"), constant.applicability().zoneId());
     }
 
     @Test
@@ -105,7 +102,7 @@ public class ScenarioSerializationTest
     {
         ConstantScenario constant = new ConstantScenario(
             0.30,
-            new ApplicabilityFilter(Set.of(DayOfWeek.WEDNESDAY), null, ZoneId.of("Europe/Paris"))
+            new ApplicabilityFilter(Set.of(DayOfWeek.WEDNESDAY), null)
         );
         String constantJson = this.objectMapper.writeValueAsString(constant);
         Scenario deserializedConstant = this.objectMapper.readValue(constantJson, Scenario.class);

@@ -169,7 +169,6 @@ Calendar and temporal filtering rules restricting when a static scenario is acti
   months:                     # `List<String>`, Optional - Active calendar months.
     - "JANUARY"
     - "FEBRUARY"
-  zone-id: "Europe/Paris"     # `ZoneId`, Optional - Timezone used for resolving schedule boundaries.
   ```
 - **Supported `days-of-week` Values**: `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY`, `SUNDAY`.
 - **Supported `months` Values**: `JANUARY`, `FEBRUARY`, `MARCH`, `APRIL`, `MAY`, `JUNE`, `JULY`, `AUGUST`, `SEPTEMBER`, `OCTOBER`, `NOVEMBER`, `DECEMBER`.
