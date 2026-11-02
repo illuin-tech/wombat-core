@@ -196,4 +196,51 @@ class LLMStaticActivityResolverTest
         assertEquals(100, (int) llmActivity.requestCount());
         assertEquals(50000L, llmActivity.outputTokenCount());
     }
+
+    @Test
+    void resolvesDailyResolutionWithThreeHourSampling()
+    {
+        LLMStaticAsset asset = new LLMStaticAsset(
+            new AssetIdentity("llm-static-daily", "env-test", "Daily Static LLM"),
+            new LLMStaticProfile(
+                LLMProvider.openai,
+                "gpt-4o",
+                Country.FRANCE,
+                List.of(
+                    new ConstantScenario(100, 3_153_600.0, null),
+                    new UserActivityScenario(200, 3_153_600.0, 31_536_000.0, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.SINUSOIDAL, 0.0, null)
+                )
+            )
+        );
+
+        Instant start = Instant.parse("2026-11-01T00:00:00Z");
+        Instant end = Instant.parse("2026-11-02T00:00:00Z");
+        TimeRange range = new TimeRange(start, end, Duration.ofDays(1));
+
+        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
+        assertTrue(result.isPresent());
+
+        AssetActivity activity = result.get();
+        assertEquals(1, activity.activity().size());
+
+        LLMActivityData slot = (LLMActivityData) activity.activity().getFirst();
+        assertEquals(ActivityRegime.MODELED, slot.regime());
+        assertEquals(range, slot.range());
+
+        // 8 sub-slots evaluated at:
+        // 01:30, 04:30, 07:30, 19:30, 22:30 -> Constant: 3,153,600 req/year, 100 tokens/req (5 slots)
+        // 10:30, 16:30 -> User (sin(pi/6)=0.5): 17,344,800 req/year, 200 tokens/req (2 slots)
+        // 13:30 -> User (sin(pi/2)=1.0): 31,536,000 req/year, 200 tokens/req (1 slot)
+        // Mean req/year = (3,153,600*5 + 17,344,800*2 + 31,536,000) / 8 = 10,249,200 req/year
+        // Daily requestCount = 10,249,200 / 365 = 28,080
+        // Mean tokens/req = (100*5 + 200*3) / 8 = 137.5 tokens/req
+        // Daily outputTokenCount = (long)(137.5 * 28,080) = 3,861,000
+        assertEquals(28_080.0, slot.requestCount());
+        assertEquals(3_861_000L, slot.outputTokenCount());
+
+        LLMServiceActivity gpt4o = slot.services().get("gpt-4o");
+        assertNotNull(gpt4o);
+        assertEquals(28_080.0, gpt4o.requestCount());
+        assertEquals(3_861_000L, gpt4o.outputTokenCount());
+    }
 }

@@ -29,9 +29,9 @@ import java.util.Set;
 
 public class LLMStaticActivityResolver implements WombatActivityResolver
 {
-    private static final Duration ONE_YEAR = Duration.ofDays(365);
-
     private final ScenarioEvaluator evaluator;
+
+    private static final Duration ONE_YEAR = Duration.ofDays(365);
 
     public LLMStaticActivityResolver()
     {
@@ -40,7 +40,7 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
 
     public LLMStaticActivityResolver(ScenarioEvaluator evaluator)
     {
-        this.evaluator = evaluator != null ? evaluator : new CompositeScenarioEvaluator();
+        this.evaluator = evaluator;
     }
 
     @Override
@@ -59,7 +59,9 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
         for (TimeRange slot : range.split())
         {
             Duration slotDuration = slot.resolution();
-            Instant midpoint = slot.start().plus(slotDuration.dividedBy(2));
+            Duration step = resolveSamplingStep(slotDuration);
+            List<TimeRange> subSlots = slot.split(step);
+            ZoneId zone = profile.zoneId();
 
             Map<String, LLMServiceActivity> serviceActivities = new LinkedHashMap<>();
             for (LLMStaticProfile.ModelConfig modelConfig : profile.models())
@@ -68,12 +70,24 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
                 if (!serviceIds.isEmpty() && !serviceIds.contains(serviceId))
                     continue;
 
-                ZoneId zone = profile.zoneId();
-                ZonedDateTime zonedDateTime = midpoint.atZone(zone);
-                ScenarioResult result = this.evaluator.evaluate(zonedDateTime, modelConfig.scenarios());
+                double totalRequestPerYear = 0.0;
+                double totalOutputTokenPerRequest = 0.0;
 
-                int requestCount = requestCountOver(result.requestPerYear(), slotDuration);
-                long outputTokenCount = (long) result.outputTokenPerRequest() * requestCount;
+                for (TimeRange subSlot : subSlots)
+                {
+                    Instant midpoint = subSlot.start().plus(subSlot.resolution().dividedBy(2));
+                    ZonedDateTime zonedDateTime = midpoint.atZone(zone);
+                    ScenarioResult result = this.evaluator.evaluate(zonedDateTime, modelConfig.scenarios());
+
+                    totalRequestPerYear += result.requestPerYear();
+                    totalOutputTokenPerRequest += result.outputTokenPerRequest();
+                }
+
+                double meanRequestPerYear = subSlots.isEmpty() ? 0.0 : totalRequestPerYear / subSlots.size();
+                double meanOutputTokenPerRequest = subSlots.isEmpty() ? 0.0 : totalOutputTokenPerRequest / subSlots.size();
+
+                int requestCount = requestCountOver(meanRequestPerYear, slotDuration);
+                long outputTokenCount = (long) (meanOutputTokenPerRequest * requestCount);
 
                 serviceActivities.put(serviceId, new LLMServiceActivity(
                     modelConfig.provider(),
@@ -94,6 +108,15 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
         }
 
         return Optional.of(new AssetActivity(asset.identity(), activities));
+    }
+
+    private static Duration resolveSamplingStep(Duration slotDuration)
+    {
+        if (slotDuration.compareTo(Duration.ofDays(1)) >= 0)
+            return Duration.ofHours(3);
+        if (slotDuration.compareTo(Duration.ofHours(1)) >= 0)
+            return Duration.ofHours(1);
+        return slotDuration;
     }
 
     private static int requestCountOver(double requestsPerYear, Duration duration)
