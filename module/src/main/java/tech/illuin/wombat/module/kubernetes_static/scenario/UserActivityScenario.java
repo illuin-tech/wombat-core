@@ -42,6 +42,11 @@ public record UserActivityScenario(
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
+    public UserActivityScenario(double baselineLoad, double peakLoad, LocalTime openingTime, LocalTime closingTime, CurveShape curve, double jitter)
+    {
+        this(baselineLoad, peakLoad, openingTime, closingTime, curve, jitter, null);
+    }
+
     @Override
     public boolean isApplicable(ZonedDateTime dateTime)
     {

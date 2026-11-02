@@ -38,7 +38,7 @@ public class KubernetesStaticActivityResolver implements WombatActivityResolver
 
     public KubernetesStaticActivityResolver(ScenarioEvaluator evaluator)
     {
-        this.evaluator = evaluator != null ? evaluator : new CompositeScenarioEvaluator();
+        this.evaluator = evaluator;
     }
 
     @Override
@@ -64,22 +64,38 @@ public class KubernetesStaticActivityResolver implements WombatActivityResolver
         List<ActivityData> activities = new ArrayList<>();
         for (TimeRange slot : range.split())
         {
-            Duration slotDuration = slot.resolution();
-            Instant midpoint = slot.start().plus(slotDuration.dividedBy(2));
-            ZonedDateTime zonedDateTime = midpoint.atZone(zone);
+            Duration step = resolveSamplingStep(slot.resolution());
+            List<TimeRange> subSlots = slot.split(step);
 
-            double loadFactor = this.evaluator.evaluate(zonedDateTime, profile.scenarios());
+            double totalLoad = 0.0;
+            for (TimeRange subSlot : subSlots)
+            {
+                Instant midpoint = subSlot.start().plus(subSlot.resolution().dividedBy(2));
+                ZonedDateTime zonedDateTime = midpoint.atZone(zone);
+                totalLoad += this.evaluator.evaluate(zonedDateTime, profile.scenarios());
+            }
+
+            double meanLoadFactor = subSlots.isEmpty() ? 0.0 : totalLoad / subSlots.size();
 
             activities.add(new KubernetesActivityData(
                 ActivityRegime.MODELED,
                 resolvedServiceIds,
                 slot,
-                CPUUsage.relative(loadFactor),
+                CPUUsage.relative(meanLoadFactor),
                 containerShares,
                 containerLocations
             ));
         }
 
         return Optional.of(new AssetActivity(asset.identity(), activities));
+    }
+
+    private static Duration resolveSamplingStep(Duration slotDuration)
+    {
+        if (slotDuration.compareTo(Duration.ofDays(1)) >= 0)
+            return Duration.ofHours(3);
+        if (slotDuration.compareTo(Duration.ofHours(1)) >= 0)
+            return Duration.ofHours(1);
+        return slotDuration;
     }
 }

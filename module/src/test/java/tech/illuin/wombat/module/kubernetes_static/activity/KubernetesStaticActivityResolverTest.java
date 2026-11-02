@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.kubernetes_static;
+package tech.illuin.wombat.module.kubernetes_static.activity;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
@@ -6,11 +6,13 @@ import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.kubernetes.CPUUsage;
 import tech.illuin.wombat.core.activity.kubernetes.KubernetesActivityData;
+import tech.illuin.wombat.core.activity.kubernetes.RelativeCPUUsage;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
-import tech.illuin.wombat.module.kubernetes_static.activity.KubernetesStaticActivityResolver;
+import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticAsset;
+import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticProfile;
 import tech.illuin.wombat.module.kubernetes_static.scenario.BatchActivityScenario;
 import tech.illuin.wombat.module.kubernetes_static.scenario.ConstantScenario;
 import tech.illuin.wombat.module.kubernetes_static.scenario.UserActivityScenario;
@@ -137,5 +139,43 @@ public class KubernetesStaticActivityResolverTest
         assertEquals(ActivityRegime.MODELED, k8sData.regime());
         // Emits single-node relative load 0.50
         assertEquals(CPUUsage.relative(0.50), k8sData.cpuUsage());
+    }
+
+    @Test
+    void resolvesDailyResolutionWithThreeHourSampling()
+    {
+        KubernetesStaticAsset asset = new KubernetesStaticAsset(
+            new AssetIdentity("k8s-static-daily", "env-test", "Daily Static Cluster"),
+            new KubernetesStaticProfile(
+                ServerProvider.aws,
+                "c5.2xlarge",
+                Country.FRANCE,
+                Lifetime.ofYears(4),
+                ZoneOffset.UTC,
+                List.of(
+                    new ConstantScenario(0.10, null),
+                    new UserActivityScenario(0.10, 0.90, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.SINUSOIDAL, 0.0, null)
+                )
+            )
+        );
+
+        Instant start = Instant.parse("2026-11-01T00:00:00Z");
+        Instant end = Instant.parse("2026-11-02T00:00:00Z");
+        TimeRange range = new TimeRange(start, end, Duration.ofDays(1));
+
+        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
+        assertTrue(result.isPresent());
+
+        AssetActivity activity = result.get();
+        assertEquals(1, activity.activity().size());
+
+        KubernetesActivityData slot = (KubernetesActivityData) activity.activity().getFirst();
+        assertEquals(ActivityRegime.MODELED, slot.regime());
+        assertEquals(range, slot.range());
+
+        // 8 sub-slots evaluated at 01:30 (0.10), 04:30 (0.10), 07:30 (0.10), 10:30 (0.50), 13:30 (0.90), 16:30 (0.50), 19:30 (0.10), 22:30 (0.10)
+        // Average: (0.10*5 + 0.50*2 + 0.90) / 8 = 2.40 / 8 = 0.30
+        assertInstanceOf(RelativeCPUUsage.class, slot.cpuUsage());
+        assertEquals(0.30, ((RelativeCPUUsage) slot.cpuUsage()).ratio(), 1e-9);
     }
 }
