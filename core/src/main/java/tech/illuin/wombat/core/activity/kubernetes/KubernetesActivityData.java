@@ -13,13 +13,25 @@ public record KubernetesActivityData(
     ActivityRegime regime,
     Set<String> serviceIds,
     TimeRange range,
-    double cpuUsage,
+    CPUUsage cpuUsage,
     Map<String, Double> containerShares,
     Map<String, ClusterInfo> containerLocations
 ) implements ActivityData
 {
+    public KubernetesActivityData(
+        ActivityRegime regime,
+        Set<String> serviceIds,
+        TimeRange range,
+        double cpuUsage,
+        Map<String, Double> containerShares,
+        Map<String, ClusterInfo> containerLocations
+    ) {
+        this(regime, serviceIds, range, CPUUsage.nanocores(cpuUsage), containerShares, containerLocations);
+    }
+
     @Override
-    public ServiceFamily family() {
+    public ServiceFamily family()
+    {
         return ServiceFamily.KUBERNETES_CONTAINER;
     }
 }

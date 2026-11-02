@@ -17,6 +17,8 @@ import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.impact.commons.*;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesImpact;
 import tech.illuin.wombat.core.activity.kubernetes.KubernetesActivityData;
+import tech.illuin.wombat.core.activity.kubernetes.NanocoresCPUUsage;
+import tech.illuin.wombat.core.activity.kubernetes.RelativeCPUUsage;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.ServerSpecification;
 
@@ -50,17 +52,37 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     {
         ServerProfile profile = (ServerProfile) asset.profile();
         KubernetesActivityData kubernetesActivityData = (KubernetesActivityData) activity;
-        logger.info("Used CPU load {}", kubernetesActivityData.cpuUsage() / NANOCORES_PER_CORE);
 
-        BoaviztaImpactResponse impactResponse = this.computeImpact(profile, kubernetesActivityData.cpuUsage());
+        BoaviztaImpactResponse impactResponse;
         ServerSpecification specification = this.computeSpecification(profile);
+        int vcpu = specification.vcpu() != null ? specification.vcpu() : 0;
+        double loadPercent;
+        int nodeCount;
+
+        if (kubernetesActivityData.cpuUsage() instanceof RelativeCPUUsage relativeUsage)
+        {
+            double ratio = relativeUsage.ratio();
+            loadPercent = ratio * FULL_LOAD;
+            nodeCount = profile.nodeCount();
+            logger.info("Relative CPU load {}% over {} node(s)", loadPercent, nodeCount);
+
+            BoaviztaImpactResponse singleNodeImpact = this.requestImpactFromPercentage(profile, loadPercent);
+            impactResponse = scale(singleNodeImpact, nodeCount);
+        }
+        else if (kubernetesActivityData.cpuUsage() instanceof NanocoresCPUUsage nanocoresUsage)
+        {
+            double nanocores = nanocoresUsage.nanocores();
+            double cpuUsageCore = nanocores / NANOCORES_PER_CORE;
+            loadPercent = vcpu > 0 ? cpuUsageCore / vcpu * 100.0 : 0.0;
+            nodeCount = specification.nodesRequired(cpuUsageCore);
+            logger.info("Used CPU load {} ({} node(s) required)", cpuUsageCore, nodeCount);
+
+            impactResponse = this.computeImpact(profile, nanocores);
+        }
+        else
+            throw new WombatEvaluationException("Unsupported CPUUsage type: " + (kubernetesActivityData.cpuUsage() != null ? kubernetesActivityData.cpuUsage().getClass() : "null"));
 
         List<Share> includedShares = includedShares(kubernetesActivityData.containerShares(), kubernetesActivityData.serviceIds());
-
-        int vcpu = specification.vcpu() != null ? specification.vcpu() : 0;
-        double cpuUsageCore = kubernetesActivityData.cpuUsage() / NANOCORES_PER_CORE;
-        double loadPercent = vcpu > 0 ? cpuUsageCore / vcpu * 100.0 : 0.0;
-        int nodeCount = specification.nodesRequired(cpuUsageCore);
 
         Comparator<KubernetesImpact> comparator = Comparator.comparingDouble(
             ki -> ki.footprint().gwp().totalValue()
@@ -71,7 +93,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
                 asset.type(),
                 profile,
                 share.share(),
-                this.convert(impactResponse, share.share(), kubernetesActivityData.range(), profile.lifespan()),
+                this.convert(impactResponse, share.share(), kubernetesActivityData.range(), profile.lifespan().asHours()),
                 kubernetesActivityData.containerLocations().get(share.serviceId()),
                 specification,
                 loadPercent,
@@ -82,7 +104,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             .toList()
         ;
 
-        Footprint globalFootprint = this.resolveGlobalFootprint(impactResponse, includedShares, kubernetesActivityData.range(), profile.lifespan());
+        Footprint globalFootprint = this.resolveGlobalFootprint(impactResponse, includedShares, kubernetesActivityData.range(), profile.lifespan().asHours());
 
         return new AssetImpact(
             asset.identity(),
@@ -96,7 +118,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         BoaviztaImpactResponse providerResponse,
         List<Share> shares,
         TimeRange timeRange,
-        int lifespanHours
+        long lifespanHours
     ) {
         double globalShare = shares.stream().mapToDouble(Share::share).sum();
         return this.convert(providerResponse, globalShare, timeRange, lifespanHours);
@@ -157,7 +179,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
                 profile.instanceType(),
                 new BoaviztaInstanceImpactRequest.Usage(profile.location().alpha3(), List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)))
             ),
-            profile.lifespan()
+            (int) profile.lifespan().asHours()
         );
     }
 
@@ -215,7 +237,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         return new BoaviztaImpactResponse.Impact.ImpactItem(left.value() + right.value(), left.min() + right.min(), left.max() + right.max(), warnings);
     }
 
-    public Footprint convert(BoaviztaImpactResponse impact, Double share, TimeRange range, int lifespanHours)
+    public Footprint convert(BoaviztaImpactResponse impact, Double share, TimeRange range, long lifespanHours)
     {
         double prorationFactor = Duration.between(range.start(), range.end()).toSeconds() / (double) (lifespanHours * 3600L);
         return new Footprint(
@@ -227,6 +249,8 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
 
     private static Footprint.FootprintImpact convert(BoaviztaImpactResponse.Impact input, Double share, double prorationFactor)
     {
+        if (input == null)
+            return null;
         List<String> embeddedWarnings = new ArrayList<>(input.embedded().warnings() == null ? Collections.emptyList() : input.embedded().warnings());
         List<String> useWarnings = new ArrayList<>(input.use().warnings() == null ? Collections.emptyList() : input.use().warnings());
         if (share != 1.0d)

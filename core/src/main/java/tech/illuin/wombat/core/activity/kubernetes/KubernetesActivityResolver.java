@@ -65,7 +65,7 @@ public class KubernetesActivityResolver implements WombatActivityResolver
                     asset.type().regime(),
                     serviceIds,
                     range,
-                    cpuUsage,
+                    CPUUsage.nanocores(cpuUsage),
                     containerShares,
                     containerLocations
                 );

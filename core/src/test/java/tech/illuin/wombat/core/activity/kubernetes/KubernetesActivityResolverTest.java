@@ -124,7 +124,7 @@ class KubernetesActivityResolverTest
         KubernetesActivityData data1 = (KubernetesActivityData) activity.activity().get(0);
         assertEquals(START, data1.range().start());
         assertEquals(mid, data1.range().end());
-        assertEquals(0.45, data1.cpuUsage());
+        assertEquals(CPUUsage.nanocores(0.45), data1.cpuUsage());
         assertEquals(Map.of(ASSET_ID, 0.5), data1.containerShares());
         assertEquals(new ClusterInfo("cluster-1", "ns-1"), data1.containerLocations().get(ASSET_ID));
         assertEquals(Set.of("service-a"), data1.serviceIds());
@@ -133,7 +133,7 @@ class KubernetesActivityResolverTest
         KubernetesActivityData data2 = (KubernetesActivityData) activity.activity().get(1);
         assertEquals(mid, data2.range().start());
         assertEquals(END, data2.range().end());
-        assertEquals(0.90, data2.cpuUsage());
+        assertEquals(CPUUsage.nanocores(0.90), data2.cpuUsage());
         assertEquals(Map.of(ASSET_ID, 0.8), data2.containerShares());
         assertEquals(new ClusterInfo("cluster-2", "ns-2"), data2.containerLocations().get(ASSET_ID));
         assertEquals(Set.of("service-a"), data2.serviceIds());
@@ -167,7 +167,7 @@ class KubernetesActivityResolverTest
         KubernetesActivityData data = (KubernetesActivityData) result.get().activity().getFirst();
         assertEquals(START, data.range().start());
         assertEquals(mid, data.range().end());
-        assertEquals(0.45, data.cpuUsage());
+        assertEquals(CPUUsage.nanocores(0.45), data.cpuUsage());
     }
 
     @Test

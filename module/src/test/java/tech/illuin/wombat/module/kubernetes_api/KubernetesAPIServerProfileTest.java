@@ -3,6 +3,7 @@ package tech.illuin.wombat.module.kubernetes_api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
+import tech.illuin.wombat.core.asset.profile.Lifetime;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,7 +22,7 @@ class KubernetesAPIServerProfileTest
                 "provider": "aws",
                 "instance-type": "m5.large",
                 "location": "FRA",
-                "lifespan": 43800
+                "lifespan": "5y"
             }
             """;
 
@@ -31,7 +32,8 @@ class KubernetesAPIServerProfileTest
         assertEquals(ServerProvider.aws, profile.provider());
         assertEquals("m5.large", profile.instanceType());
         assertSame(Country.FRANCE, profile.location());
-        assertEquals(43800, profile.lifespan());
+        assertEquals(Lifetime.ofYears(5), profile.lifespan());
+        assertEquals(1, profile.nodeCount());
     }
 
     @Test
@@ -41,7 +43,7 @@ class KubernetesAPIServerProfileTest
             ServerProvider.aws,
             "m5.large",
             Country.FRANCE,
-            43800
+            Lifetime.ofYears(5)
         );
 
         String json = this.objectMapper.writeValueAsString(profile);
