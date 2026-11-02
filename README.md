@@ -126,16 +126,16 @@ flowchart LR
 
 ### Core Modules
 
-Core modules provide ready-to-use implementations of asset types and their associated components:
+Core modules provide ready-to-use implementations of asset types and their associated components. For details on shared data structures, time formats, and enums used across module configurations, see the [Generic Type Glossary](doc/type-glossary.md).
 
-| Module                                           | Family                 | Class                       | Components          | Description                                                                                                          |
-|--------------------------------------------------|------------------------|-----------------------------|---------------------|----------------------------------------------------------------------------------------------------------------------|
-| `tech.illuin.wombat-module.kubernetes-api`       | `KUBERNETES_CONTAINER` | `KubernetesAPIModule`       | `source`            | Connects to Kubernetes cluster APIs to poll CPU and memory resource metrics.                                         |
-| `tech.illuin.wombat-module.kubernetes-static`    | `KUBERNETES_CONTAINER` | `KubernetesStaticModule`    | `activity-resolver` | Models static Kubernetes container workloads using node counts and superposed temporal scenarios. |
-| `tech.illuin.wombat-module.llm-static`           | `LLM`                  | `LLMStaticModule`           | `activity-resolver` | Models static LLM workloads based on annual request profiles.                                                        |
-| `tech.illuin.wombat-module.llm-prometheus`       | `LLM`                  | `LLMPrometheusModule`       | `source`            | Queries Prometheus via PromQL for LLM inference telemetry.                                                           |
-| `tech.illuin.wombat-module.kubernetes-simulated` | `KUBERNETES_CONTAINER` | `KubernetesSimulatedModule` |                     | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
-| `tech.illuin.wombat-module.llm-simulated`        | `LLM`                  | `KubernetesSimulatedModule` |                     | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
+| Module                                                                                 | Family                 | Description                                                                                                          |
+|----------------------------------------------------------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------|
+| [`tech.illuin.wombat-module.kubernetes-api`](doc/module/kubernetes-api.md)             | `KUBERNETES_CONTAINER` | Connects to Kubernetes cluster APIs to poll CPU and memory resource metrics.                                         |
+| [`tech.illuin.wombat-module.kubernetes-static`](doc/module/kubernetes-static.md)       | `KUBERNETES_CONTAINER` | Models static Kubernetes container workloads using node counts and superposed temporal scenarios.                    |
+| [`tech.illuin.wombat-module.kubernetes-simulated`](doc/module/kubernetes-simulated.md) | `KUBERNETES_CONTAINER` | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
+| [`tech.illuin.wombat-module.llm-prometheus`](doc/module/llm-prometheus.md)             | `LLM`                  | Queries Prometheus via PromQL for LLM inference telemetry.                                                           |
+| [`tech.illuin.wombat-module.llm-static`](doc/module/llm-static.md)                     | `LLM`                  | Models static LLM workloads based on annual request profiles.                                                        |
+| [`tech.illuin.wombat-module.llm-simulated`](doc/module/llm-simulated.md)               | `LLM`                  | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
 
 #### Standalone & Default Components
 
