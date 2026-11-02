@@ -11,9 +11,9 @@ Represents a closed time window between a starting timestamp and an ending times
 
 - **Structure**:
   ```yaml
-  start: "2026-01-15T10:00:00Z" # `String`, Required - ISO-8601 start instant.
-  end: "2026-01-15T11:00:00Z"   # `String`, Required - ISO-8601 end instant.
-  resolution: "PT1H"            # `Duration`, Optional(default: end - start) - Sampling resolution / precision step for interval partitioning (ISO-8601 duration e.g. `PT1M`, `PT15M`, `PT1H`).
+  start: "2026-01-15T10:00:00Z" # required - ISO-8601 start instant.
+  end: "2026-01-15T11:00:00Z" # required - ISO-8601 end instant.
+  resolution: "PT1H" # optional (default: end - start) - Sampling resolution / precision step for interval partitioning (ISO-8601 duration e.g. `PT1M`, `PT15M`, `PT1H`).
   ```
 - **Usage**: Used in `KubernetesActivityData` and `LLMActivityData` to delineate evaluation boundaries and discretization precision.
 
@@ -113,15 +113,15 @@ Polymorphic structure representing server or container CPU consumption.
 #### `NanocoresCPUUsage`
 Specifies absolute CPU compute consumption measured in nanocores ($10^{-9}$ cores, where $1\text{ core} = 1{,}000{,}000{,}000\text{ nanocores}$).
 ```yaml
-type: "nanocores"            # `String`, Required - Discriminator type identifier.
-nanocores: 2500000000        # `Long`, Required - CPU compute consumed in nanocores (2.5 cores).
+type: "nanocores" # required - Discriminator type identifier.
+nanocores: 2500000000 # required (when type is nanocores) - CPU compute consumed in nanocores (2.5 cores).
 ```
 
 #### `RelativeCPUUsage`
 Specifies proportional CPU compute load as a fractional ratio of total server capacity ($0.0 \le \text{ratio} \le 1.0$).
 ```yaml
-type: "relative"             # `String`, Required - Discriminator type identifier.
-ratio: 0.35                  # `Double`, Required - Fractional capacity utilization (35% capacity).
+type: "relative" # required - Discriminator type identifier.
+ratio: 0.35 # required - Fractional capacity utilization (35% capacity).
 ```
 
 ---
@@ -131,8 +131,8 @@ Cluster location and namespace metadata for a microservice or container workload
 
 - **Structure**:
   ```yaml
-  id: "production-cluster-01" # `String`, Required - Target Kubernetes cluster identifier.
-  namespace: "payments"       # `String`, Required - Kubernetes namespace.
+  id: "production-cluster-01" # required - Target Kubernetes cluster identifier.
+  namespace: "payments" # required - Kubernetes namespace.
   ```
 - **Usage**: Used in `KubernetesActivityData` container location mappings.
 
@@ -143,11 +143,11 @@ Workload volume metrics associated with a specific generative AI microservice.
 
 - **Structure**:
   ```yaml
-  provider: "openai"          # `LLMProvider`, Required - Foundation model provider (`anthropic`, `mistralai`, `openai`, etc.).
-  model: "gpt-4o"             # `String`, Required - Model identifier.
-  location: "USA"             # `Country`, Required - ISO 3166-1 alpha-3 (or alpha-2) country code.
-  output-token-count: 1500000 # `Long`, Required - Total number of generated output/completion tokens.
-  request-count: 4500.0       # `Double`, Required - Total number of inference API requests.
+  provider: "openai" # required - Foundation model provider (`anthropic`, `mistralai`, `openai`, etc.).
+  model: "gpt-4o" # required - Model identifier.
+  location: "USA" # required - ISO 3166-1 alpha-3 (or alpha-2) country code.
+  output-token-count: 1500000 # required - Total number of generated output/completion tokens.
+  request-count: 4500.0 # required - Total number of inference API requests.
   ```
 - **Usage**: Used in `LLMActivityData` services mapping.
 
@@ -160,15 +160,8 @@ Calendar and temporal filtering rules restricting when a static scenario is acti
 
 - **Structure**:
   ```yaml
-  days-of-week:               # `List<String>`, Optional - Active days of the week.
-    - "MONDAY"
-    - "TUESDAY"
-    - "WEDNESDAY"
-    - "THURSDAY"
-    - "FRIDAY"
-  months:                     # `List<String>`, Optional - Active calendar months.
-    - "JANUARY"
-    - "FEBRUARY"
+  days-of-week: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY] # optional - Active days of the week.
+  months: [JANUARY, FEBRUARY] # optional - Active calendar months.
   ```
 - **Supported `days-of-week` Values**: `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY`, `SUNDAY`.
 - **Supported `months` Values**: `JANUARY`, `FEBRUARY`, `MARCH`, `APRIL`, `MAY`, `JUNE`, `JULY`, `AUGUST`, `SEPTEMBER`, `OCTOBER`, `NOVEMBER`, `DECEMBER`.

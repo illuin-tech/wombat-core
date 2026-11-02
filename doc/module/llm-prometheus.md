@@ -23,20 +23,20 @@ The module registers the asset type `tech.illuin.wombat-module.llm-prometheus` (
 For cross-cutting data formats such as `Period`, `Country`, and `LLMProvider`, refer to the [Generic Type Glossary](../type-glossary.md).
 
 ```yaml
-id: "vllm-mistral-7b" # `String`, Required - Unique identifier for the asset.
-environment-id: "production" # `String`, Required - Identifier of the environment (e.g. `production`, `staging`).
-name: "Self-Hosted Mistral 7B Service" # `String`, Required - Human-readable asset name.
-prometheus-url: "http://prometheus.internal:9090" # `String`, Required - Base HTTP/HTTPS URL of the Prometheus server.
-proxy-url: "http://proxy.corp.internal:8080" # `String`, Optional(default: null) - HTTP/HTTPS corporate proxy URL if routing through an outbound proxy.
-username: "wombat-agent" # `String`, Optional(default: null) - Basic authentication username.
-password-key: "secrets.prometheus.password" # `String`, Required if username is set - Secret resolver key for the Basic auth password.
-period: "5m" # `Period`, Optional(default: monitor default) - Polling interval for metric sampling (e.g. `1m`, `5m`, `15m`).
-profile: # `LLMPrometheusProfile`, Required - LLM profile and PromQL query configuration.
-  provider: "mistralai" # `LLMProvider`, Required - Foundation model provider (`anthropic`, `mistralai`, `openai`, `huggingface_hub`, `cohere`, `google_genai`).
-  model: "mistralai/Mistral-7B-Instruct-v0.2" # `String`, Required - Standardized model identifier.
-  location: "FRA" # `Country`, Required - ISO 3166-1 alpha-3 (or alpha-2) country code where inference occurs.
-  dynamic-profile: # `DynamicProfile`, Required - Dynamic PromQL metric query configuration.
-    query: "sum(increase(vllm:num_tokens_total{model_name=\"mistralai/Mistral-7B-Instruct-v0.2\",type=\"generation\"}[5m]))" # `String`, Required - PromQL query returning the output token volume over the sampling window.
+id: "vllm-mistral-7b" # required - Unique identifier for the asset.
+environment-id: "production" # required - Identifier of the environment (e.g. `production`, `staging`).
+name: "Self-Hosted Mistral 7B Service" # required - Human-readable asset name.
+prometheus-url: "http://prometheus.internal:9090" # required - Base HTTP/HTTPS URL of the Prometheus server.
+proxy-url: "http://proxy.corp.internal:8080" # optional (default: null) - HTTP/HTTPS corporate proxy URL if routing through an outbound proxy.
+username: "wombat-agent" # optional (default: null) - Basic authentication username.
+password-key: "secrets.prometheus.password" # required if username is set - Secret resolver key for the Basic auth password.
+period: "5m" # optional (default: monitor default) - Polling interval for metric sampling (e.g. `1m`, `5m`, `15m`).
+profile: # required - LLM profile and PromQL query configuration.
+  provider: "mistralai" # required - Foundation model provider (`anthropic`, `mistralai`, `openai`, `huggingface_hub`, `cohere`, `google_genai`).
+  model: "mistralai/Mistral-7B-Instruct-v0.2" # required - Standardized model identifier.
+  location: "FRA" # required - ISO 3166-1 alpha-3 (or alpha-2) country code where inference occurs.
+  dynamic-profile: # required - Dynamic PromQL metric query configuration.
+    query: "sum(increase(vllm:num_tokens_total{model_name=\"mistralai/Mistral-7B-Instruct-v0.2\",type=\"generation\"}[5m]))" # required - PromQL query returning the output token volume over the sampling window.
 ```
 
 ## Basic Setup

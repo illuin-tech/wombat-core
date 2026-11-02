@@ -23,19 +23,19 @@ The module registers the asset type `tech.illuin.wombat-module.kubernetes-api` (
 For cross-cutting data formats such as `Period`, `Duration`, `Lifetime`, `Country`, and `ServerProvider`, refer to the [Generic Type Glossary](../type-glossary.md).
 
 ```yaml
-id: "k8s-prod-cluster-01" # `String`, Required - Unique identifier for the monitored asset.
-environment-id: "production" # `String`, Required - Identifier of the target environment (e.g. `production`, `staging`).
-name: "Production Primary K8s Cluster" # `String`, Required - Human-readable asset name.
-config-path: "/etc/wombat/kubeconfig" # `String`, Required - Absolute or relative file path to the kubeconfig file.
-namespace: "payments-api" # `String`, Optional(default: null) - Kubernetes namespace to restrict metric polling (polls all namespaces if omitted).
-context: "prod-cluster-ctx" # `String`, Optional(default: active context) - Kubeconfig context name to target.
-read-timeout: "PT10S" # `Duration`, Optional(default: client default) - HTTP read timeout for Kubernetes API requests.
-period: "5m" # `Period`, Optional(default: monitor default) - Polling interval for metric sampling (e.g. `30s`, `1m`, `5m`, `1h`).
-profile: # `KubernetesAPIServerProfile`, Required - Server hardware profile configuration.
-  provider: "aws" # `ServerProvider`, Required - Infrastructure provider (`aws`, `azure`, `gcp`, `ovhcloud`, `scaleway`).
-  instance-type: "m5.2xlarge" # `String`, Required - Machine or virtual instance specification (e.g. `m5.xlarge`, `n2-standard-4`).
-  location: "FRA" # `Country`, Required - ISO 3166-1 alpha-3 (or alpha-2) country code (e.g. `FRA`, `USA`, `DEU`).
-  lifespan: "5y" # `Lifetime`, Required - Expected operational lifespan of server hardware (e.g. `5y`, `60m`, `1825d`).
+id: "k8s-prod-cluster-01" # required - Unique identifier for the monitored asset.
+environment-id: "production" # required - Identifier of the target environment (e.g. `production`, `staging`).
+name: "Production Primary K8s Cluster" # required - Human-readable asset name.
+config-path: "/etc/wombat/kubeconfig" # required - Absolute or relative file path to the kubeconfig file.
+namespace: "payments-api" # optional (default: null) - Kubernetes namespace to restrict metric polling (polls all namespaces if omitted).
+context: "prod-cluster-ctx" # optional (default: active context) - Kubeconfig context name to target.
+read-timeout: "PT10S" # optional (default: client default) - HTTP read timeout for Kubernetes API requests.
+period: "5m" # optional (default: monitor default) - Polling interval for metric sampling (e.g. `30s`, `1m`, `5m`, `1h`).
+profile: # required - Server hardware profile configuration.
+  provider: "aws" # required - Infrastructure provider (`aws`, `azure`, `gcp`, `ovhcloud`, `scaleway`).
+  instance-type: "m5.2xlarge" # required - Machine or virtual instance specification (e.g. `m5.xlarge`, `n2-standard-4`).
+  location: "FRA" # required - ISO 3166-1 alpha-3 (or alpha-2) country code (e.g. `FRA`, `USA`, `DEU`).
+  lifespan: "5y" # required - Expected operational lifespan of server hardware (e.g. `5y`, `60m`, `1825d`).
 ```
 
 ## Basic Setup
