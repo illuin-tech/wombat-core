@@ -40,7 +40,6 @@ profile: # `LLMStaticProfile`, Required - Multi-model profile configuration.
           applicability: # `ApplicabilityFilter`, Optional - Temporal applicability filter.
             days-of-week: ["MONDAY", "TUESDAY"] # `List<String>`, Optional - Active days of week.
             months: ["JANUARY"] # `List<String>`, Optional - Active calendar months.
-            zone-id: "UTC" # `ZoneId`, Optional - Timezone override.
 
         # --- 2. User Activity Scenario (`user_activity`) ---
         - type: "user_activity" # `String`, Required - Scenario discriminator: `user_activity`.
@@ -53,7 +52,6 @@ profile: # `LLMStaticProfile`, Required - Multi-model profile configuration.
           jitter: 0.05 # `Double`, Optional(default: 0.0) - Deterministic variance factor.
           applicability: # `ApplicabilityFilter`, Optional - Temporal applicability filter.
             days-of-week: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] # `List<String>`, Optional - Active days.
-            zone-id: "Europe/Paris" # `ZoneId`, Optional - Filter timezone.
 
         # --- 3. Batch Activity Scenario (`batch_activity`) ---
         - type: "batch_activity" # `String`, Required - Scenario discriminator: `batch_activity`.
@@ -66,7 +64,6 @@ profile: # `LLMStaticProfile`, Required - Multi-model profile configuration.
           jitter: 0.02 # `Double`, Optional(default: 0.0) - Deterministic variance factor.
           applicability: # `ApplicabilityFilter`, Optional - Temporal applicability filter.
             days-of-week: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] # `List<String>`, Optional - Active days.
-            zone-id: "Europe/Paris" # `ZoneId`, Optional - Filter timezone.
 ```
 
 ## Basic Setup
@@ -125,7 +122,6 @@ profile:
               - "WEDNESDAY"
               - "THURSDAY"
               - "FRIDAY"
-            zone-id: "Europe/Paris"
 
     # 2. Main reasoning and coding assistant
     - provider: "anthropic"
@@ -147,7 +143,6 @@ profile:
               - "WEDNESDAY"
               - "THURSDAY"
               - "FRIDAY"
-            zone-id: "Europe/Paris"
 
     # 3. Nightly batch document summarization
     - provider: "openai"
@@ -168,5 +163,4 @@ profile:
               - "THURSDAY"
               - "FRIDAY"
               - "SATURDAY"
-            zone-id: "Europe/Paris"
 ```

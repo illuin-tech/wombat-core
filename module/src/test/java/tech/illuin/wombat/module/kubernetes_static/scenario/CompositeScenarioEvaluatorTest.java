@@ -46,8 +46,7 @@ public class CompositeScenarioEvaluatorTest
     {
         ApplicabilityFilter filter = new ApplicabilityFilter(
             Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
-            Set.of(Month.NOVEMBER),
-            UTC
+            Set.of(Month.NOVEMBER)
         );
         ConstantScenario scenario = new ConstantScenario(0.40, filter);
 
@@ -292,10 +291,9 @@ public class CompositeScenarioEvaluatorTest
         assertEquals(BatchActivityScenario.DEFAULT_SMOOTHING, batchActivity.smoothing());
         assertEquals(ApplicabilityFilter.ALWAYS, batchActivity.applicability());
 
-        ApplicabilityFilter filter = new ApplicabilityFilter(null, null, null);
+        ApplicabilityFilter filter = new ApplicabilityFilter(null, null);
         assertEquals(Set.of(), filter.daysOfWeek());
         assertEquals(Set.of(), filter.months());
-        assertNull(filter.zoneId());
         assertTrue(filter.isApplicable(ZonedDateTime.now(UTC)));
     }
 }

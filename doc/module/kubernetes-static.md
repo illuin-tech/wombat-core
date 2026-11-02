@@ -42,7 +42,6 @@ profile: # `KubernetesStaticProfile`, Required - Static profile configuration.
       applicability: # `ApplicabilityFilter`, Optional - Temporal applicability filter.
         days-of-week: ["MONDAY", "TUESDAY"] # `List<String>`, Optional - Active days of week.
         months: ["JANUARY"] # `List<String>`, Optional - Active calendar months.
-        zone-id: "Europe/Paris" # `ZoneId`, Optional - Timezone override.
 
     # --- 2. User Activity Scenario (`user_activity`) ---
     - type: "user_activity" # `String`, Required - Scenario discriminator: `user_activity`.
@@ -54,7 +53,6 @@ profile: # `KubernetesStaticProfile`, Required - Static profile configuration.
       jitter: 0.05 # `Double`, Optional(default: 0.0) - Deterministic variance factor (e.g. `0.05` for ±5%).
       applicability: # `ApplicabilityFilter`, Optional - Temporal applicability filter.
         days-of-week: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] # `List<String>`, Optional - Active days.
-        zone-id: "Europe/Paris" # `ZoneId`, Optional - Timezone for schedule resolution.
 
     # --- 3. Batch Activity Scenario (`batch_activity`) ---
     - type: "batch_activity" # `String`, Required - Scenario discriminator: `batch_activity`.
@@ -66,7 +64,6 @@ profile: # `KubernetesStaticProfile`, Required - Static profile configuration.
       jitter: 0.02 # `Double`, Optional(default: 0.0) - Deterministic variance factor.
       applicability: # `ApplicabilityFilter`, Optional - Temporal applicability filter.
         days-of-week: ["TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"] # `List<String>`, Optional - Active days.
-        zone-id: "Europe/Paris" # `ZoneId`, Optional - Timezone for schedule resolution.
 ```
 
 ## Basic Setup
@@ -130,7 +127,6 @@ profile:
           - "WEDNESDAY"
           - "THURSDAY"
           - "FRIDAY"
-        zone-id: "Europe/Berlin"
 
     # 3. Nightly ETL sync job
     - type: "batch_activity"
@@ -147,7 +143,6 @@ profile:
           - "THURSDAY"
           - "FRIDAY"
           - "SATURDAY"
-        zone-id: "Europe/Berlin"
 
     # 4. Weekly maintenance indexing job on Sundays
     - type: "batch_activity"
@@ -159,5 +154,4 @@ profile:
       applicability:
         days-of-week:
           - "SUNDAY"
-        zone-id: "Europe/Berlin"
 ```

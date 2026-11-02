@@ -67,21 +67,17 @@ public record BatchActivityScenario(
         if (dateTime == null)
             return 0.0;
 
-        ZoneId zone = this.applicability.zoneId() != null
-            ? this.applicability.zoneId()
-            : (dateTime.getZone() != null ? dateTime.getZone() : ZoneOffset.UTC);
-
-        ZonedDateTime localDateTime = dateTime.withZoneSameInstant(zone);
-        ZonedDateTime activeTrigger = this.resolveActiveTrigger(localDateTime, zone);
+        ZoneId zone = dateTime.getZone() != null ? dateTime.getZone() : ZoneOffset.UTC;
+        ZonedDateTime activeTrigger = this.resolveActiveTrigger(dateTime, zone);
 
         if (activeTrigger == null)
             return this.baselineLoad;
 
-        double progress = this.computeProgress(activeTrigger, localDateTime);
+        double progress = this.computeProgress(activeTrigger, dateTime);
         double factor = this.smoothing.calculateFactor(progress);
 
         double rawLoad = this.baselineLoad + (this.peakLoad - this.baselineLoad) * factor;
-        return DeterministicJitter.apply(rawLoad, this.jitter, localDateTime);
+        return DeterministicJitter.apply(rawLoad, this.jitter, dateTime);
     }
 
     private ZonedDateTime resolveActiveTrigger(ZonedDateTime localDateTime, ZoneId zone)

@@ -62,21 +62,17 @@ public record BatchActivityScenario(
         if (dateTime == null)
             return 0.0;
 
-        ZoneId zone = this.applicability.zoneId() != null
-            ? this.applicability.zoneId()
-            : (dateTime.getZone() != null ? dateTime.getZone() : ZoneOffset.UTC);
-
-        ZonedDateTime localDateTime = dateTime.withZoneSameInstant(zone);
-        ZonedDateTime activeTrigger = this.resolveActiveTrigger(localDateTime, zone);
+        ZoneId zone = dateTime.getZone() != null ? dateTime.getZone() : ZoneOffset.UTC;
+        ZonedDateTime activeTrigger = this.resolveActiveTrigger(dateTime, zone);
 
         if (activeTrigger == null)
             return this.baselineRequestPerYear;
 
-        double progress = this.computeProgress(activeTrigger, localDateTime);
+        double progress = this.computeProgress(activeTrigger, dateTime);
         double factor = this.smoothing.calculateFactor(progress);
 
         double rawRequest = this.baselineRequestPerYear + (this.peakRequestPerYear - this.baselineRequestPerYear) * factor;
-        return DeterministicJitter.apply(rawRequest, this.jitter, localDateTime);
+        return DeterministicJitter.apply(rawRequest, this.jitter, dateTime);
     }
 
     @Override
