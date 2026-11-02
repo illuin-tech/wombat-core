@@ -36,26 +36,15 @@ public record LLMStaticProfile(
         this(ZoneOffset.UTC, List.of(new ModelConfig(provider, model, location, scenarios)));
     }
 
-    public LLMStaticProfile(LLMProvider provider, String model, Country location, ZoneId zoneId, List<Scenario> scenarios)
-    {
-        this(zoneId, List.of(new ModelConfig(provider, model, location, zoneId, scenarios)));
-    }
-
     public record ModelConfig(
         @NotNull @JsonProperty("provider") LLMProvider provider,
         @NotBlank @JsonProperty("model") String model,
         @NotNull @JsonProperty("location") Country location,
-        @JsonProperty("zoneId") @JsonAlias("zone-id") ZoneId zoneId,
         @NotNull @NotEmpty @JsonProperty("scenarios") List<@Valid Scenario> scenarios
     ) {
         public ModelConfig
         {
             scenarios = scenarios != null ? List.copyOf(scenarios) : List.of();
-        }
-
-        public ModelConfig(LLMProvider provider, String model, Country location, List<Scenario> scenarios)
-        {
-            this(provider, model, location, null, scenarios);
         }
     }
 }

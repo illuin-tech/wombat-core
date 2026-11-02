@@ -33,7 +33,6 @@ class LLMStaticProfileTest
                         "provider": "openai",
                         "model": "gpt-4o",
                         "location": "FRA",
-                        "zoneId": "Europe/Paris",
                         "scenarios": [
                             {
                                 "type": "constant",
@@ -56,7 +55,6 @@ class LLMStaticProfileTest
         assertEquals(LLMProvider.openai, model.provider());
         assertEquals("gpt-4o", model.model());
         assertSame(Country.FRANCE, model.location());
-        assertEquals(ZoneId.of("Europe/Paris"), model.zoneId());
         assertEquals(1, model.scenarios().size());
 
         Scenario scenario = model.scenarios().get(0);
@@ -76,7 +74,6 @@ class LLMStaticProfileTest
                         "provider": "mistralai",
                         "model": "mistral-large-latest",
                         "location": "DEU",
-                        "zone-id": "UTC",
                         "scenarios": [
                             {
                                 "type": "constant",
@@ -99,7 +96,6 @@ class LLMStaticProfileTest
         assertEquals(LLMProvider.mistralai, model.provider());
         assertEquals("mistral-large-latest", model.model());
         assertSame(Country.GERMANY, model.location());
-        assertEquals(ZoneId.of("UTC"), model.zoneId());
     }
 
     @Test
@@ -202,7 +198,6 @@ class LLMStaticProfileTest
                 LLMProvider.openai,
                 "gpt-4o",
                 Country.FRANCE,
-                ZoneId.of("Europe/Paris"),
                 List.of(constant, userActivity, batch)
             ))
         );
@@ -237,32 +232,5 @@ class LLMStaticProfileTest
 
         LLMStaticProfile profile = this.objectMapper.readValue(json, LLMStaticProfile.class);
         assertEquals(ZoneOffset.UTC, profile.zoneId());
-    }
-
-    @Test
-    void constructorOverloadsWorkCorrectly()
-    {
-        ConstantScenario scenario = new ConstantScenario(200, 5000.0, null);
-
-        LLMStaticProfile profile1 = new LLMStaticProfile(
-            LLMProvider.openai,
-            "gpt-4o",
-            Country.FRANCE,
-            List.of(scenario)
-        );
-        assertEquals(ZoneOffset.UTC, profile1.zoneId());
-        assertEquals(1, profile1.models().size());
-        assertEquals("gpt-4o", profile1.models().get(0).model());
-
-        LLMStaticProfile profile2 = new LLMStaticProfile(
-            LLMProvider.mistralai,
-            "mistral-large-latest",
-            Country.GERMANY,
-            ZoneId.of("Europe/Berlin"),
-            List.of(scenario)
-        );
-        assertEquals(ZoneId.of("Europe/Berlin"), profile2.zoneId());
-        assertEquals(1, profile2.models().size());
-        assertEquals(ZoneId.of("Europe/Berlin"), profile2.models().get(0).zoneId());
     }
 }

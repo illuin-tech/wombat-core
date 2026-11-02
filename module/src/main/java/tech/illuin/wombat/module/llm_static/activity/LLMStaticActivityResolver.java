@@ -18,7 +18,6 @@ import tech.illuin.wombat.module.llm_static.scenario.evaluator.ScenarioEvaluator
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,10 +68,7 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
                 if (!serviceIds.isEmpty() && !serviceIds.contains(serviceId))
                     continue;
 
-                ZoneId zone = modelConfig.zoneId() != null
-                    ? modelConfig.zoneId()
-                    : (profile.zoneId() != null ? profile.zoneId() : ZoneOffset.UTC);
-
+                ZoneId zone = profile.zoneId();
                 ZonedDateTime zonedDateTime = midpoint.atZone(zone);
                 ScenarioResult result = this.evaluator.evaluate(zonedDateTime, modelConfig.scenarios());
 
