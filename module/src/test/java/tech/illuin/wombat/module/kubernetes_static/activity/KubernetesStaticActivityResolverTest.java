@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.kubernetes_static;
+package tech.illuin.wombat.module.kubernetes_static.activity;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
@@ -10,7 +10,8 @@ import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
-import tech.illuin.wombat.module.kubernetes_static.activity.KubernetesStaticActivityResolver;
+import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticAsset;
+import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticProfile;
 import tech.illuin.wombat.module.kubernetes_static.scenario.BatchActivityScenario;
 import tech.illuin.wombat.module.kubernetes_static.scenario.ConstantScenario;
 import tech.illuin.wombat.module.kubernetes_static.scenario.UserActivityScenario;
