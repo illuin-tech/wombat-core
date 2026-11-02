@@ -1,6 +1,7 @@
 package tech.illuin.wombat.module.llm_static;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -15,6 +16,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record LLMStaticProfile(
     @JsonProperty("zoneId") @JsonAlias("zone-id") ZoneId zoneId,
     @NotNull @NotEmpty @JsonProperty("models") List<@Valid ModelConfig> models
@@ -36,6 +38,7 @@ public record LLMStaticProfile(
         this(ZoneOffset.UTC, List.of(new ModelConfig(provider, model, location, scenarios)));
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record ModelConfig(
         @NotNull @JsonProperty("provider") LLMProvider provider,
         @NotBlank @JsonProperty("model") String model,

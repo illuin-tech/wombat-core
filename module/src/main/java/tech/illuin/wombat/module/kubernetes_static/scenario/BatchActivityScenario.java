@@ -44,6 +44,17 @@ public record BatchActivityScenario(
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
+    public BatchActivityScenario(
+        double baselineLoad,
+        double peakLoad,
+        LocalTime triggerTime,
+        Duration duration,
+        double jitter,
+        SmoothingMode smoothing
+    ) {
+        this(baselineLoad, peakLoad, triggerTime, duration, jitter, smoothing, null);
+    }
+
     @Override
     public boolean isApplicable(ZonedDateTime dateTime)
     {

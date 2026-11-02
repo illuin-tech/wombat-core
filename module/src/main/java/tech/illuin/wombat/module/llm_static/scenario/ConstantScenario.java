@@ -25,6 +25,11 @@ public record ConstantScenario(
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
+    public ConstantScenario(int outputTokenPerRequest, double requestPerYear)
+    {
+        this(outputTokenPerRequest, requestPerYear, null);
+    }
+
     @Override
     public boolean isApplicable(ZonedDateTime dateTime)
     {

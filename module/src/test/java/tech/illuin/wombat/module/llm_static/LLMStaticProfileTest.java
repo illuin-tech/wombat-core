@@ -233,4 +233,44 @@ class LLMStaticProfileTest
         LLMStaticProfile profile = this.objectMapper.readValue(json, LLMStaticProfile.class);
         assertEquals(ZoneOffset.UTC, profile.zoneId());
     }
+
+    @Test
+    void ignoresUnrecognizedPropertiesForBackwardCompatibility() throws JsonProcessingException
+    {
+        String json = """
+            {
+                "zoneId": "UTC",
+                "legacyProfileField": "some-value",
+                "models": [
+                    {
+                        "provider": "openai",
+                        "model": "gpt-4o",
+                        "location": "FRA",
+                        "requestProfile": {
+                            "type": "standard",
+                            "rate": 100
+                        },
+                        "legacyModelField": 12345,
+                        "scenarios": [
+                            {
+                                "type": "constant",
+                                "outputTokenPerRequest": 200,
+                                "requestPerYear": 1000.0
+                            }
+                        ]
+                    }
+                ]
+            }
+            """;
+
+        LLMStaticProfile profile = this.objectMapper.readValue(json, LLMStaticProfile.class);
+        assertNotNull(profile);
+        assertEquals(1, profile.models().size());
+
+        LLMStaticProfile.ModelConfig model = profile.models().getFirst();
+        assertEquals(LLMProvider.openai, model.provider());
+        assertEquals("gpt-4o", model.model());
+        assertSame(Country.FRANCE, model.location());
+        assertEquals(1, model.scenarios().size());
+    }
 }

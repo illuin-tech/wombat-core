@@ -23,6 +23,11 @@ public record ConstantScenario(
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
+    public ConstantScenario(double load)
+    {
+        this(load, null);
+    }
+
     @Override
     public boolean isApplicable(ZonedDateTime dateTime)
     {

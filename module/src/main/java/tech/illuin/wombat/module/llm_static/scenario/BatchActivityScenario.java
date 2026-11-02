@@ -45,6 +45,11 @@ public record BatchActivityScenario(
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
+    public BatchActivityScenario(int outputTokenPerRequest, double baselineRequestPerYear, double peakRequestPerYear, LocalTime triggerTime, Duration duration, double jitter, SmoothingMode smoothing)
+    {
+        this(outputTokenPerRequest, baselineRequestPerYear, peakRequestPerYear, triggerTime, duration, jitter, smoothing, null);
+    }
+
     @Override
     public boolean isApplicable(ZonedDateTime dateTime)
     {
