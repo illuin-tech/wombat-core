@@ -110,7 +110,8 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             asset.identity(),
             globalFootprint,
             serviceImpacts,
-            ImpactProvider.BOAVIZTA
+            ImpactProvider.BOAVIZTA,
+            activity.range()
         );
     }
 

@@ -289,7 +289,8 @@ class WombatCoreTest
                 resolved.identity(),
                 null,
                 emptyList(),
-                null
+                null,
+                data.range()
             ));
         }
 
