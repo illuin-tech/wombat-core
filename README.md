@@ -20,26 +20,20 @@ The library requires Java 21+ and adding the following in your `pom.xml`:
 <dependency>
     <groupId>tech.illuin</groupId>
     <artifactId>wombat-core</artifactId>
-    <version>0.14.0</version>
+    <version>0.16.0</version>
 </dependency>
 ```
 
-Additionally, some optional (but highly recommended) extension libraries can be added, at the time of this writing this includes `wombat-core-modules` which, as the name suggests, contains a few implementations enabled by default in the [Wombat application](https://github.com/illuin-tech/wombat).  
+Additionally, some optional (but highly recommended) extension libraries can be added, at the time of this writing this includes `wombat-core-module` which, as the name suggests, contains a few implementations enabled by default in the [Wombat application](https://github.com/illuin-tech/wombat).  
 
 ## Core Principles
 
-### The Core: `WombatCore`
+First, you may want to have a look at our [concept definition dump](doc/concept-definition.md) which lists the objects Wombat aims at modeling and manipulating.
 
-`WombatCore` is the central orchestration engine. It aggregates registered `WombatModule`s, tracks available asset types, and provisions two core operational services:
-* `AssetMonitor` manages the data collection phase. It is designed to be triggered periodically in an asynchronous fashion and will coordinate metric polling via registered `WombatSource` and persist resulting activity metrics using a `WombatMetricPersister`
-* `AssetEvaluator` coordinates asset activity resolution and impact estimation. It resolves service activity workload for a given `TimeRange` via `WombatActivityResolver`s and can output environmental impacts as well as financial costs using registered `WombatEvaluationResolver` implementations
+From there, we can describe the `wombat-core` library from a more logical point of view ; it consists of a `WombatCore` split into two hemispheres:
 
-### Core Components
-
-Wombat relies on three fundamental component interfaces representing distinct stages of the collection and evaluation pipeline:
-* `WombatSource` are triggered periodically by the `AssetMonitor`, they are expected to poll telemetry endpoints (e.g. Kubernetes API, Prometheus metrics, etc.) and returns `MetricData` to be persisted
-* `WombatActivityResolver` are activity data aggregators. Given an `Asset`, a `TimeRange` and an optional `AssetFilter`, it computes a standardized representation of `AssetActivity` with `ActivityData` data-points (e.g. CPU nanocores, LLM token counts) from historical metrics or modeled profiles
-* `WombatEvaluationResolver` are evaluation engines. Given an `Asset` and its resolved `ActivityData`, it computes either multi-criteria environmental footprints (`AssetImpact`) or financial costs (`AssetCost`).
+* the `AssetMonitor` for aggregating activity data samples ; it is designed to be triggered periodically in an asynchronous fashion and will coordinate metric polling
+* the `AssetEvaluator` for making environmental footprint (and financial cost) estimates based on measured and/or modeled activity data
 
 _An overview:_
 
@@ -48,7 +42,7 @@ flowchart LR
     CORE_SETUP[WombatCore\nSetup]
     ASSET_DECLARATION[Asset\nConfiguration]
 
-    subgraph SAMPLING[Async Activity Data Sampling]
+    subgraph SAMPLING[AssetMonitor: Activity Data Sampling]
         direction LR
         subgraph SOURCE[Wombat Sources]
             direction LR
@@ -69,7 +63,7 @@ flowchart LR
 
     CALL{{Evaluation call}}
 
-    subgraph ESTIMATION[Activity Evaluation]
+    subgraph ESTIMATION[AssetEvaluator: Activity Data Evaluation]
         direction LR
 
         subgraph ACTIVITY[Wombat Activity Resolvers]
@@ -122,11 +116,24 @@ flowchart LR
     class IMPACT_FINOPS finopsStyle
     class GREENOPS_RESULT greenopsStyle
     class FINOPS_RESULT finopsStyle
-```
+``` 
+
+The `WombatCore` is configured by way of `WombatModules` which are declarative structures exposing one or more [subcomponents](#core-components).
+
+There are ["core" modules](#core-modules) which are shipped as part of the `wombat-core-module` library, but you can create [custom modules](#custom-module) in order to accommodate your requirements. 
+
+### Core Components
+
+Wombat relies on three fundamental component interfaces representing distinct stages of the collection and evaluation pipeline:
+* `WombatSource` are triggered periodically by the `AssetMonitor`, they are expected to poll telemetry endpoints (e.g. Kubernetes API, Prometheus metrics, etc.) and returns `MetricData` to be persisted
+* `WombatActivityResolver` are activity data aggregators. Given an `Asset`, a `TimeRange` and an optional `AssetFilter`, it computes a standardized representation of `AssetActivity` with `ActivityData` data-points (e.g. CPU nanocores, LLM token counts) from historical metrics or modeled profiles
+* `WombatEvaluationResolver` are evaluation engines. Given an `Asset` and its resolved `ActivityData`, it computes either multi-criteria environmental footprints (`AssetImpact`) or financial costs (`AssetCost`).
 
 ### Core Modules
 
 Core modules provide ready-to-use implementations of asset types and their associated components. For details on shared data structures, time formats, and enums used across module configurations, see the [Generic Type Glossary](doc/type-glossary.md).
+
+Below is a list of currently implemented core modules shipped as part of the `wombat-core-module` library. Follow the links to each of their dedicated documentation for more information on how to use them.
 
 | Module                                                                                 | Family                 | Description                                                                                                          |
 |----------------------------------------------------------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------|
@@ -138,17 +145,31 @@ Core modules provide ready-to-use implementations of asset types and their assoc
 | [`tech.illuin.wombat-module.llm-simulated`](doc/module/llm-simulated.md)               | `LLM`                  | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
 | [`tech.illuin.wombat-module.llm-anthropic`](doc/module/llm-anthropic.md)               | `LLM`                  | Queries the Anthropic Admin usage report on demand for per-model token usage over the evaluated time range.          |
 
-#### Standalone & Default Components
+#### Default Components
 
-The following components from `wombat-core` operate outside of specific modules and serve as default or standalone resolvers:
+While `WombatModules` are allowed to declare specific [asset types](doc/concept-definition.md#technical-concepts) and introduce a complete pipeline for resolving activity and making impact estimates, most of the time you will only want an override for a single part of the pipeline, like a `WombatSource`, or a `WombatActivityResolver`.
 
-Activity Resolvers (`WombatActivityResolver`):
-* `KubernetesActivityResolver` aggregates historical container and node metrics from metric stores
-* `LLMActivityResolver` aggregates historical LLM request activity and token consumption from metric stores
+For instance, if you need to sample LLM service data from a specific database, you will only be concerned about a `WombatSource` implementation.
 
-Evaluation Resolvers (`WombatEvaluationResolver`):
-* `BoaviztaEvaluationResolver` estimates multi-criteria environmental impacts (GHG emissions, primary energy, abiotic depletion) for server and container workloads using the Boavizta API
-* `EcologitsEvaluationResolver` estimates multi-criteria environmental footprints for AI/LLM inferences using EcoLogits
+In such cases, the rest of the pipeline will rely on "default components" based on the [service family](doc/type-glossary.md#servicefamily).
+Basically, for each part of the pipeline [described earlier](#core-principles) there are two scenarios:
+
+* either the type of the `Asset` being evaluated requires its own component as declared by its associated `WombatModule`, and the engine will use that
+* or, the type of the `Asset` being evaluated has no such requirement, in which case the corresponding default for this `Asset`'s family will be used
+
+At the time of this writing, the `wombat-core` library ships with the following default component implementations:
+
+For the `KUBERNETES_CONTAINER` family:
+* Activity Resolvers:
+  * `KubernetesActivityResolver` aggregates historical container and node metrics from a metric store
+* Evaluation Resolvers:
+  * `BoaviztaEvaluationResolver` estimates multi-criteria environmental impacts (GHG emissions, primary energy, abiotic depletion) for server and container workloads using the Boavizta API
+
+For the `LLM` family:
+* Activity Resolvers:
+  * `LLMActivityResolver` aggregates historical LLM request activity and token consumption from a metric store
+* Evaluation Resolvers:
+  * `EcologitsEvaluationResolver` estimates multi-criteria environmental footprints for AI/LLM inferences using EcoLogits
 
 ## How to Use
 
