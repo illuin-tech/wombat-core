@@ -47,8 +47,34 @@ class MicrometerLLMMetricResolverTest
     }
 
     @Test
+    void sumOutputTokens_withNullAssetId_sumsAllAssets()
+    {
+        recordLLMMetric("asset-1", "service-1", LLMProvider.mistralai, "mistral-large", "FRA", 100, 2);
+        recordLLMMetric("asset-2", "service-2", LLMProvider.openai, "gpt-4o", "USA", 250, 5);
+
+        long allTokens = this.resolver.sumOutputTokens(0, 3600_000, null);
+        assertEquals(350L, allTokens);
+    }
+
+    @Test
     void sumOutputTokens_emptyRegistry_returnsZero()
     {
+        assertEquals(0L, this.resolver.sumOutputTokens(0, 3600_000, "asset-1"));
+    }
+
+    @Test
+    void sumOutputTokens_withOnlyRequestCounts_returnsZero()
+    {
+        Tags tags = Tags.of(
+            TAG_ENVIRONMENT, "env-1",
+            TAG_ASSET, "asset-1",
+            TAG_SERVICE, "service-1"
+        );
+        DistributionSummary.builder(METRIC_LLM_REQUEST_COUNT)
+            .tags(tags)
+            .register(this.registry)
+            .record(10.0);
+
         assertEquals(0L, this.resolver.sumOutputTokens(0, 3600_000, "asset-1"));
     }
 
@@ -77,6 +103,76 @@ class MicrometerLLMMetricResolverTest
     }
 
     @Test
+    void serviceActivities_withMissingServiceTag_ignoresGroup()
+    {
+        Tags tagsWithoutService = Tags.of(
+            TAG_ENVIRONMENT, "env-1",
+            TAG_ASSET, "asset-1",
+            TAG_ASSET_NAME, "asset-1",
+            TAG_ASSET_TYPE, "llm",
+            TAG_LLM_PROVIDER, LLMProvider.openai.name(),
+            TAG_LLM_MODEL, "gpt-4o",
+            TAG_LLM_LOCATION, "USA"
+        );
+        DistributionSummary.builder(METRIC_LLM_OUTPUT_TOKENS).tags(tagsWithoutService).register(this.registry).record(100.0);
+
+        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivities(0, 3600_000, "asset-1");
+        assertTrue(activities.isEmpty());
+    }
+
+    @Test
+    void serviceActivities_withInvalidCountryCode_handlesNullLocation()
+    {
+        Tags tags = Tags.of(
+            TAG_ENVIRONMENT, "env-1",
+            TAG_ASSET, "asset-1",
+            TAG_ASSET_NAME, "asset-1",
+            TAG_ASSET_TYPE, "llm",
+            TAG_SERVICE, "service-1",
+            TAG_LLM_PROVIDER, LLMProvider.openai.name(),
+            TAG_LLM_MODEL, "gpt-4o",
+            TAG_LLM_LOCATION, "UNKNOWN_CODE"
+        );
+        DistributionSummary.builder(METRIC_LLM_OUTPUT_TOKENS).tags(tags).register(this.registry).record(150.0);
+        DistributionSummary.builder(METRIC_LLM_REQUEST_COUNT).tags(tags).register(this.registry).record(3.0);
+
+        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivities(0, 3600_000, "asset-1");
+        assertEquals(1, activities.size());
+
+        LLMServiceActivity activity = activities.get("service-1");
+        assertEquals(LLMProvider.openai, activity.provider());
+        assertEquals("gpt-4o", activity.model());
+        org.junit.jupiter.api.Assertions.assertNull(activity.location());
+        assertEquals(150L, activity.outputTokenCount());
+        assertEquals(3.0, activity.requestCount());
+    }
+
+    @Test
+    void serviceActivities_mergesMultipleRecordsForSameService()
+    {
+        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 100, 2);
+        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 150, 3);
+
+        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivities(0, 3600_000, "asset-1");
+        assertEquals(1, activities.size());
+
+        LLMServiceActivity activity = activities.get("service-1");
+        assertEquals(LLMProvider.openai, activity.provider());
+        assertEquals("gpt-4o", activity.model());
+        assertEquals(Country.US, activity.location());
+        assertEquals(250L, activity.outputTokenCount());
+        assertEquals(5.0, activity.requestCount());
+    }
+
+    @Test
+    void serviceActivities_emptyRegistryOrUnknownAsset_returnsEmpty()
+    {
+        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 100, 2);
+
+        assertTrue(this.resolver.serviceActivities(0, 3600_000, "unknown").isEmpty());
+    }
+
+    @Test
     void outputTokensPerBucket_calculatesTokensPerBucketWithFiltering()
     {
         recordLLMMetric("asset-1", "service-1", LLMProvider.mistralai, "mistral-large", "FRA", 100, 2);
@@ -95,6 +191,41 @@ class MicrometerLLMMetricResolverTest
 
         Map<Long, Double> tokensFilteredByModel = this.resolver.outputTokensPerBucket(startMs, endMs, stepMs, "asset-1", List.of("gpt-4o"));
         assertEquals(Map.of(expectedBucket, 250.0), tokensFilteredByModel);
+    }
+
+    @Test
+    void outputTokensPerBucket_withZeroTokens_returnsEmpty()
+    {
+        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 0.0, 2);
+
+        Map<Long, Double> emptyResult = this.resolver.outputTokensPerBucket(1000, 4000, 3600_000, "asset-1", List.of());
+        assertTrue(emptyResult.isEmpty());
+    }
+
+    @Test
+    void outputTokensPerBucket_withNonMatchingFilters_returnsEmpty()
+    {
+        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 100, 2);
+
+        Map<Long, Double> nonMatchingAsset = this.resolver.outputTokensPerBucket(1000, 4000, 3600_000, "unknown", List.of());
+        assertTrue(nonMatchingAsset.isEmpty());
+
+        Map<Long, Double> nonMatchingService = this.resolver.outputTokensPerBucket(1000, 4000, 3600_000, "asset-1", List.of("unknown-service"));
+        assertTrue(nonMatchingService.isEmpty());
+    }
+
+    @Test
+    void outputTokensPerBucket_alignsBucketToStep()
+    {
+        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 100, 2);
+
+        long startMs = 7200_000 + 1500;
+        long endMs = startMs + 1000;
+        long stepMs = 3600_000;
+        long expectedBucket = 7200_000;
+
+        Map<Long, Double> result = this.resolver.outputTokensPerBucket(startMs, endMs, stepMs, "asset-1", List.of());
+        assertEquals(Map.of(expectedBucket, 100.0), result);
     }
 
     private void recordLLMMetric(String assetId, String serviceId, LLMProvider provider, String model, String countryCode, double tokens, double requests)
