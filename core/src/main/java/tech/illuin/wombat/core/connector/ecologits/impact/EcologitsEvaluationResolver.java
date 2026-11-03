@@ -113,7 +113,8 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
             asset.identity(),
             globalFootprint,
             serviceImpacts,
-            ImpactProvider.ECOLOGITS
+            ImpactProvider.ECOLOGITS,
+            activity.range()
         );
     }
 

@@ -1,5 +1,6 @@
 package tech.illuin.wombat.core.evaluation.impact.commons;
 
+import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 
@@ -9,7 +10,8 @@ public record AssetImpact(
     AssetIdentity assetIdentity,
     Footprint footprint,
     List<ServiceImpact> serviceImpacts,
-    ImpactProvider provider
+    ImpactProvider provider,
+    TimeRange range
 ) implements AssetEvaluation
 {
     @Override

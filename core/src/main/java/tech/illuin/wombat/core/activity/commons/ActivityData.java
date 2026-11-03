@@ -5,13 +5,11 @@ import tech.illuin.wombat.core.asset.type.ServiceFamily;
 
 import java.util.Set;
 
-public interface ActivityData
+public interface ActivityData extends Timeboxed
 {
     ServiceFamily family();
 
     ActivityRegime regime();
 
     Set<String> serviceIds();
-
-    TimeRange range();
 }
