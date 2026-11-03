@@ -34,8 +34,11 @@ public class LLMActivityResolver implements WombatActivityResolver
     {
         Set<String> filteredServiceIds = filter == null ? Set.of() : filter.filterServiceIds(asset);
 
-        List<ActivityData> activities = range.split().stream()
-            .map(slot -> resolveSlot(asset, slot, filteredServiceIds))
+        List<TimeRange> slots = range.split();
+
+        Map<Long, Map<String, LLMServiceActivity>> activitiesPerSlot = this.metricResolver.serviceActivitiesPerBucket(range, asset.identity().id());
+        List<ActivityData> activities = slots.stream()
+            .map(slot -> resolveSlot(asset, slot, activitiesPerSlot.getOrDefault(toEpochMs(slot.start()), Map.of()), filteredServiceIds))
             .flatMap(Optional::stream)
             .toList();
 
@@ -44,17 +47,8 @@ public class LLMActivityResolver implements WombatActivityResolver
             : Optional.of(new AssetActivity(asset.identity(), activities));
     }
 
-    private Optional<ActivityData> resolveSlot(Asset asset, TimeRange range, Set<String> filteredServiceIds)
+    private static Optional<ActivityData> resolveSlot(Asset asset, TimeRange range, Map<String, LLMServiceActivity> activities, Set<String> filteredServiceIds)
     {
-        long start = toEpochMs(range.start());
-        long end = toEpochMs(range.end());
-
-        Map<String, LLMServiceActivity> activities = this.metricResolver.serviceActivities(
-            start,
-            end,
-            asset.identity().id()
-        );
-
         if (!filteredServiceIds.isEmpty())
         {
             Map<String, LLMServiceActivity> filtered = new LinkedHashMap<>();

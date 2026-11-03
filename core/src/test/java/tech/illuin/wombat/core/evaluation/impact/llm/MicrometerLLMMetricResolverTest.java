@@ -7,11 +7,15 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
+import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,6 +26,8 @@ class MicrometerLLMMetricResolverTest
     private MeterRegistry registry;
     private MicrometerLLMMetricResolver resolver;
 
+    private static final TimeRange HOUR = new TimeRange(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600));
+
     @BeforeEach
     void setUp()
     {
@@ -30,61 +36,12 @@ class MicrometerLLMMetricResolverTest
     }
 
     @Test
-    void sumOutputTokens_aggregatesTokensForAsset()
-    {
-        recordLLMMetric("asset-1", "service-1", LLMProvider.mistralai, "mistral-large", "FRA", 100, 2);
-        recordLLMMetric("asset-1", "service-2", LLMProvider.openai, "gpt-4o", "USA", 250, 5);
-        recordLLMMetric("asset-2", "service-3", LLMProvider.anthropic, "claude-3-5-sonnet", "USA", 500, 10);
-
-        long asset1Tokens = this.resolver.sumOutputTokens(0, 3600_000, "asset-1");
-        assertEquals(350L, asset1Tokens);
-
-        long asset2Tokens = this.resolver.sumOutputTokens(0, 3600_000, "asset-2");
-        assertEquals(500L, asset2Tokens);
-
-        long unknownTokens = this.resolver.sumOutputTokens(0, 3600_000, "unknown");
-        assertEquals(0L, unknownTokens);
-    }
-
-    @Test
-    void sumOutputTokens_withNullAssetId_sumsAllAssets()
-    {
-        recordLLMMetric("asset-1", "service-1", LLMProvider.mistralai, "mistral-large", "FRA", 100, 2);
-        recordLLMMetric("asset-2", "service-2", LLMProvider.openai, "gpt-4o", "USA", 250, 5);
-
-        long allTokens = this.resolver.sumOutputTokens(0, 3600_000, null);
-        assertEquals(350L, allTokens);
-    }
-
-    @Test
-    void sumOutputTokens_emptyRegistry_returnsZero()
-    {
-        assertEquals(0L, this.resolver.sumOutputTokens(0, 3600_000, "asset-1"));
-    }
-
-    @Test
-    void sumOutputTokens_withOnlyRequestCounts_returnsZero()
-    {
-        Tags tags = Tags.of(
-            TAG_ENVIRONMENT, "env-1",
-            TAG_ASSET, "asset-1",
-            TAG_SERVICE, "service-1"
-        );
-        DistributionSummary.builder(METRIC_LLM_REQUEST_COUNT)
-            .tags(tags)
-            .register(this.registry)
-            .record(10.0);
-
-        assertEquals(0L, this.resolver.sumOutputTokens(0, 3600_000, "asset-1"));
-    }
-
-    @Test
-    void serviceActivities_mapsAndAggregatesServiceActivities()
+    void serviceActivitiesPerBucket_mapsAndAggregatesServiceActivities()
     {
         recordLLMMetric("asset-1", "service-1", LLMProvider.mistralai, "mistral-large", "FRA", 100, 2);
         recordLLMMetric("asset-1", "service-2", LLMProvider.openai, "gpt-4o", "USA", 250, 5);
 
-        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivities(0, 3600_000, "asset-1");
+        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivitiesPerBucket(HOUR, "asset-1").getOrDefault(0L, Map.of());
         assertEquals(2, activities.size());
 
         LLMServiceActivity activity1 = activities.get("service-1");
@@ -103,7 +60,7 @@ class MicrometerLLMMetricResolverTest
     }
 
     @Test
-    void serviceActivities_withMissingServiceTag_ignoresGroup()
+    void serviceActivitiesPerBucket_withMissingServiceTag_ignoresGroup()
     {
         Tags tagsWithoutService = Tags.of(
             TAG_ENVIRONMENT, "env-1",
@@ -116,12 +73,12 @@ class MicrometerLLMMetricResolverTest
         );
         DistributionSummary.builder(METRIC_LLM_OUTPUT_TOKENS).tags(tagsWithoutService).register(this.registry).record(100.0);
 
-        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivities(0, 3600_000, "asset-1");
+        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivitiesPerBucket(HOUR, "asset-1").getOrDefault(0L, Map.of());
         assertTrue(activities.isEmpty());
     }
 
     @Test
-    void serviceActivities_withInvalidCountryCode_handlesNullLocation()
+    void serviceActivitiesPerBucket_withInvalidCountryCode_handlesNullLocation()
     {
         Tags tags = Tags.of(
             TAG_ENVIRONMENT, "env-1",
@@ -136,7 +93,7 @@ class MicrometerLLMMetricResolverTest
         DistributionSummary.builder(METRIC_LLM_OUTPUT_TOKENS).tags(tags).register(this.registry).record(150.0);
         DistributionSummary.builder(METRIC_LLM_REQUEST_COUNT).tags(tags).register(this.registry).record(3.0);
 
-        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivities(0, 3600_000, "asset-1");
+        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivitiesPerBucket(HOUR, "asset-1").getOrDefault(0L, Map.of());
         assertEquals(1, activities.size());
 
         LLMServiceActivity activity = activities.get("service-1");
@@ -148,12 +105,12 @@ class MicrometerLLMMetricResolverTest
     }
 
     @Test
-    void serviceActivities_mergesMultipleRecordsForSameService()
+    void serviceActivitiesPerBucket_mergesMultipleRecordsForSameService()
     {
         recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 100, 2);
         recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 150, 3);
 
-        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivities(0, 3600_000, "asset-1");
+        Map<String, LLMServiceActivity> activities = this.resolver.serviceActivitiesPerBucket(HOUR, "asset-1").getOrDefault(0L, Map.of());
         assertEquals(1, activities.size());
 
         LLMServiceActivity activity = activities.get("service-1");
@@ -165,67 +122,24 @@ class MicrometerLLMMetricResolverTest
     }
 
     @Test
-    void serviceActivities_emptyRegistryOrUnknownAsset_returnsEmpty()
+    void serviceActivitiesPerBucket_emptyRegistryOrUnknownAsset_returnsEmpty()
     {
         recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 100, 2);
 
-        assertTrue(this.resolver.serviceActivities(0, 3600_000, "unknown").isEmpty());
+        assertTrue(this.resolver.serviceActivitiesPerBucket(HOUR, "unknown").getOrDefault(0L, Map.of()).isEmpty());
     }
 
+    /** The registry holds a snapshot rather than a history, so every slot of the range reads the same values. */
     @Test
-    void outputTokensPerBucket_calculatesTokensPerBucketWithFiltering()
+    void serviceActivitiesPerBucket_repeatsTheSnapshotForEverySlot()
     {
-        recordLLMMetric("asset-1", "service-1", LLMProvider.mistralai, "mistral-large", "FRA", 100, 2);
-        recordLLMMetric("asset-1", "service-2", LLMProvider.openai, "gpt-4o", "USA", 250, 5);
+        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "FRA", 100.0, 2.0);
+        TimeRange range = new TimeRange(Instant.EPOCH, Instant.EPOCH.plusSeconds(2 * 3600), Duration.ofHours(1));
 
-        long startMs = 1000;
-        long endMs = 4000;
-        long stepMs = 3600_000;
-        long expectedBucket = 0;
+        Map<Long, Map<String, LLMServiceActivity>> perSlot = this.resolver.serviceActivitiesPerBucket(range, "asset-1");
 
-        Map<Long, Double> tokensAll = this.resolver.outputTokensPerBucket(startMs, endMs, stepMs, "asset-1", List.of());
-        assertEquals(Map.of(expectedBucket, 350.0), tokensAll);
-
-        Map<Long, Double> tokensFilteredByService = this.resolver.outputTokensPerBucket(startMs, endMs, stepMs, "asset-1", List.of("service-1"));
-        assertEquals(Map.of(expectedBucket, 100.0), tokensFilteredByService);
-
-        Map<Long, Double> tokensFilteredByModel = this.resolver.outputTokensPerBucket(startMs, endMs, stepMs, "asset-1", List.of("gpt-4o"));
-        assertEquals(Map.of(expectedBucket, 250.0), tokensFilteredByModel);
-    }
-
-    @Test
-    void outputTokensPerBucket_withZeroTokens_returnsEmpty()
-    {
-        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 0.0, 2);
-
-        Map<Long, Double> emptyResult = this.resolver.outputTokensPerBucket(1000, 4000, 3600_000, "asset-1", List.of());
-        assertTrue(emptyResult.isEmpty());
-    }
-
-    @Test
-    void outputTokensPerBucket_withNonMatchingFilters_returnsEmpty()
-    {
-        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 100, 2);
-
-        Map<Long, Double> nonMatchingAsset = this.resolver.outputTokensPerBucket(1000, 4000, 3600_000, "unknown", List.of());
-        assertTrue(nonMatchingAsset.isEmpty());
-
-        Map<Long, Double> nonMatchingService = this.resolver.outputTokensPerBucket(1000, 4000, 3600_000, "asset-1", List.of("unknown-service"));
-        assertTrue(nonMatchingService.isEmpty());
-    }
-
-    @Test
-    void outputTokensPerBucket_alignsBucketToStep()
-    {
-        recordLLMMetric("asset-1", "service-1", LLMProvider.openai, "gpt-4o", "USA", 100, 2);
-
-        long startMs = 7200_000 + 1500;
-        long endMs = startMs + 1000;
-        long stepMs = 3600_000;
-        long expectedBucket = 7200_000;
-
-        Map<Long, Double> result = this.resolver.outputTokensPerBucket(startMs, endMs, stepMs, "asset-1", List.of());
-        assertEquals(Map.of(expectedBucket, 100.0), result);
+        assertEquals(Set.of(0L, 3600_000L), perSlot.keySet());
+        assertEquals(100L, perSlot.get(3600_000L).get("service-1").outputTokenCount());
     }
 
     private void recordLLMMetric(String assetId, String serviceId, LLMProvider provider, String model, String countryCode, double tokens, double requests)

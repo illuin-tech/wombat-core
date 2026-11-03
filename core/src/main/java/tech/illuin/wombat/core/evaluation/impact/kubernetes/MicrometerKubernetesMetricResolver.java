@@ -1,12 +1,14 @@
 package tech.illuin.wombat.core.evaluation.impact.kubernetes;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.source.persistence.micrometer.data.Aggregation;
 import tech.illuin.wombat.core.source.persistence.micrometer.data.MetricGroup;
 import tech.illuin.wombat.core.source.persistence.micrometer.data.TagGroup;
 
 import java.util.*;
 
+import static tech.illuin.wombat.core.activity.commons.TimeRange.toEpochMs;
 import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTags.*;
 
 public class MicrometerKubernetesMetricResolver implements KubernetesMetricResolver
@@ -29,9 +31,22 @@ public class MicrometerKubernetesMetricResolver implements KubernetesMetricResol
     }
 
     @Override
-    public Optional<Double> averageCpuPerInstant(long startMs, long endMs, List<String> assetIds)
+    public Map<Long, Double> averageCpuPerBucket(TimeRange range, List<String> assetIds)
     {
-        List<MetricGroup> groups = gatherGroups(assetIds);
+        return totalCpu(gatherGroups(assetIds))
+            .map(cpu -> perSlot(range, cpu))
+            .orElse(Map.of());
+    }
+
+    @Override
+    public Map<Long, Map<String, Double>> containerSharesPerBucket(TimeRange range, List<String> assetIds)
+    {
+        Map<String, Double> shares = containerShares(gatherGroups(assetIds));
+        return shares.isEmpty() ? Map.of() : perSlot(range, shares);
+    }
+
+    private static Optional<Double> totalCpu(List<MetricGroup> groups)
+    {
         List<Double> cpus = groups.stream()
             .map(g -> g.value(METRIC_K8S_CPU))
             .flatMap(Optional::stream)
@@ -47,10 +62,8 @@ public class MicrometerKubernetesMetricResolver implements KubernetesMetricResol
         return Optional.of(totalCpu);
     }
 
-    @Override
-    public Map<String, Double> containerShares(long startMs, long endMs, List<String> assetIds)
+    private static Map<String, Double> containerShares(List<MetricGroup> groups)
     {
-        List<MetricGroup> groups = gatherGroups(assetIds);
         Map<String, Double> cpuByContainer = new LinkedHashMap<>();
         double totalCpu = 0.0;
 
@@ -76,7 +89,7 @@ public class MicrometerKubernetesMetricResolver implements KubernetesMetricResol
     }
 
     @Override
-    public Map<String, List<ContainerLocation>> containerLocations(long startMs, long endMs, List<String> assetIds)
+    public Map<String, List<ContainerLocation>> containerLocations(TimeRange range, List<String> assetIds)
     {
         List<MetricGroup> groups = gatherGroups(assetIds);
         Map<String, Set<ContainerLocation>> locations = new LinkedHashMap<>();
@@ -101,23 +114,6 @@ public class MicrometerKubernetesMetricResolver implements KubernetesMetricResol
         return result;
     }
 
-    @Override
-    public Map<Long, Double> cpuTimePerBucket(long startMs, long endMs, long stepMs, List<String> assetIds, Collection<String> serviceIds)
-    {
-        List<MetricGroup> groups = gatherGroups(assetIds);
-        long bucket = (startMs / stepMs) * stepMs;
-        long spanMs = Math.max(0, endMs - startMs);
-
-        double totalCpuTime = groups.stream()
-            .filter(g -> serviceIds.isEmpty() || serviceIds.contains(g.tag(TAG_SERVICE).orElse("")))
-            .map(g -> g.value(METRIC_K8S_CPU))
-            .flatMap(Optional::stream)
-            .mapToDouble(cpu -> cpu * spanMs)
-            .sum();
-
-        return totalCpuTime > 0.0 ? Map.of(bucket, totalCpuTime) : Map.of();
-    }
-
     private List<MetricGroup> gatherGroups(List<String> assetIds)
     {
         Map<TagGroup, MetricGroup> groups = new HashMap<>();
@@ -129,5 +125,12 @@ public class MicrometerKubernetesMetricResolver implements KubernetesMetricResol
                 .ifPresent(mg -> mg.recordValues(meter, VALUES));
         }
         return new ArrayList<>(groups.values());
+    }
+
+    private static <V> Map<Long, V> perSlot(TimeRange range, V value)
+    {
+        Map<Long, V> perSlot = new LinkedHashMap<>();
+        range.split().forEach(slot -> perSlot.put(toEpochMs(slot.start()), value));
+        return perSlot;
     }
 }

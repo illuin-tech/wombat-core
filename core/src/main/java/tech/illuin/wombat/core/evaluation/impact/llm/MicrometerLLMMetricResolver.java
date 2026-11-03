@@ -2,6 +2,7 @@ package tech.illuin.wombat.core.evaluation.impact.llm;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import tech.illuin.wombat.core.activity.commons.Country;
+import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.source.persistence.micrometer.data.Aggregation;
@@ -10,6 +11,7 @@ import tech.illuin.wombat.core.source.persistence.micrometer.data.TagGroup;
 
 import java.util.*;
 
+import static tech.illuin.wombat.core.activity.commons.TimeRange.toEpochMs;
 import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTags.*;
 
 public class MicrometerLLMMetricResolver implements LLMMetricResolver
@@ -32,17 +34,13 @@ public class MicrometerLLMMetricResolver implements LLMMetricResolver
     }
 
     @Override
-    public long sumOutputTokens(long startMs, long endMs, String assetId)
+    public Map<Long, Map<String, LLMServiceActivity>> serviceActivitiesPerBucket(TimeRange range, String assetId)
     {
-        return gatherGroups(assetId).stream()
-            .map(g -> g.value(METRIC_LLM_OUTPUT_TOKENS))
-            .flatMap(Optional::stream)
-            .mapToLong(Double::longValue)
-            .sum();
+        Map<String, LLMServiceActivity> activities = serviceActivities(assetId);
+        return activities.isEmpty() ? Map.of() : perSlot(range, activities);
     }
 
-    @Override
-    public Map<String, LLMServiceActivity> serviceActivities(long startMs, long endMs, String assetId)
+    private Map<String, LLMServiceActivity> serviceActivities(String assetId)
     {
         Map<String, LLMServiceActivity> activities = new LinkedHashMap<>();
 
@@ -71,20 +69,6 @@ public class MicrometerLLMMetricResolver implements LLMMetricResolver
         return activities;
     }
 
-    @Override
-    public Map<Long, Double> outputTokensPerBucket(long startMs, long endMs, long stepMs, String assetId, Collection<String> serviceIds)
-    {
-        long bucket = (startMs / stepMs) * stepMs;
-        double tokens = gatherGroups(assetId).stream()
-            .filter(g -> serviceIds.isEmpty() || serviceIds.contains(g.tag(TAG_SERVICE).orElse("")) || serviceIds.contains(g.tag(TAG_LLM_MODEL).orElse("")))
-            .map(g -> g.value(METRIC_LLM_OUTPUT_TOKENS))
-            .flatMap(Optional::stream)
-            .mapToDouble(Double::doubleValue)
-            .sum();
-
-        return tokens > 0.0 ? Map.of(bucket, tokens) : Map.of();
-    }
-
     private List<MetricGroup> gatherGroups(String assetId)
     {
         Map<TagGroup, MetricGroup> groups = new HashMap<>();
@@ -96,5 +80,12 @@ public class MicrometerLLMMetricResolver implements LLMMetricResolver
                 .ifPresent(mg -> mg.recordValues(meter, VALUES));
         }
         return new ArrayList<>(groups.values());
+    }
+
+    private static <V> Map<Long, V> perSlot(TimeRange range, V value)
+    {
+        Map<Long, V> perSlot = new LinkedHashMap<>();
+        range.split().forEach(slot -> perSlot.put(toEpochMs(slot.start()), value));
+        return perSlot;
     }
 }

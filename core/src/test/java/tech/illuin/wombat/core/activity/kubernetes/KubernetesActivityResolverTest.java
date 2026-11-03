@@ -72,46 +72,43 @@ class KubernetesActivityResolverTest
             });
     }
 
+
     @Test
     void resolve_whenAllSlotsHaveNoMetrics_returnsEmpty() throws WombatActivityException
     {
         TimeRange range = new TimeRange(START, END, RESOLUTION);
         when(asset.identity().id()).thenReturn(ASSET_ID);
-        when(metricResolver.averageCpuPerInstant(anyLong(), anyLong(), anyList())).thenReturn(Optional.empty());
+        when(metricResolver.averageCpuPerBucket(any(), anyList())).thenReturn(Map.of());
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, filter);
 
         assertTrue(result.isEmpty());
+        verify(metricResolver, never()).containerSharesPerBucket(any(), anyList());
     }
 
     @Test
-    void resolve_whenMetricsAvailable_producesActivityDataPerTimeSlot() throws WombatActivityException
+    void resolve_whenMetricsAvailable_producesActivityDataPerTimeSlotFromGroupedQueries() throws WombatActivityException
     {
         TimeRange range = new TimeRange(START, END, RESOLUTION); // Produces 2 slots of 1 hour
         Instant mid = START.plus(RESOLUTION);
         long t0 = toEpochMs(START);
         long t1 = toEpochMs(mid);
         long t2 = toEpochMs(END);
+        long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
         when(asset.identity().id()).thenReturn(ASSET_ID);
         when(filter.filterServiceIds(asset)).thenReturn(Set.of("service-a"));
 
-        // Slot 1 metrics (START -> mid)
-        when(metricResolver.averageCpuPerInstant(t0, t1, assetIds)).thenReturn(Optional.of(0.45));
-        when(metricResolver.containerShares(t0, t1, assetIds)).thenReturn(Map.of(ASSET_ID, 0.5));
-        ContainerLocation loc1 = mock(ContainerLocation.class);
-        when(loc1.clusterId()).thenReturn("cluster-1");
-        when(loc1.namespace()).thenReturn("ns-1");
-        when(metricResolver.containerLocations(t0, t1, assetIds)).thenReturn(Map.of(ASSET_ID, List.of(loc1)));
-
-        // Slot 2 metrics (mid -> END)
-        when(metricResolver.averageCpuPerInstant(t1, t2, assetIds)).thenReturn(Optional.of(0.90));
-        when(metricResolver.containerShares(t1, t2, assetIds)).thenReturn(Map.of(ASSET_ID, 0.8));
-        ContainerLocation loc2 = mock(ContainerLocation.class);
-        when(loc2.clusterId()).thenReturn("cluster-2");
-        when(loc2.namespace()).thenReturn("ns-2");
-        when(metricResolver.containerLocations(t1, t2, assetIds)).thenReturn(Map.of(ASSET_ID, List.of(loc2)));
+        when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.45, t1, 0.90));
+        when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of(
+            t0, Map.of(ASSET_ID, 0.5),
+            t1, Map.of(ASSET_ID, 0.8)
+        ));
+        ContainerLocation location = mock(ContainerLocation.class);
+        when(location.clusterId()).thenReturn("cluster-1");
+        when(location.namespace()).thenReturn("ns-1");
+        when(metricResolver.containerLocations(range, assetIds)).thenReturn(Map.of(ASSET_ID, List.of(location)));
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, filter);
 
@@ -135,7 +132,7 @@ class KubernetesActivityResolverTest
         assertEquals(END, data2.range().end());
         assertEquals(CPUUsage.nanocores(0.90), data2.cpuUsage());
         assertEquals(Map.of(ASSET_ID, 0.8), data2.containerShares());
-        assertEquals(new ClusterInfo("cluster-2", "ns-2"), data2.containerLocations().get(ASSET_ID));
+        assertEquals(new ClusterInfo("cluster-1", "ns-1"), data2.containerLocations().get(ASSET_ID));
         assertEquals(Set.of("service-a"), data2.serviceIds());
     }
 
@@ -145,19 +142,14 @@ class KubernetesActivityResolverTest
         TimeRange range = new TimeRange(START, END, RESOLUTION); // 2 slots
         Instant mid = START.plus(RESOLUTION);
         long t0 = toEpochMs(START);
-        long t1 = toEpochMs(mid);
         long t2 = toEpochMs(END);
+        long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
         when(asset.identity().id()).thenReturn(ASSET_ID);
-
-        // Slot 1 has metrics
-        when(metricResolver.averageCpuPerInstant(t0, t1, assetIds)).thenReturn(Optional.of(0.45));
-        when(metricResolver.containerShares(t0, t1, assetIds)).thenReturn(Map.of());
-        when(metricResolver.containerLocations(t0, t1, assetIds)).thenReturn(Map.of());
-
-        // Slot 2 has no metrics
-        when(metricResolver.averageCpuPerInstant(t1, t2, assetIds)).thenReturn(Optional.empty());
+        when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.45));
+        when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of());
+        when(metricResolver.containerLocations(range, assetIds)).thenReturn(Map.of());
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, null);
 
@@ -168,6 +160,27 @@ class KubernetesActivityResolverTest
         assertEquals(START, data.range().start());
         assertEquals(mid, data.range().end());
         assertEquals(CPUUsage.nanocores(0.45), data.cpuUsage());
+        assertTrue(data.containerShares().isEmpty());
+    }
+
+    @Test
+    void resolve_ignoresBucketsBeyondTheLastFullSlot() throws WombatActivityException
+    {
+        TimeRange range = new TimeRange(START, END.plus(Duration.ofMinutes(30)), RESOLUTION); // 2 full slots, the trailing half hour is dropped
+        long t0 = toEpochMs(START);
+        long t2 = toEpochMs(END);
+        long step = RESOLUTION.toMillis();
+        List<String> assetIds = List.of(ASSET_ID);
+
+        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.45, t2, 0.90));
+        when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of());
+        when(metricResolver.containerLocations(range, assetIds)).thenReturn(Map.of());
+
+        Optional<AssetActivity> result = resolver.resolve(asset, range, null);
+
+        assertEquals(1, result.orElseThrow().activity().size());
+        assertEquals(START, result.get().activity().getFirst().range().start());
     }
 
     @Test
@@ -176,12 +189,13 @@ class KubernetesActivityResolverTest
         TimeRange range = new TimeRange(START, START.plus(RESOLUTION), RESOLUTION); // 1 slot
         long t0 = toEpochMs(START);
         long t1 = toEpochMs(START.plus(RESOLUTION));
+        long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
         when(asset.identity().id()).thenReturn(ASSET_ID);
-        when(metricResolver.averageCpuPerInstant(t0, t1, assetIds)).thenReturn(Optional.of(0.2));
-        when(metricResolver.containerShares(t0, t1, assetIds)).thenReturn(Map.of());
-        when(metricResolver.containerLocations(t0, t1, assetIds)).thenReturn(Map.of());
+        when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.2));
+        when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of());
+        when(metricResolver.containerLocations(range, assetIds)).thenReturn(Map.of());
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, null);
 
@@ -196,11 +210,12 @@ class KubernetesActivityResolverTest
         TimeRange range = new TimeRange(START, START.plus(RESOLUTION), RESOLUTION);
         long t0 = toEpochMs(START);
         long t1 = toEpochMs(START.plus(RESOLUTION));
+        long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
         when(asset.identity().id()).thenReturn(ASSET_ID);
-        when(metricResolver.averageCpuPerInstant(t0, t1, assetIds)).thenReturn(Optional.of(0.5));
-        when(metricResolver.containerShares(t0, t1, assetIds)).thenReturn(Map.of());
+        when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.5));
+        when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of());
 
         ContainerLocation firstLocation = mock(ContainerLocation.class);
         when(firstLocation.clusterId()).thenReturn("cluster-first");
@@ -213,7 +228,7 @@ class KubernetesActivityResolverTest
             "multi-container", List.of(firstLocation, secondLocation)
         );
 
-        when(metricResolver.containerLocations(t0, t1, assetIds)).thenReturn(reportedLocations);
+        when(metricResolver.containerLocations(range, assetIds)).thenReturn(reportedLocations);
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, null);
 
