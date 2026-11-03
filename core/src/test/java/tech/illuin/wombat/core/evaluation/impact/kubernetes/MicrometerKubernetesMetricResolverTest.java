@@ -6,11 +6,13 @@ import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.activity.commons.TimeRange;
 
-import java.util.Collection;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,6 +23,8 @@ class MicrometerKubernetesMetricResolverTest
     private MeterRegistry registry;
     private MicrometerKubernetesMetricResolver resolver;
 
+    private static final TimeRange HOUR = new TimeRange(Instant.EPOCH, Instant.EPOCH.plusSeconds(3600));
+
     @BeforeEach
     void setUp()
     {
@@ -29,32 +33,27 @@ class MicrometerKubernetesMetricResolverTest
     }
 
     @Test
-    void averageCpuPerInstant_returnsSumAcrossMatchingAssets()
+    void averageCpuPerBucket_returnsSumAcrossMatchingAssets()
     {
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
         recordK8sMetric("asset-1", "service-b", "cluster-1", "ns-1", "pod-2", 200.0, 1024.0);
         recordK8sMetric("asset-2", "service-c", "cluster-1", "ns-1", "pod-3", 300.0, 1024.0);
 
-        Optional<Double> asset1Cpu = this.resolver.averageCpuPerInstant(0, 3600_000, List.of("asset-1"));
-        assertTrue(asset1Cpu.isPresent());
-        assertEquals(300.0, asset1Cpu.get());
+        assertEquals(Map.of(0L, 300.0), this.resolver.averageCpuPerBucket(HOUR, List.of("asset-1")));
 
-        Optional<Double> allCpu = this.resolver.averageCpuPerInstant(0, 3600_000, List.of());
-        assertTrue(allCpu.isPresent());
-        assertEquals(600.0, allCpu.get());
+        assertEquals(Map.of(0L, 600.0), this.resolver.averageCpuPerBucket(HOUR, List.of()));
 
-        Optional<Double> unknownCpu = this.resolver.averageCpuPerInstant(0, 3600_000, List.of("unknown"));
-        assertTrue(unknownCpu.isEmpty());
+        assertTrue(this.resolver.averageCpuPerBucket(HOUR, List.of("unknown")).isEmpty());
     }
 
     @Test
-    void averageCpuPerInstant_emptyRegistry_returnsEmpty()
+    void averageCpuPerBucket_emptyRegistry_returnsEmpty()
     {
-        assertTrue(this.resolver.averageCpuPerInstant(0, 3600_000, List.of("asset-1")).isEmpty());
+        assertTrue(this.resolver.averageCpuPerBucket(HOUR, List.of("asset-1")).isEmpty());
     }
 
     @Test
-    void averageCpuPerInstant_withOnlyNonCpuMetrics_returnsEmpty()
+    void averageCpuPerBucket_withOnlyNonCpuMetrics_returnsEmpty()
     {
         Tags tags = Tags.of(
             TAG_ENVIRONMENT, "env-1",
@@ -66,11 +65,11 @@ class MicrometerKubernetesMetricResolverTest
             .register(this.registry)
             .record(1024.0);
 
-        assertTrue(this.resolver.averageCpuPerInstant(0, 3600_000, List.of("asset-1")).isEmpty());
+        assertTrue(this.resolver.averageCpuPerBucket(HOUR, List.of("asset-1")).isEmpty());
     }
 
     @Test
-    void averageCpuPerInstant_withUnrelatedMeters_ignoresNonK8sMetrics()
+    void averageCpuPerBucket_withUnrelatedMeters_ignoresNonK8sMetrics()
     {
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 150.0, 1024.0);
 
@@ -79,35 +78,33 @@ class MicrometerKubernetesMetricResolverTest
             .register(this.registry)
             .record(500.0);
 
-        Optional<Double> cpu = this.resolver.averageCpuPerInstant(0, 3600_000, List.of("asset-1"));
-        assertTrue(cpu.isPresent());
-        assertEquals(150.0, cpu.get());
+        assertEquals(Map.of(0L, 150.0), this.resolver.averageCpuPerBucket(HOUR, List.of("asset-1")));
     }
 
     @Test
-    void containerShares_computesNormalizedShares()
+    void containerSharesPerBucket_computesNormalizedShares()
     {
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-2", 100.0, 1024.0);
         recordK8sMetric("asset-1", "service-b", "cluster-1", "ns-1", "pod-3", 200.0, 1024.0);
 
-        Map<String, Double> shares = this.resolver.containerShares(0, 3600_000, List.of("asset-1"));
+        Map<String, Double> shares = this.resolver.containerSharesPerBucket(HOUR, List.of("asset-1")).getOrDefault(0L, Map.of());
         assertEquals(2, shares.size());
         assertEquals(0.5, shares.get("service-a"));
         assertEquals(0.5, shares.get("service-b"));
     }
 
     @Test
-    void containerShares_zeroCpu_returnsEmptyMap()
+    void containerSharesPerBucket_zeroCpu_returnsEmptyMap()
     {
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 0.0, 1024.0);
 
-        Map<String, Double> shares = this.resolver.containerShares(0, 3600_000, List.of("asset-1"));
+        Map<String, Double> shares = this.resolver.containerSharesPerBucket(HOUR, List.of("asset-1")).getOrDefault(0L, Map.of());
         assertTrue(shares.isEmpty());
     }
 
     @Test
-    void containerShares_withMissingServiceTag_ignoresGroup()
+    void containerSharesPerBucket_withMissingServiceTag_ignoresGroup()
     {
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
 
@@ -127,22 +124,36 @@ class MicrometerKubernetesMetricResolverTest
             .register(this.registry)
             .record(100.0);
 
-        Map<String, Double> shares = this.resolver.containerShares(0, 3600_000, List.of("asset-1"));
+        Map<String, Double> shares = this.resolver.containerSharesPerBucket(HOUR, List.of("asset-1")).getOrDefault(0L, Map.of());
         assertEquals(1, shares.size());
         assertEquals(1.0, shares.get("service-a"));
     }
 
     @Test
-    void containerShares_multiPodAggregationUnderSameService()
+    void containerSharesPerBucket_multiPodAggregationUnderSameService()
     {
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-2", 300.0, 1024.0);
         recordK8sMetric("asset-1", "service-b", "cluster-1", "ns-1", "pod-3", 100.0, 1024.0);
 
-        Map<String, Double> shares = this.resolver.containerShares(0, 3600_000, List.of("asset-1"));
+        Map<String, Double> shares = this.resolver.containerSharesPerBucket(HOUR, List.of("asset-1")).getOrDefault(0L, Map.of());
         assertEquals(2, shares.size());
         assertEquals(0.8, shares.get("service-a"), 1e-6);
         assertEquals(0.2, shares.get("service-b"), 1e-6);
+    }
+
+    /** The registry holds a snapshot rather than a history, so every slot of the range reads the same values. */
+    @Test
+    void perBucketValues_areTheSnapshotRepeatedForEverySlot()
+    {
+        recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
+        recordK8sMetric("asset-1", "service-b", "cluster-1", "ns-1", "pod-2", 300.0, 1024.0);
+        TimeRange range = new TimeRange(Instant.EPOCH, Instant.EPOCH.plusSeconds(3 * 3600), Duration.ofHours(1));
+
+        assertEquals(Map.of(0L, 400.0, 3600_000L, 400.0, 7200_000L, 400.0), this.resolver.averageCpuPerBucket(range, List.of("asset-1")));
+        Map<Long, Map<String, Double>> shares = this.resolver.containerSharesPerBucket(range, List.of("asset-1"));
+        assertEquals(Set.of(0L, 3600_000L, 7200_000L), shares.keySet());
+        assertEquals(0.75, shares.get(7200_000L).get("service-b"), 1e-6);
     }
 
     @Test
@@ -152,7 +163,7 @@ class MicrometerKubernetesMetricResolverTest
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-2", 100.0, 1024.0);
         recordK8sMetric("asset-1", "service-a", "cluster-2", "ns-2", "pod-3", 100.0, 1024.0);
 
-        Map<String, List<ContainerLocation>> locations = this.resolver.containerLocations(0, 3600_000, List.of("asset-1"));
+        Map<String, List<ContainerLocation>> locations = this.resolver.containerLocations(HOUR, List.of("asset-1"));
         assertEquals(1, locations.size());
         List<ContainerLocation> serviceALocations = locations.get("service-a");
         assertEquals(2, serviceALocations.size());
@@ -189,7 +200,7 @@ class MicrometerKubernetesMetricResolverTest
         );
         DistributionSummary.builder(METRIC_K8S_CPU).tags(missingService).register(this.registry).record(100.0);
 
-        Map<String, List<ContainerLocation>> locations = this.resolver.containerLocations(0, 3600_000, List.of("asset-1"));
+        Map<String, List<ContainerLocation>> locations = this.resolver.containerLocations(HOUR, List.of("asset-1"));
         assertEquals(1, locations.size());
         List<ContainerLocation> serviceALocations = locations.get("service-a");
         assertEquals(1, serviceALocations.size());
@@ -202,64 +213,10 @@ class MicrometerKubernetesMetricResolverTest
         recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
         recordK8sMetric("asset-1", "service-b", "cluster-2", "ns-2", "pod-2", 100.0, 1024.0);
 
-        Map<String, List<ContainerLocation>> locations = this.resolver.containerLocations(0, 3600_000, List.of("asset-1"));
+        Map<String, List<ContainerLocation>> locations = this.resolver.containerLocations(HOUR, List.of("asset-1"));
         assertEquals(2, locations.size());
         assertEquals(List.of(new ContainerLocation("cluster-1", "ns-1")), locations.get("service-a"));
         assertEquals(List.of(new ContainerLocation("cluster-2", "ns-2")), locations.get("service-b"));
-    }
-
-    @Test
-    void cpuTimePerBucket_calculatesCpuTimePerBucket()
-    {
-        recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
-        recordK8sMetric("asset-1", "service-b", "cluster-1", "ns-1", "pod-2", 200.0, 1024.0);
-
-        long startMs = 1000;
-        long endMs = 4000;
-        long stepMs = 3600_000;
-        long expectedBucket = 0;
-        long spanMs = endMs - startMs; // 3000
-
-        Map<Long, Double> cpuTimeAll = this.resolver.cpuTimePerBucket(startMs, endMs, stepMs, List.of("asset-1"), List.of());
-        assertEquals(Map.of(expectedBucket, 300.0 * spanMs), cpuTimeAll);
-
-        Map<Long, Double> cpuTimeFiltered = this.resolver.cpuTimePerBucket(startMs, endMs, stepMs, List.of("asset-1"), List.of("service-a"));
-        assertEquals(Map.of(expectedBucket, 100.0 * spanMs), cpuTimeFiltered);
-    }
-
-    @Test
-    void cpuTimePerBucket_withInvertedTimeSpan_returnsEmpty()
-    {
-        recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
-
-        Map<Long, Double> inverted = this.resolver.cpuTimePerBucket(4000, 1000, 3600_000, List.of("asset-1"), List.of());
-        assertTrue(inverted.isEmpty());
-
-        Map<Long, Double> equal = this.resolver.cpuTimePerBucket(1000, 1000, 3600_000, List.of("asset-1"), List.of());
-        assertTrue(equal.isEmpty());
-    }
-
-    @Test
-    void cpuTimePerBucket_withNonMatchingServiceFilter_returnsEmpty()
-    {
-        recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
-
-        Map<Long, Double> filtered = this.resolver.cpuTimePerBucket(1000, 4000, 3600_000, List.of("asset-1"), List.of("non-existent-service"));
-        assertTrue(filtered.isEmpty());
-    }
-
-    @Test
-    void cpuTimePerBucket_alignsBucketToStep()
-    {
-        recordK8sMetric("asset-1", "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
-
-        long startMs = 7200_000 + 1500; // 2h + 1.5s
-        long endMs = startMs + 1000;
-        long stepMs = 3600_000; // 1h step
-        long expectedBucket = 7200_000;
-
-        Map<Long, Double> result = this.resolver.cpuTimePerBucket(startMs, endMs, stepMs, List.of("asset-1"), List.of());
-        assertEquals(Map.of(expectedBucket, 100.0 * 1000), result);
     }
 
     private void recordK8sMetric(String assetId, String serviceId, String cluster, String namespace, String pod, double cpu, double ram)
