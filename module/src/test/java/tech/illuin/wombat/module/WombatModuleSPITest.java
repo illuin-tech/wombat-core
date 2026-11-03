@@ -6,6 +6,7 @@ import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIModule;
 import tech.illuin.wombat.module.kubernetes_simulated.KubernetesSimulatedModule;
 import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticModule;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicModule;
+import tech.illuin.wombat.module.llm_google.LLMGoogleModule;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusModule;
 import tech.illuin.wombat.module.llm_simulated.LLMSimulatedModule;
 import tech.illuin.wombat.module.llm_static.LLMStaticModule;
@@ -28,7 +29,7 @@ public class WombatModuleSPITest
         List<WombatModule> modules = new ArrayList<>();
         loader.forEach(modules::add);
 
-        assertEquals(7, modules.size());
+        assertEquals(8, modules.size());
         Set<Class<? extends WombatModule>> moduleClasses = modules.stream()
             .map(WombatModule::getClass)
             .collect(Collectors.toSet());
@@ -37,6 +38,7 @@ public class WombatModuleSPITest
         assertTrue(moduleClasses.contains(KubernetesSimulatedModule.class));
         assertTrue(moduleClasses.contains(KubernetesStaticModule.class));
         assertTrue(moduleClasses.contains(LLMAnthropicModule.class));
+        assertTrue(moduleClasses.contains(LLMGoogleModule.class));
         assertTrue(moduleClasses.contains(LLMPrometheusModule.class));
         assertTrue(moduleClasses.contains(LLMSimulatedModule.class));
         assertTrue(moduleClasses.contains(LLMStaticModule.class));
@@ -49,6 +51,7 @@ public class WombatModuleSPITest
         assertEquals("tech.illuin.wombat-module.kubernetes-simulated", KubernetesSimulatedModule.TYPE.name());
         assertEquals("tech.illuin.wombat-module.llm-anthropic", LLMAnthropicModule.TYPE.name());
         assertEquals("tech.illuin.wombat-module.kubernetes-static", KubernetesStaticModule.TYPE.name());
+        assertEquals("tech.illuin.wombat-module.llm-google", LLMGoogleModule.TYPE.name());
         assertEquals("tech.illuin.wombat-module.llm-prometheus", LLMPrometheusModule.TYPE.name());
         assertEquals("tech.illuin.wombat-module.llm-simulated", LLMSimulatedModule.TYPE.name());
         assertEquals("tech.illuin.wombat-module.llm-static", LLMStaticModule.TYPE.name());
