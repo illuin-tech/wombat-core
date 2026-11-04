@@ -42,19 +42,17 @@ The module registers the asset type `tech.illuin.wombat-module.llm-vertexai` (`L
 For cross-cutting data formats such as `Country` and `LLMProvider`, refer to the [Generic Type Glossary](../type-glossary.md).
 
 ```yaml
-id: "vertex-gemini-flash" # `String`, Required - Unique identifier for the asset.
-environment-id: "production" # `String`, Required - Identifier of the environment (e.g. `production`, `staging`).
-name: "Vertex AI - Gemini 2.0 Flash" # `String`, Required - Human-readable asset name.
+id: "vertex-gemini-flash" # required - Unique identifier for the asset.
+environment-id: "production" # required - Identifier of the environment (e.g. `production`, `staging`).
+name: "Vertex AI"  # required - Human-readable asset name.
 google-url: "https://monitoring.googleapis.com" # `String`, Required - Base URL of the Cloud Monitoring API.
 resource-name: "projects/my-gcp-project" # `String`, Required - projects/<id>, folders/<id>, or organizations/<id>.
 credentials-key: "secrets.google.service-account" # `String`, Optional(default: null) - Secret resolver key for a service-account JSON key. Falls back to Application Default Credentials when omitted.
-proxy-url: "http://proxy.corp.internal:8080" # Optional - HTTP proxy with an explicit host and port.
+proxy-url: "http://proxy.corp.internal:8080" # optional (default: null) - HTTP corporate proxy URL; must include a host and a port.
 profile: # `LLMVertexAIProfile`, Required - LLM profile and Cloud Monitoring query configuration.
-  provider: "google_genai" # `LLMProvider`, Required - Foundation model provider (`anthropic`, `mistralai`, `openai`, `huggingface_hub`, `cohere`, `google_genai`).
-  models: # Optional - Model identifiers to include; omitted or empty includes all visible models.
+  models: # optional (default: all models) - Restricts the usage report to these model identifiers.
     - "gemini-2.0-flash"
-  location: "BEL" # `Country`, Required - ISO 3166-1 alpha-3 (or alpha-2) country code where inference occurs.
-  output-tokens-per-request: 500 # `Integer`, Required - Average output tokens per request, used to derive the request count from the token volume. Must be strictly positive.
+  output-tokens-per-request: 500 # optional (default: 500) - Average output tokens per request, used to derive the request count (must be strictly positive).
 ```
 
 ## Basic Setup
@@ -68,10 +66,7 @@ name: "Vertex AI - Gemini 2.0 Flash"
 google-url: "https://monitoring.googleapis.com"
 resource-name: "projects/my-gcp-project"
 profile:
-  provider: "google_genai"
-  models:
-    - "gemini-2.0-flash"
-  location: "BEL"
+  models: ["gemini-2.0-flash"]
   output-tokens-per-request: 500
 ```
 
@@ -84,7 +79,6 @@ In an enterprise environment, several Gemini models are consumed from a shared G
 The example below tracks two models as separate services under one asset. Both use the same assumed country and average response length.
 
 ```yaml
----
 id: "vertex-gemini"
 environment-id: "production"
 name: "Vertex AI - Gemini"
@@ -92,11 +86,7 @@ google-url: "https://monitoring.googleapis.com"
 resource-name: "projects/corp-ai-platform"
 credentials-key: "secrets.google.wombat-reader"
 profile:
-  provider: "google_genai"
-  models:
-    - "gemini-2.5-pro"
-    - "gemini-2.0-flash"
-  location: "NLD"
+  models: ["gemini-2.5-pro", "gemini-2.0-flash"]
   output-tokens-per-request: 500
 ```
 
@@ -107,11 +97,3 @@ Set `proxy-url` on the asset to route Cloud Monitoring requests and OAuth creden
 ```yaml
 proxy-url: "http://proxy.corp.internal:8080"
 ```
-
-## Migration from the Previous Google Configuration
-
-- Replace `project-id: my-project` with `resource-name: projects/my-project`.
-- Replace `profile.model: gemini-2.5-flash` with `profile.models: [gemini-2.5-flash]`.
-- Remove `profile.dynamic-profile`, including its `filter`.
-- Move model restrictions into `models`. Other arbitrary filter restrictions are not supported.
-- Explicitly configured models retain zero-token slots. With all-model discovery, an empty report produces no activity because no model can be identified.
