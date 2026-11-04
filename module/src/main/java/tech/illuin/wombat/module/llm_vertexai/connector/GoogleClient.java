@@ -1,8 +1,8 @@
-package tech.illuin.wombat.module.llm_google.connector;
+package tech.illuin.wombat.module.llm_vertexai.connector;
 
 import feign.Param;
 import feign.RequestLine;
-import tech.illuin.wombat.module.llm_google.connector.model.GoogleQueryResponse;
+import tech.illuin.wombat.module.llm_vertexai.connector.model.GoogleQueryResponse;
 
 public interface GoogleClient
 {
@@ -19,6 +19,7 @@ public interface GoogleClient
             + "&aggregation.perSeriesAligner=ALIGN_SUM"
             + "&aggregation.crossSeriesReducer=REDUCE_SUM"
             + "&aggregation.groupByFields=resource.labels.model_user_id"
+            + "&aggregation.groupByFields=resource.labels.location"
             + "&view=FULL"
             + "&pageToken={pageToken}"
     )

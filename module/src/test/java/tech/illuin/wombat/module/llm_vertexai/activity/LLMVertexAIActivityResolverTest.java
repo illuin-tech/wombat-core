@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.llm_google.activity;
+package tech.illuin.wombat.module.llm_vertexai.activity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
@@ -15,11 +15,11 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
-import tech.illuin.wombat.module.llm_google.LLMGoogleAsset;
-import tech.illuin.wombat.module.llm_google.LLMGoogleProfile;
-import tech.illuin.wombat.module.llm_google.connector.GoogleClient;
-import tech.illuin.wombat.module.llm_google.connector.GoogleMultiClient;
-import tech.illuin.wombat.module.llm_google.connector.model.GoogleQueryResponse;
+import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
+import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIProfile;
+import tech.illuin.wombat.module.llm_vertexai.connector.GoogleClient;
+import tech.illuin.wombat.module.llm_vertexai.connector.GoogleMultiClient;
+import tech.illuin.wombat.module.llm_vertexai.connector.model.GoogleQueryResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -33,7 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
-class LLMGoogleActivityResolverTest
+class LLMVertexAIActivityResolverTest
 {
     private static final String PROJECT = "projects/macro-theater-402700";
     private static final String BASE_FILTER = "metric.type=\"aiplatform.googleapis.com/publisher/online_serving/token_count\" AND metric.labels.type=\"output\"";
@@ -44,11 +44,11 @@ class LLMGoogleActivityResolverTest
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final GoogleClient client = mock(GoogleClient.class);
-    private final LLMGoogleAsset asset = new LLMGoogleAsset(
+    private final LLMVertexAIAsset asset = new LLMVertexAIAsset(
         AssetIdentity.of("llm-google", "prod", "Google LLM"), "https://monitoring.googleapis.com", PROJECT, null,
-        new LLMGoogleProfile(LLMProvider.google_genai, Country.US, 500, List.of(MODEL))
+        new LLMVertexAIProfile(500, List.of(MODEL))
     );
-    private final LLMGoogleActivityResolver resolver = new LLMGoogleActivityResolver(multi(this.client));
+    private final LLMVertexAIActivityResolver resolver = new LLMVertexAIActivityResolver(multi(this.client));
 
     @Test
     void queriesTheWholeRangeOnceAlignedOnItsResolution() throws Exception
@@ -64,7 +64,7 @@ class LLMGoogleActivityResolverTest
     void emitsOneActivityPerSlotWithProviderModelLocationAndRequests() throws Exception
     {
         when(this.client.query(any(), any(), any(), any(), any(), isNull())).thenReturn(response("""
-            {"timeSeries":[{"resource":{"labels":{"model_user_id":"gemini-2.5-flash"}},"points":[
+            {"timeSeries":[{"resource":{"labels":{"model_user_id":"gemini-2.5-flash","location":"us-central1"}},"points":[
               {"interval":{"endTime":"2026-10-06T23:00:00Z"},"value":{"int64Value":"250"}},
               {"interval":{"endTime":"2026-10-06T21:00:00Z"},"value":{"int64Value":"1000"}}
             ]}]}
@@ -179,7 +179,7 @@ class LLMGoogleActivityResolverTest
     @Test
     void failsWhenNoClientIsRegisteredForTheAsset()
     {
-        LLMGoogleActivityResolver resolver = new LLMGoogleActivityResolver(new GoogleMultiClient());
+        LLMVertexAIActivityResolver resolver = new LLMVertexAIActivityResolver(new GoogleMultiClient());
 
         IllegalStateException e = assertThrows(IllegalStateException.class, () -> resolver.resolve(this.asset, THREE_HOURS, null));
 
@@ -187,7 +187,7 @@ class LLMGoogleActivityResolverTest
     }
 
     @Test
-    void acceptsOnlyGoogleAssets()
+    void acceptsOnlyVertexAIAssets()
     {
         assertTrue(this.resolver.accept(this.asset));
         assertFalse(this.resolver.accept(mock(Asset.class)));
@@ -196,8 +196,8 @@ class LLMGoogleActivityResolverTest
     @Test
     void discoversModelsAndKeepsTheirUsageSeparate() throws Exception
     {
-        LLMGoogleAsset allModels = new LLMGoogleAsset(this.asset.identity(), this.asset.googleUrl(), "folders/123", null,
-            new LLMGoogleProfile(LLMProvider.google_genai, Country.US, 500, null));
+        LLMVertexAIAsset allModels = new LLMVertexAIAsset(this.asset.identity(), this.asset.googleUrl(), "folders/123", null,
+            new LLMVertexAIProfile(500, null));
         when(this.client.query(any(), any(), any(), any(), any(), any())).thenReturn(response("""
             {"timeSeries":[
               {"resource":{"labels":{"model_user_id":"gemini-2.5-flash"}},"points":[
@@ -219,8 +219,8 @@ class LLMGoogleActivityResolverTest
     @Test
     void intersectsConfiguredModelsWithRequestedServices() throws Exception
     {
-        LLMGoogleAsset multiple = new LLMGoogleAsset(this.asset.identity(), this.asset.googleUrl(), "organizations/456", null,
-            new LLMGoogleProfile(LLMProvider.google_genai, Country.US, 500, List.of(MODEL, "gemini-2.5-pro")));
+        LLMVertexAIAsset multiple = new LLMVertexAIAsset(this.asset.identity(), this.asset.googleUrl(), "organizations/456", null,
+            new LLMVertexAIProfile(500, List.of(MODEL, "gemini-2.5-pro")));
         AssetFilter filter = new AssetFilter(new AssetFilter.Environment("prod", Set.of(new AssetFilter.Asset("llm-google", Set.of(MODEL, "other")))));
         when(this.client.query(any(), any(), any(), any(), any(), any())).thenReturn(response("{}"));
 
@@ -233,8 +233,8 @@ class LLMGoogleActivityResolverTest
     @Test
     void escapesModelNamesInTheGeneratedFilter() throws Exception
     {
-        LLMGoogleAsset escaped = new LLMGoogleAsset(this.asset.identity(), this.asset.googleUrl(), PROJECT, null,
-            new LLMGoogleProfile(LLMProvider.google_genai, Country.US, 500, List.of("model\"\\name")));
+        LLMVertexAIAsset escaped = new LLMVertexAIAsset(this.asset.identity(), this.asset.googleUrl(), PROJECT, null,
+            new LLMVertexAIProfile(500, List.of("model\"\\name")));
         when(this.client.query(any(), any(), any(), any(), any(), any())).thenReturn(response("{}"));
 
         this.resolver.resolve(escaped, THREE_HOURS, null);
@@ -256,11 +256,35 @@ class LLMGoogleActivityResolverTest
     @Test
     void allModelsWithNoUsageProducesNoActivity() throws Exception
     {
-        LLMGoogleAsset allModels = new LLMGoogleAsset(this.asset.identity(), this.asset.googleUrl(), PROJECT, null,
-            new LLMGoogleProfile(LLMProvider.google_genai, Country.US, 500, List.of()));
+        LLMVertexAIAsset allModels = new LLMVertexAIAsset(this.asset.identity(), this.asset.googleUrl(), PROJECT, null,
+            new LLMVertexAIProfile(500, List.of()));
         when(this.client.query(any(), any(), any(), any(), any(), any())).thenReturn(response("{}"));
 
         assertTrue(this.resolver.resolve(allModels, THREE_HOURS, null).isEmpty());
+    }
+
+    @Test
+    void resolvesDynamicLocationFromResponseLabels() throws Exception
+    {
+        when(this.client.query(any(), any(), any(), any(), any(), any())).thenReturn(response("""
+            {"timeSeries":[
+              {"resource":{"labels":{"model_user_id":"gemini-2.5-flash","location":"europe-west9"}},"points":[
+                {"interval":{"endTime":"2026-10-06T21:00:00Z"},"value":{"int64Value":"500"}}]},
+              {"resource":{"labels":{"model_user_id":"gemini-2.5-pro","location":"unknown-region"}},"points":[
+                {"interval":{"endTime":"2026-10-06T21:00:00Z"},"value":{"int64Value":"300"}}]}
+            ]}
+            """));
+
+        LLMVertexAIAsset multiModelAsset = new LLMVertexAIAsset(
+            this.asset.identity(), this.asset.googleUrl(), PROJECT, null,
+            new LLMVertexAIProfile(500, List.of(MODEL, "gemini-2.5-pro"))
+        );
+
+        AssetActivity activity = this.resolver.resolve(multiModelAsset, THREE_HOURS, null).orElseThrow();
+        LLMActivityData first = (LLMActivityData) activity.activity().getFirst();
+
+        assertEquals(Country.FRANCE, first.services().get(MODEL).location());
+        assertEquals(Country.WORLD, first.services().get("gemini-2.5-pro").location());
     }
 
     private static GoogleQueryResponse response(String json) throws Exception

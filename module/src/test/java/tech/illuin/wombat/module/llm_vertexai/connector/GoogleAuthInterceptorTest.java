@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.llm_google.connector;
+package tech.illuin.wombat.module.llm_vertexai.connector;
 
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;

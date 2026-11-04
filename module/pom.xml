@@ -58,7 +58,6 @@
             <version>${fabric8-kubernetes-client.version}</version>
         </dependency>
 
-        <!-- Google Cloud auth (OAuth2 access tokens for the Cloud Monitoring API, used by llm_google) -->
         <dependency>
             <groupId>com.google.auth</groupId>
             <artifactId>google-auth-library-oauth2-http</artifactId>

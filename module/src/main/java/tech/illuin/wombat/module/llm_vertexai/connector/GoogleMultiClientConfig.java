@@ -1,11 +1,11 @@
-package tech.illuin.wombat.module.llm_google.connector;
+package tech.illuin.wombat.module.llm_vertexai.connector;
 
 import feign.Feign;
 import feign.Client;
 import feign.jackson.JacksonDecoder;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.SecretResolver;
-import tech.illuin.wombat.module.llm_google.LLMGoogleAsset;
+import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -23,13 +23,13 @@ public class GoogleMultiClientConfig
         SecretResolver secrets = context.secrets();
         GoogleMultiClient multi = new GoogleMultiClient();
         context.assets().stream()
-            .filter(LLMGoogleAsset.class::isInstance)
-            .map(LLMGoogleAsset.class::cast)
+            .filter(LLMVertexAIAsset.class::isInstance)
+            .map(LLMVertexAIAsset.class::cast)
             .forEach(asset -> multi.register(asset.identity().id(), createClient(asset, secrets, client)));
         return multi;
     }
 
-    private static GoogleClient createClient(LLMGoogleAsset properties, SecretResolver secrets, Client client)
+    private static GoogleClient createClient(LLMVertexAIAsset properties, SecretResolver secrets, Client client)
     {
         String serviceAccountJson = properties.usesServiceAccountKey()
             ? secrets.require(properties.credentialsKey())
@@ -49,10 +49,12 @@ public class GoogleMultiClientConfig
         Feign.Builder builder = Feign.builder()
             .decoder(new JacksonDecoder())
             .requestInterceptor(new GoogleAuthInterceptor(serviceAccountJson, proxy));
+
         if (client != null)
             builder.client(client);
         else if (proxy != null)
             builder.client(new Client.Proxied(null, null, proxy));
+
         return builder.target(GoogleClient.class, properties.googleUrl());
     }
 }

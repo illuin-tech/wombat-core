@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.llm_google.connector;
+package tech.illuin.wombat.module.llm_vertexai.connector;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -6,13 +6,12 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.activity.commons.Country;
-import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
-import tech.illuin.wombat.module.llm_google.LLMGoogleAsset;
-import tech.illuin.wombat.module.llm_google.LLMGoogleProfile;
+import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
+import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIProfile;
 
 import java.security.KeyPairGenerator;
 import java.net.InetSocketAddress;
@@ -87,8 +86,8 @@ public class GoogleMultiClientConfigTest
             ObjectMapper mapper = new ObjectMapper();
             var json = mapper.readTree(serviceAccountJson());
             ((com.fasterxml.jackson.databind.node.ObjectNode) json).put("token_uri", "http://oauth.invalid/token");
-            LLMGoogleAsset base = asset("g", "GOOGLE_SA_KEY");
-            LLMGoogleAsset proxied = new LLMGoogleAsset(base.identity(), "http://monitoring.invalid", base.resourceName(),
+            LLMVertexAIAsset base = asset("g", "GOOGLE_SA_KEY");
+            LLMVertexAIAsset proxied = new LLMVertexAIAsset(base.identity(), "http://monitoring.invalid", base.resourceName(),
                 base.credentialsKey(), "http://127.0.0.1:" + proxy.getAddress().getPort(), base.profile());
             GoogleClient client = GoogleMultiClientConfig.create(context(Map.of("GOOGLE_SA_KEY", mapper.writeValueAsString(json)), proxied))
                 .get("g").orElseThrow();
@@ -105,25 +104,25 @@ public class GoogleMultiClientConfigTest
     @Test
     void rejectsInvalidProxyUrls()
     {
-        LLMGoogleAsset base = asset("g", null);
+        LLMVertexAIAsset base = asset("g", null);
         for (String url : List.of("http://localhost", "https://localhost:8080", "http://user:pass@localhost:8080", "http://localhost:8080/path"))
         {
-            LLMGoogleAsset invalid = new LLMGoogleAsset(base.identity(), base.googleUrl(), base.resourceName(), null, url, base.profile());
+            LLMVertexAIAsset invalid = new LLMVertexAIAsset(base.identity(), base.googleUrl(), base.resourceName(), null, url, base.profile());
             assertThrows(IllegalStateException.class, () -> GoogleMultiClientConfig.create(context(Map.of(), invalid)), url);
         }
     }
 
-    private static WombatContext context(Map<String, String> environment, LLMGoogleAsset asset)
+    private static WombatContext context(Map<String, String> environment, LLMVertexAIAsset asset)
     {
         return new ResolvedContext(
             List.of(new Environment("env", List.of(asset))),
             new EnvironmentSecretResolver(environment::get));
     }
 
-    private static LLMGoogleAsset asset(String id, String credentialsKey)
+    private static LLMVertexAIAsset asset(String id, String credentialsKey)
     {
-        return new LLMGoogleAsset(AssetIdentity.of(id, "env", id), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
-            new LLMGoogleProfile(LLMProvider.google_genai, Country.US, 500, List.of("gemini-2.5-flash")));
+        return new LLMVertexAIAsset(AssetIdentity.of(id, "env", id), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
+            new LLMVertexAIProfile(500, List.of("gemini-2.5-flash")));
     }
 
     private static String serviceAccountJson() throws Exception

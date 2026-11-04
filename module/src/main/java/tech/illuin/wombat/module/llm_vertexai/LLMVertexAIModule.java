@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.llm_google;
+package tech.illuin.wombat.module.llm_vertexai;
 
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.asset.Asset;
@@ -7,14 +7,14 @@ import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.module.WombatModule;
-import tech.illuin.wombat.module.llm_google.activity.LLMGoogleActivityResolver;
-import tech.illuin.wombat.module.llm_google.connector.GoogleMultiClientConfig;
+import tech.illuin.wombat.module.llm_vertexai.activity.LLMVertexAIActivityResolver;
+import tech.illuin.wombat.module.llm_vertexai.connector.GoogleMultiClientConfig;
 
 import java.util.Optional;
 
-public class LLMGoogleModule implements WombatModule
+public class LLMVertexAIModule implements WombatModule
 {
-    public static final AssetType TYPE = AssetType.of("tech.illuin", "wombat-module", "llm-google", ActivityRegime.MEASURED, ServiceFamily.LLM);
+    public static final AssetType TYPE = AssetType.of("tech.illuin", "wombat-module", "llm-vertexai", ActivityRegime.MEASURED, ServiceFamily.LLM);
 
     @Override
     public AssetType type()
@@ -25,12 +25,12 @@ public class LLMGoogleModule implements WombatModule
     @Override
     public Class<? extends Asset> assetClass()
     {
-        return LLMGoogleAsset.class;
+        return LLMVertexAIAsset.class;
     }
 
     @Override
     public Optional<WombatActivityResolver> createActivityResolver(WombatContext context)
     {
-        return Optional.of(new LLMGoogleActivityResolver(GoogleMultiClientConfig.create(context)));
+        return Optional.of(new LLMVertexAIActivityResolver(GoogleMultiClientConfig.create(context)));
     }
 }

@@ -1,9 +1,8 @@
-package tech.illuin.wombat.module.llm_google;
+package tech.illuin.wombat.module.llm_vertexai;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.activity.commons.Country;
-import tech.illuin.wombat.core.asset.profile.LLMProvider;
 
 import java.util.Set;
 import java.util.List;
@@ -12,12 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class LLMGoogleAssetTest
+public class LLMVertexAIAssetTest
 {
     @Test
     void anAssetRelyingOnApplicationDefaultCredentialsNeedsNoSecret()
     {
-        LLMGoogleAsset asset = asset(null);
+        LLMVertexAIAsset asset = asset(null);
 
         assertFalse(asset.usesServiceAccountKey());
         assertEquals(Set.of(), asset.requiredSecretKeys());
@@ -26,7 +25,7 @@ public class LLMGoogleAssetTest
     @Test
     void aBlankCredentialsKeyIsTreatedAsAbsent()
     {
-        LLMGoogleAsset asset = asset("  ");
+        LLMVertexAIAsset asset = asset("  ");
 
         assertFalse(asset.usesServiceAccountKey());
         assertEquals(Set.of(), asset.requiredSecretKeys());
@@ -35,21 +34,21 @@ public class LLMGoogleAssetTest
     @Test
     void aServiceAccountAssetDeclaresTheVariableItNeeds()
     {
-        LLMGoogleAsset asset = asset("GOOGLE_SA_KEY");
+        LLMVertexAIAsset asset = asset("GOOGLE_SA_KEY");
 
         assertTrue(asset.usesServiceAccountKey());
         assertEquals(Set.of("GOOGLE_SA_KEY"), asset.requiredSecretKeys());
     }
 
     @Test
-    void declaresTheLLMGoogleAssetType()
+    void declaresTheLLMVertexAIAssetType()
     {
-        assertEquals(LLMGoogleModule.TYPE, asset(null).type());
+        assertEquals(LLMVertexAIModule.TYPE, asset(null).type());
     }
 
-    private static LLMGoogleAsset asset(String credentialsKey)
+    private static LLMVertexAIAsset asset(String credentialsKey)
     {
-        return new LLMGoogleAsset(AssetIdentity.of("g", "env", "G"), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
-            new LLMGoogleProfile(LLMProvider.google_genai, Country.US, 500, List.of("gemini-2.5-flash")));
+        return new LLMVertexAIAsset(AssetIdentity.of("g", "env", "G"), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
+            new LLMVertexAIProfile(500, List.of("gemini-2.5-flash")));
     }
 }

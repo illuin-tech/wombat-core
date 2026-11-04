@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.llm_google;
+package tech.illuin.wombat.module.llm_vertexai;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
@@ -12,17 +12,17 @@ import tech.illuin.wombat.core.secret.SecretAware;
 
 import java.util.Set;
 
-public record LLMGoogleAsset(
+public record LLMVertexAIAsset(
     @JsonUnwrapped AssetIdentity identity,
     @NotBlank @JsonProperty("google-url") String googleUrl,
     @NotBlank @Pattern(regexp = "(projects|folders|organizations)/[A-Za-z0-9_-]+")
     @JsonProperty("resource-name") String resourceName,
     @JsonProperty("credentials-key") String credentialsKey,
     @JsonProperty("proxy-url") String proxyUrl,
-    @NotNull @JsonProperty("profile") LLMGoogleProfile profile
+    @NotNull @JsonProperty("profile") LLMVertexAIProfile profile
 ) implements Asset, SecretAware
 {
-    public LLMGoogleAsset(AssetIdentity identity, String googleUrl, String resourceName, String credentialsKey, LLMGoogleProfile profile)
+    public LLMVertexAIAsset(AssetIdentity identity, String googleUrl, String resourceName, String credentialsKey, LLMVertexAIProfile profile)
     {
         this(identity, googleUrl, resourceName, credentialsKey, null, profile);
     }
@@ -30,7 +30,7 @@ public record LLMGoogleAsset(
     @Override
     public AssetType type()
     {
-        return LLMGoogleModule.TYPE;
+        return LLMVertexAIModule.TYPE;
     }
 
     @Override

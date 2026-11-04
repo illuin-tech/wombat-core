@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.llm_google.connector;
+package tech.illuin.wombat.module.llm_vertexai.connector;
 
 import feign.Feign;
 import feign.Request;

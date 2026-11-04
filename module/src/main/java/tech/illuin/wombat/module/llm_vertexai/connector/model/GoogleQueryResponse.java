@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.llm_google.connector.model;
+package tech.illuin.wombat.module.llm_vertexai.connector.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -23,7 +23,13 @@ public record GoogleQueryResponse(
     public record Resource(@JsonProperty("labels") Labels labels) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Labels(@JsonProperty("model_user_id") String model) {}
+    public record Labels(
+        @JsonProperty("model_user_id") String model,
+        @JsonProperty("model_version_id") String modelVersionId,
+        @JsonProperty("project_id") String projectId,
+        @JsonProperty("location") String location,
+        @JsonProperty("publisher") String publisher
+    ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Point(

@@ -1,24 +1,23 @@
-package tech.illuin.wombat.module.llm_google;
+package tech.illuin.wombat.module.llm_vertexai;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.profile.LLMProfile;
-import tech.illuin.wombat.core.asset.profile.LLMProvider;
 
 import java.util.List;
 
-public record LLMGoogleProfile(
-    @NotNull @JsonProperty("provider") LLMProvider provider,
-    @NotNull @JsonProperty("location") Country location,
-    @Positive @JsonProperty("output-tokens-per-request") int outputTokensPerRequest,
+public record LLMVertexAIProfile(
+    @Positive @JsonProperty("outputTokensPerRequest") @JsonAlias("output-tokens-per-request") Integer outputTokensPerRequest,
     @JsonProperty("models") List<@NotBlank String> models
 ) implements LLMProfile
 {
-    public LLMGoogleProfile
+    public LLMVertexAIProfile
     {
         models = models == null ? List.of() : List.copyOf(models);
+        outputTokensPerRequest = outputTokensPerRequest == null ? 500 : outputTokensPerRequest;
     }
 }

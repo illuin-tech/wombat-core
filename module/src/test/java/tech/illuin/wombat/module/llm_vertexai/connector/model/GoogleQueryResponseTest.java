@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.llm_google.connector.model;
+package tech.illuin.wombat.module.llm_vertexai.connector.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
