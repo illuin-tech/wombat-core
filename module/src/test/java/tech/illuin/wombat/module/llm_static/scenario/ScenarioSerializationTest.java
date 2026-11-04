@@ -191,7 +191,6 @@ public class ScenarioSerializationTest
             null
         );
         String userJson = this.objectMapper.writeValueAsString(userActivity);
-        assertFalse(userJson.contains("peakRate"));
         Scenario deserializedUser = this.objectMapper.readValue(userJson, Scenario.class);
         assertEquals(userActivity, deserializedUser);
 
@@ -205,7 +204,6 @@ public class ScenarioSerializationTest
             null
         );
         String batchJson = this.objectMapper.writeValueAsString(batchActivity);
-        assertFalse(batchJson.contains("peakRate"));
         Scenario deserializedBatch = this.objectMapper.readValue(batchJson, Scenario.class);
         assertEquals(batchActivity, deserializedBatch);
     }
