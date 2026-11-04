@@ -98,13 +98,21 @@ public class LLMAnthropicActivityResolver implements WombatActivityResolver
     private Map<String, Map<Long, Long>> usage(LLMAnthropicAsset asset, TimeRange range, BucketWidth width) throws WombatActivityException
     {
         String assetId = asset.identity().id();
-        AnthropicAdminClient adminClient = this.client.get(assetId)
-            .orElseThrow(() -> new IllegalStateException("No Anthropic client registered for asset " + assetId));
+        AnthropicAdminClient adminClient = this.client.get(assetId).orElseThrow(
+            () -> new IllegalStateException("No Anthropic client registered for asset " + assetId)
+        );
 
         return fetch(adminClient, asset.profile(), range.start(), range.end(), width, assetId);
     }
 
-    private static Map<String, Map<Long, Long>> fetch(AnthropicAdminClient adminClient, LLMAnthropicProfile profile, Instant start, Instant end, BucketWidth width, String assetId) throws WombatActivityException
+    private static Map<String, Map<Long, Long>> fetch(
+        AnthropicAdminClient adminClient,
+        LLMAnthropicProfile profile,
+        Instant start,
+        Instant end,
+        BucketWidth width,
+        String assetId
+    ) throws WombatActivityException
     {
         logger.debug("Fetching Anthropic usage for asset {} over [{}, {}) with {} buckets", assetId, start, end, width.code);
 
