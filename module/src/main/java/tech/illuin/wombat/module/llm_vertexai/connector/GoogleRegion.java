@@ -56,12 +56,12 @@ public enum GoogleRegion
     private static final Map<String, GoogleRegion> index = new HashMap<>();
 
     static {
-        for (GoogleRegion region : values()) {
+        for (GoogleRegion region : values())
             index.put(region.identifier(), region);
-        }
     }
 
-    GoogleRegion(String identifier, Country country) {
+    GoogleRegion(String identifier, Country country)
+    {
         this.identifier = identifier;
         this.country = country;
     }
