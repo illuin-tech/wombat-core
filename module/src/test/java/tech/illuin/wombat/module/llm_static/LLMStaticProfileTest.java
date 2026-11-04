@@ -173,7 +173,6 @@ class LLMStaticProfileTest
         ConstantScenario constant = new ConstantScenario(200, 10000.0, null);
         UserActivityScenario userActivity = new UserActivityScenario(
             250,
-            100.0,
             5000.0,
             LocalTime.of(8, 0),
             LocalTime.of(18, 0),
@@ -183,7 +182,6 @@ class LLMStaticProfileTest
         );
         BatchActivityScenario batch = new BatchActivityScenario(
             800,
-            0.0,
             12000.0,
             LocalTime.of(1, 0),
             Duration.ofHours(3),

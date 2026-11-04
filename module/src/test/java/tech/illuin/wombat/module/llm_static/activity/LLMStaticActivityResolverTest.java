@@ -119,8 +119,11 @@ class LLMStaticActivityResolverTest
     {
         // 1 req/sec = 31536000 req/year -> 3600 req/hour
         // Baseline: 3153600.0 req/year -> 360 req/hour
-        // User Activity: peak 31536000.0 req/year -> 3600 req/hour (09:00 - 18:00)
-        // Batch Activity: peak 63072000.0 req/year -> 7200 req/hour (02:00 - 04:00)
+        // User Activity: peak 31536000.0 req/year -> 3600 req/hour (09:00 - 18:00, sinusoidal)
+        // Batch Activity: peak 63072000.0 req/year -> 7200 req/hour (02:00 - 04:00, duration 2h)
+        double userTotalRequests = 31_536_000.0 * (9.0 / 24.0) * (2.0 / Math.PI);
+        double batchTotalRequests = 63_072_000.0 * (2.0 / 24.0) * 1.0;
+
         LLMStaticAsset asset = new LLMStaticAsset(
             new AssetIdentity("llm-static-2", "env-test", "Static LLM 2"),
             new LLMStaticProfile(
@@ -129,8 +132,8 @@ class LLMStaticActivityResolverTest
                 Country.FRANCE,
                 List.of(
                     new ConstantScenario(100, 3_153_600.0, null),
-                    new UserActivityScenario(200, 3_153_600.0, 31_536_000.0, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.SINUSOIDAL, 0.0, null),
-                    new BatchActivityScenario(500, 0.0, 63_072_000.0, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.NONE, null)
+                    new UserActivityScenario(200, userTotalRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.SINUSOIDAL, 0.0, null),
+                    new BatchActivityScenario(500, batchTotalRequests, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.NONE, null)
                 )
             )
         );
@@ -198,8 +201,10 @@ class LLMStaticActivityResolverTest
     }
 
     @Test
-    void resolvesDailyResolutionWithThreeHourSampling()
+    void resolvesDailyResolutionWithHourlySampling()
     {
+        double userTotalRequests = 31_536_000.0 * (9.0 / 24.0) * (2.0 / Math.PI);
+
         LLMStaticAsset asset = new LLMStaticAsset(
             new AssetIdentity("llm-static-daily", "env-test", "Daily Static LLM"),
             new LLMStaticProfile(
@@ -208,14 +213,21 @@ class LLMStaticActivityResolverTest
                 Country.FRANCE,
                 List.of(
                     new ConstantScenario(100, 3_153_600.0, null),
-                    new UserActivityScenario(200, 3_153_600.0, 31_536_000.0, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.SINUSOIDAL, 0.0, null)
+                    new UserActivityScenario(
+                        200,
+                        userTotalRequests,
+                        LocalTime.of(9, 0),
+                        LocalTime.of(18, 0),
+                        UserActivityScenario.CurveShape.SINUSOIDAL,
+                        0.0
+                    )
                 )
             )
         );
 
         Instant start = Instant.parse("2026-11-01T00:00:00Z");
         Instant end = Instant.parse("2026-11-02T00:00:00Z");
-        TimeRange range = new TimeRange(start, end, Duration.ofDays(1));
+        TimeRange range = new TimeRange(start, end);
 
         Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
         assertTrue(result.isPresent());
@@ -227,20 +239,198 @@ class LLMStaticActivityResolverTest
         assertEquals(ActivityRegime.MODELED, slot.regime());
         assertEquals(range, slot.range());
 
-        // 8 sub-slots evaluated at:
-        // 01:30, 04:30, 07:30, 19:30, 22:30 -> Constant: 3,153,600 req/year, 100 tokens/req (5 slots)
-        // 10:30, 16:30 -> User (sin(pi/6)=0.5): 17,344,800 req/year, 200 tokens/req (2 slots)
-        // 13:30 -> User (sin(pi/2)=1.0): 31,536,000 req/year, 200 tokens/req (1 slot)
-        // Mean req/year = (3,153,600*5 + 17,344,800*2 + 31,536,000) / 8 = 10,249,200 req/year
-        // Daily requestCount = 10,249,200 / 365 = 28,080
-        // Mean tokens/req = (100*5 + 200*3) / 8 = 137.5 tokens/req
-        // Daily outputTokenCount = (long)(137.5 * 28,080) = 3,861,000
-        assertEquals(28_080.0, slot.requestCount());
-        assertEquals(3_861_000L, slot.outputTokenCount());
+        // 24 sub-slots evaluated at hourly resolution:
+        // 15 constant slots (100 tokens/req), 9 user sinusoidal slots (200 tokens/req)
+        // Daily requestCount = 26,132
+        // Mean tokens/req = (100*15 + 200*9) / 24 = 137.5 tokens/req
+        // Daily outputTokenCount = (long)(137.5 * 26,132) = 3,593,150
+        assertEquals(26_132.0, slot.requestCount());
+        assertEquals(3_593_150L, slot.outputTokenCount());
 
         LLMServiceActivity gpt4o = slot.services().get("gpt-4o");
         assertNotNull(gpt4o);
-        assertEquals(28_080.0, gpt4o.requestCount());
-        assertEquals(3_861_000L, gpt4o.outputTokenCount());
+        assertEquals(26_132.0, gpt4o.requestCount());
+        assertEquals(3_593_150L, gpt4o.outputTokenCount());
+    }
+
+    @Test
+    void resolvesSevenDayAggregateBatchActivityScenario()
+    {
+        LLMStaticAsset asset = new LLMStaticAsset(
+            new AssetIdentity("llm-batch-7d", "env-test", "Batch 7D Asset"),
+            new LLMStaticProfile(
+                LLMProvider.openai,
+                "gpt-4o",
+                Country.FRANCE,
+                List.of(
+                    new BatchActivityScenario(1000, 100_000.0, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.NONE)
+                )
+            )
+        );
+
+        Instant start = Instant.parse("2026-11-01T00:00:00Z");
+        Instant end = Instant.parse("2026-11-08T00:00:00Z");
+        TimeRange range = new TimeRange(start, end, Duration.ofDays(7));
+
+        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
+        assertTrue(result.isPresent());
+
+        AssetActivity activity = result.get();
+        assertEquals(1, activity.activity().size());
+
+        LLMActivityData slot = (LLMActivityData) activity.activity().getFirst();
+        assertEquals(ActivityRegime.MODELED, slot.regime());
+        assertEquals(1918.0, slot.requestCount());
+        assertEquals(1_918_000L, slot.outputTokenCount());
+    }
+
+    @Test
+    void resolvesFullYearSummationForUserActivityScenario()
+    {
+        double targetAnnualRequests = 100_000.0;
+        LLMStaticAsset asset = new LLMStaticAsset(
+            new AssetIdentity("llm-user-year", "env-test", "User Year Asset"),
+            new LLMStaticProfile(
+                LLMProvider.openai,
+                "gpt-4o",
+                Country.FRANCE,
+                List.of(
+                    new UserActivityScenario(100, targetAnnualRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0)
+                )
+            )
+        );
+
+        Instant start = Instant.parse("2026-01-01T00:00:00Z");
+        Instant end = Instant.parse("2027-01-01T00:00:00Z");
+        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
+
+        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
+        assertTrue(result.isPresent());
+
+        long totalRequests = result.get().activity().stream()
+            .mapToLong(a -> (long) ((LLMActivityData) a).requestCount())
+            .sum();
+
+        // 8,760 1-hour slots integrated over standard year should be within 0.5% of target annual volume
+        assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.005);
+    }
+
+    @Test
+    void resolvesFullYearSummationForBatchActivityScenario()
+    {
+        double targetAnnualRequests = 50_000.0;
+        LLMStaticAsset asset = new LLMStaticAsset(
+            new AssetIdentity("llm-batch-year", "env-test", "Batch Year Asset"),
+            new LLMStaticProfile(
+                LLMProvider.openai,
+                "gpt-4o",
+                Country.FRANCE,
+                List.of(
+                    new BatchActivityScenario(200, targetAnnualRequests, LocalTime.of(2, 0), Duration.ofHours(10), 0.0, BatchActivityScenario.SmoothingMode.SMOOTH_STEP)
+                )
+            )
+        );
+
+        Instant start = Instant.parse("2026-01-01T00:00:00Z");
+        Instant end = Instant.parse("2027-01-01T00:00:00Z");
+        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
+
+        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
+        assertTrue(result.isPresent());
+
+        long totalRequests = result.get().activity().stream()
+            .mapToLong(a -> (long) ((LLMActivityData) a).requestCount())
+            .sum();
+
+        assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.01);
+    }
+
+    @Test
+    void resolvesFullYearSummationWithMonthApplicabilityFilter()
+    {
+        double targetAnnualRequests = 100_000.0;
+        tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter janFilter =
+            new tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter(Set.of(), Set.of(java.time.Month.JANUARY));
+
+        LLMStaticAsset asset = new LLMStaticAsset(
+            new AssetIdentity("llm-jan-asset", "env-test", "Jan Only Asset"),
+            new LLMStaticProfile(
+                LLMProvider.openai,
+                "gpt-4o",
+                Country.FRANCE,
+                List.of(
+                    new UserActivityScenario(100, targetAnnualRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0, janFilter)
+                )
+            )
+        );
+
+        Instant start = Instant.parse("2026-01-01T00:00:00Z");
+        Instant end = Instant.parse("2027-01-01T00:00:00Z");
+        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
+
+        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
+        assertTrue(result.isPresent());
+
+        List<tech.illuin.wombat.core.activity.commons.ActivityData> activities = result.get().activity();
+        long totalRequests = 0;
+        long nonJanuaryRequests = 0;
+
+        Instant feb1 = Instant.parse("2026-02-01T00:00:00Z");
+        for (var act : activities)
+        {
+            LLMActivityData llmAct = (LLMActivityData) act;
+            totalRequests += (long) llmAct.requestCount();
+            if (!act.range().start().isBefore(feb1))
+                nonJanuaryRequests += (long) llmAct.requestCount();
+        }
+
+        assertEquals(0, nonJanuaryRequests);
+        assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.005);
+    }
+
+    @Test
+    void resolvesFullYearSummationWithWeekdayApplicabilityFilter()
+    {
+        double targetAnnualRequests = 100_000.0;
+        tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter weekdayFilter =
+            new tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter(
+                Set.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY),
+                Set.of()
+            );
+
+        LLMStaticAsset asset = new LLMStaticAsset(
+            new AssetIdentity("llm-weekday-asset", "env-test", "Weekday Asset"),
+            new LLMStaticProfile(
+                LLMProvider.openai,
+                "gpt-4o",
+                Country.FRANCE,
+                List.of(
+                    new UserActivityScenario(100, targetAnnualRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0, weekdayFilter)
+                )
+            )
+        );
+
+        Instant start = Instant.parse("2026-01-01T00:00:00Z");
+        Instant end = Instant.parse("2027-01-01T00:00:00Z");
+        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
+
+        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
+        assertTrue(result.isPresent());
+
+        List<tech.illuin.wombat.core.activity.commons.ActivityData> activities = result.get().activity();
+        long totalRequests = 0;
+        long weekendRequests = 0;
+
+        for (var act : activities)
+        {
+            LLMActivityData llmAct = (LLMActivityData) act;
+            totalRequests += (long) llmAct.requestCount();
+            java.time.DayOfWeek dow = act.range().start().atZone(ZoneOffset.UTC).getDayOfWeek();
+            if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY)
+                weekendRequests += (long) llmAct.requestCount();
+        }
+
+        assertEquals(0, weekendRequests);
+        assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.005);
     }
 }

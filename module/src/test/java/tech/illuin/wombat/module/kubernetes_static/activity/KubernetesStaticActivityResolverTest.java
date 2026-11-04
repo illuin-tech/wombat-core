@@ -142,7 +142,7 @@ public class KubernetesStaticActivityResolverTest
     }
 
     @Test
-    void resolvesDailyResolutionWithThreeHourSampling()
+    void resolvesDailyResolutionWithHourlySampling()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
             new AssetIdentity("k8s-static-daily", "env-test", "Daily Static Cluster"),
@@ -173,9 +173,10 @@ public class KubernetesStaticActivityResolverTest
         assertEquals(ActivityRegime.MODELED, slot.regime());
         assertEquals(range, slot.range());
 
-        // 8 sub-slots evaluated at 01:30 (0.10), 04:30 (0.10), 07:30 (0.10), 10:30 (0.50), 13:30 (0.90), 16:30 (0.50), 19:30 (0.10), 22:30 (0.10)
-        // Average: (0.10*5 + 0.50*2 + 0.90) / 8 = 2.40 / 8 = 0.30
+        // 24 sub-slots evaluated at hourly resolution:
+        // 15 constant slots (0.10) + 9 sinusoidal user slots (0.10 -> 0.90)
+        // Mean load: (15 * 0.10 + 9 * 0.10 + 0.80 * (1 / sin(10 deg))) / 24 ≈ 0.291959
         assertInstanceOf(RelativeCPUUsage.class, slot.cpuUsage());
-        assertEquals(0.30, ((RelativeCPUUsage) slot.cpuUsage()).ratio(), 1e-9);
+        assertEquals(0.291959, ((RelativeCPUUsage) slot.cpuUsage()).ratio(), 1e-4);
     }
 }

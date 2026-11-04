@@ -70,8 +70,7 @@ public class ScenarioSerializationTest
             {
                 "type": "user_activity",
                 "outputTokenPerRequest": 250,
-                "baselineRequestPerYear": 1000.0,
-                "peakRequestPerYear": 8000.0,
+                "requestPerYear": 8000.0,
                 "openingTime": "09:00:00",
                 "closingTime": "18:00:00",
                 "curve": "sinusoidal",
@@ -84,8 +83,7 @@ public class ScenarioSerializationTest
 
         UserActivityScenario userActivity = (UserActivityScenario) scenario;
         assertEquals(250, userActivity.outputTokenPerRequest());
-        assertEquals(1000.0, userActivity.baselineRequestPerYear());
-        assertEquals(8000.0, userActivity.peakRequestPerYear());
+        assertEquals(8000.0, userActivity.requestPerYear());
         assertEquals(LocalTime.of(9, 0), userActivity.openingTime());
         assertEquals(LocalTime.of(18, 0), userActivity.closingTime());
         assertEquals(UserActivityScenario.CurveShape.SINUSOIDAL, userActivity.curve());
@@ -94,7 +92,7 @@ public class ScenarioSerializationTest
     }
 
     @Test
-    void deserializesUserActivityScenarioWithKebabCaseAliases() throws JsonProcessingException
+    void deserializesUserActivityScenarioWithLegacyAndKebabCaseAliases() throws JsonProcessingException
     {
         String json = """
             {
@@ -112,8 +110,7 @@ public class ScenarioSerializationTest
 
         UserActivityScenario userActivity = (UserActivityScenario) scenario;
         assertEquals(300, userActivity.outputTokenPerRequest());
-        assertEquals(500.0, userActivity.baselineRequestPerYear());
-        assertEquals(5000.0, userActivity.peakRequestPerYear());
+        assertEquals(5000.0, userActivity.requestPerYear());
         assertEquals(LocalTime.of(8, 30), userActivity.openingTime());
         assertEquals(LocalTime.of(17, 30), userActivity.closingTime());
         assertEquals(UserActivityScenario.DEFAULT_CURVE, userActivity.curve());
@@ -126,8 +123,7 @@ public class ScenarioSerializationTest
             {
                 "type": "batch_activity",
                 "outputTokenPerRequest": 1000,
-                "baselineRequestPerYear": 0.0,
-                "peakRequestPerYear": 20000.0,
+                "requestPerYear": 20000.0,
                 "triggerTime": "02:00:00",
                 "duration": "PT2H",
                 "jitter": 0.1,
@@ -140,8 +136,7 @@ public class ScenarioSerializationTest
 
         BatchActivityScenario batchActivity = (BatchActivityScenario) scenario;
         assertEquals(1000, batchActivity.outputTokenPerRequest());
-        assertEquals(0.0, batchActivity.baselineRequestPerYear());
-        assertEquals(20000.0, batchActivity.peakRequestPerYear());
+        assertEquals(20000.0, batchActivity.requestPerYear());
         assertEquals(LocalTime.of(2, 0), batchActivity.triggerTime());
         assertEquals(Duration.ofHours(2), batchActivity.duration());
         assertEquals(0.1, batchActivity.jitter());
@@ -150,7 +145,7 @@ public class ScenarioSerializationTest
     }
 
     @Test
-    void deserializesBatchActivityScenarioWithKebabCaseAliases() throws JsonProcessingException
+    void deserializesBatchActivityScenarioWithLegacyAndKebabCaseAliases() throws JsonProcessingException
     {
         String json = """
             {
@@ -168,8 +163,7 @@ public class ScenarioSerializationTest
 
         BatchActivityScenario batchActivity = (BatchActivityScenario) scenario;
         assertEquals(1200, batchActivity.outputTokenPerRequest());
-        assertEquals(0.0, batchActivity.baselineRequestPerYear());
-        assertEquals(15000.0, batchActivity.peakRequestPerYear());
+        assertEquals(15000.0, batchActivity.requestPerYear());
         assertEquals(LocalTime.of(1, 0), batchActivity.triggerTime());
         assertEquals(Duration.ofHours(3), batchActivity.duration());
         assertEquals(BatchActivityScenario.DEFAULT_SMOOTHING, batchActivity.smoothing());
@@ -189,7 +183,6 @@ public class ScenarioSerializationTest
 
         UserActivityScenario userActivity = new UserActivityScenario(
             150,
-            500.0,
             4000.0,
             LocalTime.of(8, 30),
             LocalTime.of(19, 0),
@@ -198,12 +191,12 @@ public class ScenarioSerializationTest
             null
         );
         String userJson = this.objectMapper.writeValueAsString(userActivity);
+        assertFalse(userJson.contains("peakRate"));
         Scenario deserializedUser = this.objectMapper.readValue(userJson, Scenario.class);
         assertEquals(userActivity, deserializedUser);
 
         BatchActivityScenario batchActivity = new BatchActivityScenario(
             800,
-            0.0,
             12000.0,
             LocalTime.of(23, 0),
             Duration.ofMinutes(90),
@@ -212,6 +205,7 @@ public class ScenarioSerializationTest
             null
         );
         String batchJson = this.objectMapper.writeValueAsString(batchActivity);
+        assertFalse(batchJson.contains("peakRate"));
         Scenario deserializedBatch = this.objectMapper.readValue(batchJson, Scenario.class);
         assertEquals(batchActivity, deserializedBatch);
     }
@@ -230,6 +224,7 @@ public class ScenarioSerializationTest
             }
             """;
         UserActivityScenario userActivity = (UserActivityScenario) this.objectMapper.readValue(userJson, Scenario.class);
+        assertEquals(1000.0, userActivity.requestPerYear());
         assertEquals(UserActivityScenario.DEFAULT_CURVE, userActivity.curve());
         assertEquals(ApplicabilityFilter.ALWAYS, userActivity.applicability());
 
@@ -244,6 +239,7 @@ public class ScenarioSerializationTest
             }
             """;
         BatchActivityScenario batchActivity = (BatchActivityScenario) this.objectMapper.readValue(batchJson, Scenario.class);
+        assertEquals(2000.0, batchActivity.requestPerYear());
         assertEquals(BatchActivityScenario.DEFAULT_SMOOTHING, batchActivity.smoothing());
         assertEquals(ApplicabilityFilter.ALWAYS, batchActivity.applicability());
 

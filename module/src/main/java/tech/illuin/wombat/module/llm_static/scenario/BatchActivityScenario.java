@@ -1,6 +1,7 @@
 package tech.illuin.wombat.module.llm_static.scenario;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -15,21 +16,20 @@ import java.time.ZonedDateTime;
 
 /**
  * Models scheduled batch workload activity with trigger time, duration, and optional smoothing,
- * with baseline and peak annual request counts modulated accordingly.
+ * with annual request volume distributed across active batch executions.
  *
  * @param outputTokenPerRequest mean output token count per request (>= 0)
- * @param baselineRequestPerYear annual request count outside batch window (>= 0.0)
- * @param peakRequestPerYear annual request count during batch execution (>= 0.0)
+ * @param requestPerYear total annual request volume (>= 0.0)
  * @param triggerTime daily start time of batch job
  * @param duration active execution duration
  * @param jitter deterministic variance factor (e.g. 0.05 for +-5%)
  * @param smoothing transition smoothing mode (none, linear ramp, smooth step)
  * @param applicability optional applicability filter
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record BatchActivityScenario(
     @PositiveOrZero @JsonProperty("outputTokenPerRequest") @JsonAlias({"output-token-per-request", "output-token-count"}) int outputTokenPerRequest,
-    @PositiveOrZero @JsonProperty("baselineRequestPerYear") @JsonAlias({"baseline-request-per-year", "baselineRequestsPerYear"}) double baselineRequestPerYear,
-    @PositiveOrZero @JsonProperty("peakRequestPerYear") @JsonAlias({"peak-request-per-year", "peakRequestsPerYear"}) double peakRequestPerYear,
+    @PositiveOrZero @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) double requestPerYear,
     @NotNull @JsonProperty("triggerTime") @JsonAlias("trigger-time") LocalTime triggerTime,
     @NotNull @JsonProperty("duration") Duration duration,
     @JsonProperty("jitter") double jitter,
@@ -45,9 +45,14 @@ public record BatchActivityScenario(
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
-    public BatchActivityScenario(int outputTokenPerRequest, double baselineRequestPerYear, double peakRequestPerYear, LocalTime triggerTime, Duration duration, double jitter, SmoothingMode smoothing)
+    public BatchActivityScenario(int outputTokenPerRequest, double requestPerYear, LocalTime triggerTime, Duration duration, double jitter, SmoothingMode smoothing)
     {
-        this(outputTokenPerRequest, baselineRequestPerYear, peakRequestPerYear, triggerTime, duration, jitter, smoothing, null);
+        this(outputTokenPerRequest, requestPerYear, triggerTime, duration, jitter, smoothing, ApplicabilityFilter.ALWAYS);
+    }
+
+    public BatchActivityScenario(int outputTokenPerRequest, double requestPerYear, LocalTime triggerTime, Duration duration)
+    {
+        this(outputTokenPerRequest, requestPerYear, triggerTime, duration, 0.0, DEFAULT_SMOOTHING, ApplicabilityFilter.ALWAYS);
     }
 
     @Override
@@ -59,19 +64,19 @@ public record BatchActivityScenario(
     @Override
     public double evaluateRequestPerYear(ZonedDateTime dateTime)
     {
-        if (dateTime == null)
+        if (dateTime == null || !this.isApplicable(dateTime))
             return 0.0;
 
         ZoneId zone = dateTime.getZone() != null ? dateTime.getZone() : ZoneOffset.UTC;
         ZonedDateTime activeTrigger = this.resolveActiveTrigger(dateTime, zone);
 
         if (activeTrigger == null)
-            return this.baselineRequestPerYear;
+            return 0.0;
 
         double progress = this.computeProgress(activeTrigger, dateTime);
         double factor = this.smoothing.calculateFactor(progress);
 
-        double rawRequest = this.baselineRequestPerYear + (this.peakRequestPerYear - this.baselineRequestPerYear) * factor;
+        double rawRequest = this.calculatePeakRate() * factor;
         return DeterministicJitter.apply(rawRequest, this.jitter, dateTime);
     }
 
@@ -81,8 +86,32 @@ public record BatchActivityScenario(
         return this.outputTokenPerRequest;
     }
 
+    private double calculatePeakRate()
+    {
+        if (this.requestPerYear <= 0.0 || this.duration == null || this.duration.isZero() || this.duration.isNegative())
+            return 0.0;
+
+        double fDays = this.applicability.annualActiveFraction();
+        if (fDays <= 0.0)
+            return 0.0;
+
+        double fBatch = (double) this.duration.toNanos() / (double) Duration.ofDays(1).toNanos();
+        if (fBatch <= 0.0)
+            return 0.0;
+
+        double iSmoothing = this.smoothing.integralFactor();
+        if (iSmoothing <= 0.0)
+            return 0.0;
+
+        double fActive = fDays * fBatch * iSmoothing;
+        return fActive > 0.0 ? this.requestPerYear / fActive : 0.0;
+    }
+
     private ZonedDateTime resolveActiveTrigger(ZonedDateTime localDateTime, ZoneId zone)
     {
+        if (this.duration == null || this.duration.isZero() || this.duration.isNegative())
+            return null;
+
         ZonedDateTime todayTrigger = localDateTime.toLocalDate().atTime(this.triggerTime).atZone(zone);
         if (!localDateTime.isBefore(todayTrigger) && !localDateTime.isAfter(todayTrigger.plus(this.duration)))
             return todayTrigger;
@@ -97,7 +126,7 @@ public record BatchActivityScenario(
     private double computeProgress(ZonedDateTime trigger, ZonedDateTime current)
     {
         Duration total = this.duration;
-        if (total.isZero() || total.isNegative())
+        if (total == null || total.isZero() || total.isNegative())
             return 1.0;
 
         Duration elapsed = Duration.between(trigger, current);
@@ -141,6 +170,16 @@ public record BatchActivityScenario(
                     double x = (1.0 - progress) / ramp;
                     yield x * x * (3.0 - 2.0 * x);
                 }
+            };
+        }
+
+        public double integralFactor()
+        {
+            return switch (this)
+            {
+                case NONE -> 1.0;
+                case LINEAR_RAMP -> 0.9;
+                case SMOOTH_STEP -> 0.9;
             };
         }
     }

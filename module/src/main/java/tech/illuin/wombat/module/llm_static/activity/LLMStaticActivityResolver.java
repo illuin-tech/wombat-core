@@ -58,8 +58,7 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
         List<ActivityData> activities = new ArrayList<>();
         for (TimeRange slot : range.split())
         {
-            Duration slotDuration = slot.resolution();
-            Duration step = resolveSamplingStep(slotDuration);
+            Duration step = resolveSamplingStep(slot.resolution());
             List<TimeRange> subSlots = slot.split(step);
             ZoneId zone = profile.zoneId();
 
@@ -86,7 +85,7 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
                 double meanRequestPerYear = subSlots.isEmpty() ? 0.0 : totalRequestPerYear / subSlots.size();
                 double meanOutputTokenPerRequest = subSlots.isEmpty() ? 0.0 : totalOutputTokenPerRequest / subSlots.size();
 
-                int requestCount = requestCountOver(meanRequestPerYear, slotDuration);
+                int requestCount = requestCountOver(meanRequestPerYear, slot.resolution());
                 long outputTokenCount = (long) (meanOutputTokenPerRequest * requestCount);
 
                 serviceActivities.put(serviceId, new LLMServiceActivity(
@@ -110,17 +109,15 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
         return Optional.of(new AssetActivity(asset.identity(), activities));
     }
 
-    private static Duration resolveSamplingStep(Duration slotDuration)
+    private static Duration resolveSamplingStep(Duration slotResolution)
     {
-        if (slotDuration.compareTo(Duration.ofDays(1)) >= 0)
-            return Duration.ofHours(3);
-        if (slotDuration.compareTo(Duration.ofHours(1)) >= 0)
+        if (slotResolution.compareTo(Duration.ofHours(1)) >= 0)
             return Duration.ofHours(1);
-        return slotDuration;
+        return slotResolution;
     }
 
     private static int requestCountOver(double requestsPerYear, Duration duration)
     {
-        return (int) (requestsPerYear * ((double) duration.toSeconds() / ONE_YEAR.toSeconds()));
+        return (int) Math.round(requestsPerYear * ((double) duration.toSeconds() / ONE_YEAR.toSeconds()));
     }
 }
