@@ -16,7 +16,7 @@ import java.time.ZonedDateTime;
  */
 public record ConstantScenario(
     @PositiveOrZero @JsonProperty("outputTokenPerRequest") @JsonAlias({"output-token-per-request", "output-token-count"}) int outputTokenPerRequest,
-    @PositiveOrZero @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear"}) double requestPerYear,
+    @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear"}) @PositiveOrZero int requestPerYear,
     @JsonProperty("applicability") ApplicabilityFilter applicability
 ) implements Scenario
 {
@@ -25,7 +25,7 @@ public record ConstantScenario(
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
-    public ConstantScenario(int outputTokenPerRequest, double requestPerYear)
+    public ConstantScenario(int outputTokenPerRequest, int requestPerYear)
     {
         this(outputTokenPerRequest, requestPerYear, null);
     }
@@ -43,7 +43,7 @@ public record ConstantScenario(
     }
 
     @Override
-    public int outputTokenPerRequest()
+    public @PositiveOrZero int outputTokenPerRequest()
     {
         return this.outputTokenPerRequest;
     }

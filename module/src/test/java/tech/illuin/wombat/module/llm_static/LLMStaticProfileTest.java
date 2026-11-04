@@ -170,11 +170,10 @@ class LLMStaticProfileTest
     @Test
     void serializesToJsonAndBack() throws JsonProcessingException
     {
-        ConstantScenario constant = new ConstantScenario(200, 10000.0, null);
+        ConstantScenario constant = new ConstantScenario(200, 10000, null);
         UserActivityScenario userActivity = new UserActivityScenario(
             250,
-            100.0,
-            5000.0,
+            5000,
             LocalTime.of(8, 0),
             LocalTime.of(18, 0),
             UserActivityScenario.CurveShape.BELL,
@@ -183,8 +182,7 @@ class LLMStaticProfileTest
         );
         BatchActivityScenario batch = new BatchActivityScenario(
             800,
-            0.0,
-            12000.0,
+            12000,
             LocalTime.of(1, 0),
             Duration.ofHours(3),
             0.0,

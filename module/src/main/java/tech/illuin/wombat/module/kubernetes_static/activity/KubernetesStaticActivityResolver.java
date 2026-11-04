@@ -92,8 +92,6 @@ public class KubernetesStaticActivityResolver implements WombatActivityResolver
 
     private static Duration resolveSamplingStep(Duration slotDuration)
     {
-        if (slotDuration.compareTo(Duration.ofDays(1)) >= 0)
-            return Duration.ofHours(3);
         if (slotDuration.compareTo(Duration.ofHours(1)) >= 0)
             return Duration.ofHours(1);
         return slotDuration;

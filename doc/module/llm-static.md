@@ -16,6 +16,8 @@ Use this module when:
 - You need deterministic modeling based on expected annual query volumes, diurnal usage cycles, and batch report generation.
 - You operate a multi-model architecture combining lightweight routing models with heavy frontier reasoning models.
 
+Workload activity is resolved by distributing projected annual request volumes across superposed temporal scenarios (constant rates, daytime user activity curves, and scheduled batch jobs) evaluated at hourly or sub-hourly precision over the requested time range.
+
 ## Configuration Specification
 
 The module registers the asset type `tech.illuin.wombat-module.llm-static` (`LLMStaticAsset`) with a static profile configuration (`LLMStaticProfile`).
@@ -36,15 +38,14 @@ profile: # required - Multi-model profile configuration.
         # Constant scenario
         - type: constant
           output-token-per-request: 250 # required - Mean output tokens per request.
-          request-per-year: 500000.0 # required - Projected annual request count.
+          request-per-year: 500000 # required - Projected annual request count.
           applicability: # optional - Temporal applicability filter.
             days-of-week: [MONDAY, TUESDAY] # optional - Active days of week.
             months: [JANUARY] # optional - Active calendar months.
         # User Activity scenario
         - type: user_activity
           output-token-per-request: 350 # required - Mean output tokens per request.
-          baseline-request-per-year: 50000.0 # required - Annualized request rate during off-hours.
-          peak-request-per-year: 1200000.0 # required - Annualized request rate during peak hours.
+          request-per-year: 1200000 # required - Projected annual request volume distributed across active opening hours.
           opening-time: "08:30:00" # required - Opening time of the daily activity window (in `HH:mm:ss` format).
           closing-time: "18:30:00" # required - Closing time of the daily activity window (in `HH:mm:ss` format).
           curve: "bell" # optional (default: bell) - Mathematical shape: `bell`, `sinusoidal`, `trapezoidal`.
@@ -54,8 +55,7 @@ profile: # required - Multi-model profile configuration.
         # Batch Activity scenario
         - type: batch_activity
           output-token-per-request: 1200 # required - Mean output tokens per batch request.
-          baseline-request-per-year: 0.0 # required - Annualized request rate outside batch window.
-          peak-request-per-year: 800000.0 # required - Annualized request rate during active batch processing.
+          request-per-year: 800000 # required - Projected annual request volume distributed across scheduled batch runs.
           trigger-time: "01:00:00" # required - Daily start time of the batch job (in `HH:mm:ss` format).
           duration: "PT3H" # required - Duration of the batch window (ISO-8601).
           smoothing: "smooth_step" # optional (default: none) - Smoothing mode: `none`, `linear_ramp`, `smooth_step`.
@@ -81,7 +81,7 @@ profile:
       scenarios:
         - type: "constant"
           output-token-per-request: 350
-          request-per-year: 500000.0
+          request-per-year: 500000
 ```
 
 ## Advanced Setup
@@ -107,8 +107,7 @@ profile:
       scenarios:
         - type: user_activity
           output-token-per-request: 80
-          baseline-request-per-year: 100000.0
-          peak-request-per-year: 3000000.0
+          request-per-year: 3000000
           opening-time: "08:00:00"
           closing-time: "19:00:00"
           curve: bell
@@ -122,8 +121,7 @@ profile:
       scenarios:
         - type: user_activity
           output-token-per-request: 450
-          baseline-request-per-year: 20000.0
-          peak-request-per-year: 1200000.0
+          request-per-year: 1200000
           opening-time: "09:00:00"
           closing-time: "18:00:00"
           curve: trapezoidal
@@ -137,8 +135,7 @@ profile:
       scenarios:
         - type: batch_activity
           output-token-per-request: 1500
-          baseline-request-per-year: 0.0
-          peak-request-per-year: 600000.0
+          request-per-year: 600000
           trigger-time: "01:00:00"
           duration: "PT3H"
           smoothing: smooth_step

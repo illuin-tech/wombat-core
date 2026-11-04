@@ -16,7 +16,7 @@ Use this module when:
 - You need deterministic activity modeling based on anticipated diurnal traffic, business hours, and scheduled batch jobs.
 - You want to evaluate hypothetical cluster migrations (e.g., resizing instance types, changing node counts, or switching regions/providers).
 
-Workload activity is resolved by evaluating superposed temporal scenarios (constant loads, daytime user traffic curves, and scheduled batch jobs) over any requested evaluation time range.
+Workload activity is resolved by evaluating superposed temporal scenarios (constant loads, daytime user traffic curves, and scheduled batch jobs) at hourly or sub-hourly precision over any requested evaluation time range.
 
 ## Configuration Specification
 
