@@ -24,7 +24,7 @@ public class ScenarioSerializationTest
             {
                 "type": "constant",
                 "outputTokenPerRequest": 200,
-                "requestPerYear": 50000.0,
+                "requestPerYear": 50000,
                 "applicability": {
                     "daysOfWeek": ["MONDAY", "TUESDAY"],
                     "months": ["JANUARY", "FEBRUARY"]
@@ -50,7 +50,7 @@ public class ScenarioSerializationTest
             {
                 "type": "constant",
                 "output-token-per-request": 150,
-                "request-per-year": 12000.0
+                "request-per-year": 12000
             }
             """;
 
@@ -70,7 +70,7 @@ public class ScenarioSerializationTest
             {
                 "type": "user_activity",
                 "outputTokenPerRequest": 250,
-                "requestPerYear": 8000.0,
+                "requestPerYear": 8000,
                 "openingTime": "09:00:00",
                 "closingTime": "18:00:00",
                 "curve": "sinusoidal",
@@ -123,7 +123,7 @@ public class ScenarioSerializationTest
             {
                 "type": "batch_activity",
                 "outputTokenPerRequest": 1000,
-                "requestPerYear": 20000.0,
+                "requestPerYear": 20000,
                 "triggerTime": "02:00:00",
                 "duration": "PT2H",
                 "jitter": 0.1,
@@ -174,7 +174,7 @@ public class ScenarioSerializationTest
     {
         ConstantScenario constant = new ConstantScenario(
             200,
-            10000.0,
+            10000,
             new ApplicabilityFilter(Set.of(DayOfWeek.WEDNESDAY), null)
         );
         String constantJson = this.objectMapper.writeValueAsString(constant);
@@ -183,7 +183,7 @@ public class ScenarioSerializationTest
 
         UserActivityScenario userActivity = new UserActivityScenario(
             150,
-            4000.0,
+            4000,
             LocalTime.of(8, 30),
             LocalTime.of(19, 0),
             UserActivityScenario.CurveShape.TRAPEZOIDAL,
@@ -196,7 +196,7 @@ public class ScenarioSerializationTest
 
         BatchActivityScenario batchActivity = new BatchActivityScenario(
             800,
-            12000.0,
+            12000,
             LocalTime.of(23, 0),
             Duration.ofMinutes(90),
             0.0,
@@ -245,7 +245,7 @@ public class ScenarioSerializationTest
             {
                 "type": "constant",
                 "outputTokenPerRequest": 250,
-                "requestPerYear": 1000.0
+                "requestPerYear": 1000
             }
             """;
         ConstantScenario constant = (ConstantScenario) this.objectMapper.readValue(constantJson, Scenario.class);

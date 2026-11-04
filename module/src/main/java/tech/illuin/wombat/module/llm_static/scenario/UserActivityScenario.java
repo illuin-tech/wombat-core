@@ -27,7 +27,7 @@ import java.time.ZonedDateTime;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record UserActivityScenario(
     @PositiveOrZero @JsonProperty("outputTokenPerRequest") @JsonAlias({"output-token-per-request", "output-token-count"}) int outputTokenPerRequest,
-    @PositiveOrZero @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) double requestPerYear,
+    @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) @PositiveOrZero int requestPerYear,
     @NotNull @JsonProperty("openingTime") @JsonAlias("opening-time") LocalTime openingTime,
     @NotNull @JsonProperty("closingTime") @JsonAlias("closing-time") LocalTime closingTime,
     @JsonProperty("curve") CurveShape curve,
@@ -45,7 +45,7 @@ public record UserActivityScenario(
 
     public UserActivityScenario(
         int outputTokenPerRequest,
-        double requestPerYear,
+        int requestPerYear,
         LocalTime openingTime,
         LocalTime closingTime,
         CurveShape curve,
@@ -76,7 +76,7 @@ public record UserActivityScenario(
     }
 
     @Override
-    public int outputTokenPerRequest()
+    public @PositiveOrZero int outputTokenPerRequest()
     {
         return this.outputTokenPerRequest;
     }

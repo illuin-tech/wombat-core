@@ -22,14 +22,14 @@ class UserActivityScenarioTest
         // requestPerYear = 100_000 -> peakRate = 100_000 / 0.1875 = 533_333.3333333334
         UserActivityScenario scenario = new UserActivityScenario(
             200,
-            100_000.0,
+            100_000,
             LocalTime.of(9, 0),
             LocalTime.of(18, 0),
             UserActivityScenario.CurveShape.BELL,
             0.0
         );
 
-        double expectedPeakRate = 100_000.0 / 0.1875;
+        double expectedPeakRate = 100_000 / 0.1875;
 
         // Outside window -> 0.0
         ZonedDateTime night = ZonedDateTime.of(2026, 11, 4, 3, 0, 0, 0, ZoneOffset.UTC);
@@ -47,7 +47,7 @@ class UserActivityScenarioTest
         ApplicabilityFilter filter = new ApplicabilityFilter(Set.of(), Set.of(Month.JANUARY));
         UserActivityScenario scenario = new UserActivityScenario(
             200,
-            100_000.0,
+            100_000,
             LocalTime.of(9, 0),
             LocalTime.of(18, 0),
             UserActivityScenario.CurveShape.BELL,
@@ -71,7 +71,7 @@ class UserActivityScenarioTest
     {
         UserActivityScenario scenario = new UserActivityScenario(
             100,
-            10_000.0,
+            10_000,
             LocalTime.of(9, 0),
             LocalTime.of(18, 0),
             null,
@@ -89,7 +89,7 @@ class UserActivityScenarioTest
         // Equal opening and closing time -> evaluates to 0
         UserActivityScenario zeroWindow = new UserActivityScenario(
             100,
-            50_000.0,
+            50_000,
             LocalTime.of(9, 0),
             LocalTime.of(9, 0),
             UserActivityScenario.CurveShape.BELL,
@@ -100,7 +100,7 @@ class UserActivityScenarioTest
         // Zero request per year -> evaluates to 0
         UserActivityScenario zeroRequests = new UserActivityScenario(
             100,
-            0.0,
+            0,
             LocalTime.of(9, 0),
             LocalTime.of(18, 0),
             UserActivityScenario.CurveShape.BELL,

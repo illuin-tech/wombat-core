@@ -23,7 +23,7 @@ class BatchActivityScenarioTest
         // requestPerYear = 60_000 -> peakRate = 60_000 * 12 = 720_000
         BatchActivityScenario scenario = new BatchActivityScenario(
             500,
-            60_000.0,
+            60_000,
             LocalTime.of(2, 0),
             Duration.ofHours(2),
             0.0,
@@ -47,7 +47,7 @@ class BatchActivityScenarioTest
         // requestPerYear = 75_000 -> peakRate = 75_000 / 0.375 = 200_000
         BatchActivityScenario scenario = new BatchActivityScenario(
             300,
-            75_000.0,
+            75_000,
             LocalTime.of(2, 0),
             Duration.ofHours(10),
             0.0,
@@ -66,7 +66,7 @@ class BatchActivityScenarioTest
         ApplicabilityFilter filter = new ApplicabilityFilter(Set.of(), Set.of(Month.JANUARY));
         BatchActivityScenario scenario = new BatchActivityScenario(
             400,
-            31_000.0,
+            31_000,
             LocalTime.of(2, 0),
             Duration.ofHours(2),
             0.0,
@@ -90,7 +90,7 @@ class BatchActivityScenarioTest
     {
         BatchActivityScenario scenario = new BatchActivityScenario(
             100,
-            5000.0,
+            5000,
             LocalTime.of(2, 0),
             Duration.ofHours(1),
             0.0,
@@ -107,7 +107,7 @@ class BatchActivityScenarioTest
     {
         BatchActivityScenario zeroDuration = new BatchActivityScenario(
             100,
-            50_000.0,
+            50_000,
             LocalTime.of(2, 0),
             Duration.ZERO
         );

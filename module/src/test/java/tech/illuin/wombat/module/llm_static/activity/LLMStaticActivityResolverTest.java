@@ -15,6 +15,7 @@ import tech.illuin.wombat.module.llm_static.LLMStaticProfile;
 import tech.illuin.wombat.module.llm_static.scenario.BatchActivityScenario;
 import tech.illuin.wombat.module.llm_static.scenario.ConstantScenario;
 import tech.illuin.wombat.module.llm_static.scenario.UserActivityScenario;
+import tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -24,11 +25,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static java.time.DayOfWeek.*;
+import static java.time.DayOfWeek.FRIDAY;
+import static java.time.DayOfWeek.THURSDAY;
+import static java.time.Month.JANUARY;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LLMStaticActivityResolverTest
 {
-    private static final Duration ONE_YEAR = Duration.ofDays(365);
     private final LLMStaticActivityResolver resolver = new LLMStaticActivityResolver();
 
     @Test
@@ -38,13 +42,13 @@ class LLMStaticActivityResolverTest
             LLMProvider.mistralai,
             "mistral-large-latest",
             Country.FRANCE,
-            List.of(new ConstantScenario(500, 31_536_000.0, null)) // 1 req/sec -> 31536000 req/year
+            List.of(new ConstantScenario(500, 31_536_000, null)) // 1 req/sec -> 31536000 req/year
         );
         LLMStaticProfile.ModelConfig m2 = new LLMStaticProfile.ModelConfig(
             LLMProvider.openai,
             "gpt-4o",
             Country.US,
-            List.of(new ConstantScenario(1000, 63_072_000.0, null)) // 2 req/sec
+            List.of(new ConstantScenario(1000, 63_072_000, null)) // 2 req/sec
         );
 
         LLMStaticProfile profile = new LLMStaticProfile(List.of(m1, m2));
@@ -77,7 +81,7 @@ class LLMStaticActivityResolverTest
         assertEquals(200_000L, a2.outputTokenCount()); // 1000 * 200
 
         assertEquals(250_000L, llmActivity.outputTokenCount());
-        assertEquals(300.0, llmActivity.requestCount());
+        assertEquals(300, llmActivity.requestCount());
     }
 
     @Test
@@ -89,7 +93,7 @@ class LLMStaticActivityResolverTest
                 LLMProvider.openai,
                 "gpt-4o",
                 Country.FRANCE,
-                List.of(new ConstantScenario(200, 31_536_000.0, null)) // ~1 req/sec -> 3600 req/hour
+                List.of(new ConstantScenario(200, 31_536_000, null)) // ~1 req/sec -> 3600 req/hour
             )
         );
 
@@ -109,7 +113,7 @@ class LLMStaticActivityResolverTest
             assertInstanceOf(LLMActivityData.class, actData);
             LLMActivityData llmData = (LLMActivityData) actData;
             assertEquals(ActivityRegime.MODELED, llmData.regime());
-            assertEquals(3600.0, llmData.requestCount());
+            assertEquals(3600, llmData.requestCount());
             assertEquals(720_000L, llmData.outputTokenCount()); // 200 * 3600
         }
     }
@@ -118,11 +122,11 @@ class LLMStaticActivityResolverTest
     void resolvesSuperposedScenariosAcrossTimeSlots()
     {
         // 1 req/sec = 31536000 req/year -> 3600 req/hour
-        // Baseline: 3153600.0 req/year -> 360 req/hour
-        // User Activity: peak 31536000.0 req/year -> 3600 req/hour (09:00 - 18:00, sinusoidal)
-        // Batch Activity: peak 63072000.0 req/year -> 7200 req/hour (02:00 - 04:00, duration 2h)
-        double userTotalRequests = 31_536_000.0 * (9.0 / 24.0) * (2.0 / Math.PI);
-        double batchTotalRequests = 63_072_000.0 * (2.0 / 24.0) * 1.0;
+        // Baseline: 3153600 req/year -> 360 req/hour
+        // User Activity: peak 31536000 req/year -> 3600 req/hour (09:00 - 18:00, sinusoidal)
+        // Batch Activity: peak 63072000 req/year -> 7200 req/hour (02:00 - 04:00, duration 2h)
+        int userTotalRequests = (int) (31_536_000 * (9.0 / 24.0) * (2.0 / Math.PI));
+        int batchTotalRequests = (int) (63_072_000 * (2.0 / 24.0) * 1.0);
 
         LLMStaticAsset asset = new LLMStaticAsset(
             new AssetIdentity("llm-static-2", "env-test", "Static LLM 2"),
@@ -131,7 +135,7 @@ class LLMStaticActivityResolverTest
                 "gpt-4o",
                 Country.FRANCE,
                 List.of(
-                    new ConstantScenario(100, 3_153_600.0, null),
+                    new ConstantScenario(100, 3_153_600, null),
                     new UserActivityScenario(200, userTotalRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.SINUSOIDAL, 0.0, null),
                     new BatchActivityScenario(500, batchTotalRequests, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.NONE, null)
                 )
@@ -174,13 +178,13 @@ class LLMStaticActivityResolverTest
             LLMProvider.mistralai,
             "mistral-large-latest",
             Country.FRANCE,
-            List.of(new ConstantScenario(500, 31_536_000.0, null))
+            List.of(new ConstantScenario(500, 31_536_000, null))
         );
         LLMStaticProfile.ModelConfig m2 = new LLMStaticProfile.ModelConfig(
             LLMProvider.openai,
             "gpt-4o",
             Country.US,
-            List.of(new ConstantScenario(1000, 63_072_000.0, null))
+            List.of(new ConstantScenario(1000, 63_072_000, null))
         );
 
         LLMStaticProfile profile = new LLMStaticProfile(List.of(m1, m2));
@@ -203,7 +207,7 @@ class LLMStaticActivityResolverTest
     @Test
     void resolvesDailyResolutionWithHourlySampling()
     {
-        double userTotalRequests = 31_536_000.0 * (9.0 / 24.0) * (2.0 / Math.PI);
+        int userTotalRequests = (int) (31_536_000 * (9.0 / 24.0) * (2.0 / Math.PI));
 
         LLMStaticAsset asset = new LLMStaticAsset(
             new AssetIdentity("llm-static-daily", "env-test", "Daily Static LLM"),
@@ -212,7 +216,7 @@ class LLMStaticActivityResolverTest
                 "gpt-4o",
                 Country.FRANCE,
                 List.of(
-                    new ConstantScenario(100, 3_153_600.0, null),
+                    new ConstantScenario(100, 3_153_600, null),
                     new UserActivityScenario(
                         200,
                         userTotalRequests,
@@ -244,12 +248,12 @@ class LLMStaticActivityResolverTest
         // Daily requestCount = 26,132
         // Mean tokens/req = (100*15 + 200*9) / 24 = 137.5 tokens/req
         // Daily outputTokenCount = (long)(137.5 * 26,132) = 3,593,150
-        assertEquals(26_132.0, slot.requestCount());
+        assertEquals(26_132, slot.requestCount());
         assertEquals(3_593_150L, slot.outputTokenCount());
 
         LLMServiceActivity gpt4o = slot.services().get("gpt-4o");
         assertNotNull(gpt4o);
-        assertEquals(26_132.0, gpt4o.requestCount());
+        assertEquals(26_132, gpt4o.requestCount());
         assertEquals(3_593_150L, gpt4o.outputTokenCount());
     }
 
@@ -263,7 +267,7 @@ class LLMStaticActivityResolverTest
                 "gpt-4o",
                 Country.FRANCE,
                 List.of(
-                    new BatchActivityScenario(1000, 100_000.0, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.NONE)
+                    new BatchActivityScenario(1000, 100_000, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.NONE)
                 )
             )
         );
@@ -280,14 +284,14 @@ class LLMStaticActivityResolverTest
 
         LLMActivityData slot = (LLMActivityData) activity.activity().getFirst();
         assertEquals(ActivityRegime.MODELED, slot.regime());
-        assertEquals(1918.0, slot.requestCount());
+        assertEquals(1918, slot.requestCount());
         assertEquals(1_918_000L, slot.outputTokenCount());
     }
 
     @Test
     void resolvesFullYearSummationForUserActivityScenario()
     {
-        double targetAnnualRequests = 100_000.0;
+        int targetAnnualRequests = 100_000;
         LLMStaticAsset asset = new LLMStaticAsset(
             new AssetIdentity("llm-user-year", "env-test", "User Year Asset"),
             new LLMStaticProfile(
@@ -318,7 +322,7 @@ class LLMStaticActivityResolverTest
     @Test
     void resolvesFullYearSummationForBatchActivityScenario()
     {
-        double targetAnnualRequests = 50_000.0;
+        int targetAnnualRequests = 50_000;
         LLMStaticAsset asset = new LLMStaticAsset(
             new AssetIdentity("llm-batch-year", "env-test", "Batch Year Asset"),
             new LLMStaticProfile(
@@ -348,9 +352,8 @@ class LLMStaticActivityResolverTest
     @Test
     void resolvesFullYearSummationWithMonthApplicabilityFilter()
     {
-        double targetAnnualRequests = 100_000.0;
-        tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter janFilter =
-            new tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter(Set.of(), Set.of(java.time.Month.JANUARY));
+        int targetAnnualRequests = 100_000;
+        ApplicabilityFilter janFilter = new ApplicabilityFilter(Set.of(), Set.of(JANUARY));
 
         LLMStaticAsset asset = new LLMStaticAsset(
             new AssetIdentity("llm-jan-asset", "env-test", "Jan Only Asset"),
@@ -391,12 +394,11 @@ class LLMStaticActivityResolverTest
     @Test
     void resolvesFullYearSummationWithWeekdayApplicabilityFilter()
     {
-        double targetAnnualRequests = 100_000.0;
-        tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter weekdayFilter =
-            new tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter(
-                Set.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY),
-                Set.of()
-            );
+        int targetAnnualRequests = 100_000;
+        ApplicabilityFilter weekdayFilter = new ApplicabilityFilter(
+            Set.of(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY),
+            Set.of()
+        );
 
         LLMStaticAsset asset = new LLMStaticAsset(
             new AssetIdentity("llm-weekday-asset", "env-test", "Weekday Asset"),

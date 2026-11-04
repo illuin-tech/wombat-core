@@ -29,7 +29,7 @@ import java.time.ZonedDateTime;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record BatchActivityScenario(
     @PositiveOrZero @JsonProperty("outputTokenPerRequest") @JsonAlias({"output-token-per-request", "output-token-count"}) int outputTokenPerRequest,
-    @PositiveOrZero @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) double requestPerYear,
+    @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) @PositiveOrZero int requestPerYear,
     @NotNull @JsonProperty("triggerTime") @JsonAlias("trigger-time") LocalTime triggerTime,
     @NotNull @JsonProperty("duration") Duration duration,
     @JsonProperty("jitter") double jitter,
@@ -45,12 +45,12 @@ public record BatchActivityScenario(
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
-    public BatchActivityScenario(int outputTokenPerRequest, double requestPerYear, LocalTime triggerTime, Duration duration, double jitter, SmoothingMode smoothing)
+    public BatchActivityScenario(int outputTokenPerRequest, int requestPerYear, LocalTime triggerTime, Duration duration, double jitter, SmoothingMode smoothing)
     {
         this(outputTokenPerRequest, requestPerYear, triggerTime, duration, jitter, smoothing, ApplicabilityFilter.ALWAYS);
     }
 
-    public BatchActivityScenario(int outputTokenPerRequest, double requestPerYear, LocalTime triggerTime, Duration duration)
+    public BatchActivityScenario(int outputTokenPerRequest, int requestPerYear, LocalTime triggerTime, Duration duration)
     {
         this(outputTokenPerRequest, requestPerYear, triggerTime, duration, 0.0, DEFAULT_SMOOTHING, ApplicabilityFilter.ALWAYS);
     }
@@ -81,7 +81,7 @@ public record BatchActivityScenario(
     }
 
     @Override
-    public int outputTokenPerRequest()
+    public @PositiveOrZero int outputTokenPerRequest()
     {
         return this.outputTokenPerRequest;
     }

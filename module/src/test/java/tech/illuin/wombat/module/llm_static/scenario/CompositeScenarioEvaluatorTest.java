@@ -30,13 +30,13 @@ public class CompositeScenarioEvaluatorTest
         ZonedDateTime dt = ZonedDateTime.of(2026, 11, 1, 12, 0, 0, 0, UTC);
         assertEquals(ScenarioResult.EMPTY, this.evaluator.evaluate(dt, null));
         assertEquals(ScenarioResult.EMPTY, this.evaluator.evaluate(dt, Collections.emptyList()));
-        assertEquals(ScenarioResult.EMPTY, this.evaluator.evaluate(null, List.of(new ConstantScenario(100, 5000.0, null))));
+        assertEquals(ScenarioResult.EMPTY, this.evaluator.evaluate(null, List.of(new ConstantScenario(100, 5000, null))));
     }
 
     @Test
     void constantScenarioEvaluatesLoadCorrectly()
     {
-        ConstantScenario scenario = new ConstantScenario(250, 10_000.0, null);
+        ConstantScenario scenario = new ConstantScenario(250, 10_000, null);
         ZonedDateTime dt = ZonedDateTime.of(2026, 11, 1, 14, 0, 0, 0, UTC);
         assertEquals(10000.0, scenario.evaluateRequestPerYear(dt));
         assertEquals(250, scenario.outputTokenPerRequest());
@@ -53,13 +53,13 @@ public class CompositeScenarioEvaluatorTest
             Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
             Set.of(Month.NOVEMBER)
         );
-        ConstantScenario scenario = new ConstantScenario(150, 20_000.0, filter);
+        ConstantScenario scenario = new ConstantScenario(150, 20_000, filter);
 
         // 2026-11-04 is a Wednesday -> Applicable
         ZonedDateTime wednesday = ZonedDateTime.of(2026, 11, 4, 10, 0, 0, 0, UTC);
         assertTrue(scenario.isApplicable(wednesday));
         ScenarioResult resultWed = this.evaluator.evaluate(wednesday, List.of(scenario));
-        assertEquals(20000.0, resultWed.requestPerYear());
+        assertEquals(20000, resultWed.requestPerYear());
         assertEquals(150, resultWed.outputTokenPerRequest());
 
         // 2026-11-05 is a Thursday -> Not applicable
@@ -78,7 +78,7 @@ public class CompositeScenarioEvaluatorTest
     {
         UserActivityScenario scenario = new UserActivityScenario(
             200,
-            10000.0,
+            10000,
             LocalTime.of(9, 0),
             LocalTime.of(18, 0),
             UserActivityScenario.CurveShape.SINUSOIDAL,
@@ -88,20 +88,20 @@ public class CompositeScenarioEvaluatorTest
 
         // Midnight -> 0.0
         ZonedDateTime night = ZonedDateTime.of(2026, 11, 1, 3, 0, 0, 0, UTC);
-        assertEquals(0.0, scenario.evaluateRequestPerYear(night));
+        assertEquals(0, scenario.evaluateRequestPerYear(night));
 
         // Midday (13:30 is exact midpoint of 9:00 - 18:00) -> Peak
-        double peakRate = 10000.0 / ((9.0 / 24.0) * (2.0 / Math.PI));
+        double peakRate = 10000 / ((9.0 / 24.0) * (2.0 / Math.PI));
         ZonedDateTime midday = ZonedDateTime.of(2026, 11, 1, 13, 30, 0, 0, UTC);
         assertEquals(peakRate, scenario.evaluateRequestPerYear(midday), 1e-4);
 
-        // Opening time (9:00) -> 0.0
+        // Opening time (9:00) -> 0
         ZonedDateTime opening = ZonedDateTime.of(2026, 11, 1, 9, 0, 0, 0, UTC);
-        assertEquals(0.0, scenario.evaluateRequestPerYear(opening), 1e-4);
+        assertEquals(0, scenario.evaluateRequestPerYear(opening), 1e-4);
 
-        // Closing time (18:00) -> 0.0
+        // Closing time (18:00) -> 0
         ZonedDateTime closing = ZonedDateTime.of(2026, 11, 1, 18, 0, 0, 0, UTC);
-        assertEquals(0.0, scenario.evaluateRequestPerYear(closing), 1e-4);
+        assertEquals(0, scenario.evaluateRequestPerYear(closing), 1e-4);
     }
 
     @Test
@@ -109,7 +109,7 @@ public class CompositeScenarioEvaluatorTest
     {
         UserActivityScenario trapezoid = new UserActivityScenario(
             300,
-            10000.0,
+            10000,
             LocalTime.of(10, 0),
             LocalTime.of(20, 0),
             UserActivityScenario.CurveShape.TRAPEZOIDAL,
@@ -117,10 +117,10 @@ public class CompositeScenarioEvaluatorTest
             null
         );
 
-        double peakRate = 10000.0 / ((10.0 / 24.0) * 0.8);
+        double peakRate = 10000 / ((10.0 / 24.0) * 0.8);
 
-        // 10:00 -> 0.0 (progress = 0)
-        assertEquals(0.0, trapezoid.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 1, 10, 0, 0, 0, UTC)), 1e-4);
+        // 10:00 -> 0 (progress = 0)
+        assertEquals(0, trapezoid.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 1, 10, 0, 0, 0, UTC)), 1e-4);
         // 11:00 -> 0.5 * peakRate (progress = 0.1 -> ramp is 0.2, so factor = 0.5)
         assertEquals(0.5 * peakRate, trapezoid.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 1, 11, 0, 0, 0, UTC)), 1e-4);
         // 12:00 -> peakRate (progress = 0.2 -> plateau)
@@ -132,11 +132,11 @@ public class CompositeScenarioEvaluatorTest
         // 19:00 -> 0.5 * peakRate (progress = 0.9 -> factor = 0.5)
         assertEquals(0.5 * peakRate, trapezoid.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 1, 19, 0, 0, 0, UTC)), 1e-4);
         // 20:00 -> 0.0 (progress = 1.0)
-        assertEquals(0.0, trapezoid.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 1, 20, 0, 0, 0, UTC)), 1e-4);
+        assertEquals(0, trapezoid.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 1, 20, 0, 0, 0, UTC)), 1e-4);
 
         UserActivityScenario bell = new UserActivityScenario(
             300,
-            10_000.0,
+            10_000,
             LocalTime.of(10, 0),
             LocalTime.of(20, 0),
             UserActivityScenario.CurveShape.BELL,
@@ -145,7 +145,7 @@ public class CompositeScenarioEvaluatorTest
         );
 
         // Midpoint at 15:00 -> Peak
-        double bellPeakRate = 10_000.0 / ((10.0 / 24.0) * 0.5);
+        double bellPeakRate = 10_000 / ((10.0 / 24.0) * 0.5);
         assertEquals(bellPeakRate, bell.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 1, 15, 0, 0, 0, UTC)), 1e-4);
     }
 
@@ -154,7 +154,7 @@ public class CompositeScenarioEvaluatorTest
     {
         UserActivityScenario overnight = new UserActivityScenario(
             400,
-            10000.0,
+            10000,
             LocalTime.of(22, 0),
             LocalTime.of(4, 0),
             UserActivityScenario.CurveShape.SINUSOIDAL,
@@ -164,13 +164,13 @@ public class CompositeScenarioEvaluatorTest
 
         // Total window: 22:00 to 04:00 (6 hours)
         // Midpoint: 01:00 (3 hours elapsed)
-        double overnightPeakRate = 10000.0 / ((6.0 / 24.0) * (2.0 / Math.PI));
+        double overnightPeakRate = 10000 / ((6.0 / 24.0) * (2.0 / Math.PI));
         ZonedDateTime midpoint = ZonedDateTime.of(2026, 11, 1, 1, 0, 0, 0, UTC);
         assertEquals(overnightPeakRate, overnight.evaluateRequestPerYear(midpoint), 1e-4);
 
         // Outside window: 12:00 -> 0.0
         ZonedDateTime midday = ZonedDateTime.of(2026, 11, 1, 12, 0, 0, 0, UTC);
-        assertEquals(0.0, overnight.evaluateRequestPerYear(midday), 1e-4);
+        assertEquals(0, overnight.evaluateRequestPerYear(midday), 1e-4);
     }
 
     @Test
@@ -178,7 +178,7 @@ public class CompositeScenarioEvaluatorTest
     {
         BatchActivityScenario batch = new BatchActivityScenario(
             500,
-            50000.0,
+            50000,
             LocalTime.of(2, 0),
             Duration.ofHours(3),
             0.0,
@@ -205,7 +205,7 @@ public class CompositeScenarioEvaluatorTest
     {
         BatchActivityScenario rampBatch = new BatchActivityScenario(
             600,
-            10000.0,
+            10000,
             LocalTime.of(2, 0),
             Duration.ofHours(10), // ramp is 10% = 1 hour
             0.0,
@@ -224,7 +224,7 @@ public class CompositeScenarioEvaluatorTest
 
         BatchActivityScenario smoothBatch = new BatchActivityScenario(
             600,
-            10000.0,
+            10000,
             LocalTime.of(2, 0),
             Duration.ofHours(10),
             0.0,
@@ -242,7 +242,7 @@ public class CompositeScenarioEvaluatorTest
     {
         BatchActivityScenario midnightBatch = new BatchActivityScenario(
             700,
-            8000.0,
+            8000,
             LocalTime.of(23, 0),
             Duration.ofHours(4), // runs 23:00 to 03:00 next day
             0.0,
@@ -268,10 +268,10 @@ public class CompositeScenarioEvaluatorTest
     @Test
     void compositeScenarioEvaluatesEnvelopeOfConstantUserAndBatch()
     {
-        ConstantScenario baseline = new ConstantScenario(100, 1000.0, null);
+        ConstantScenario baseline = new ConstantScenario(100, 1000, null);
         UserActivityScenario userActivity = new UserActivityScenario(
             200,
-            10000.0,
+            10000,
             LocalTime.of(8, 0),
             LocalTime.of(18, 0),
             UserActivityScenario.CurveShape.SINUSOIDAL,
@@ -280,7 +280,7 @@ public class CompositeScenarioEvaluatorTest
         );
         BatchActivityScenario batch = new BatchActivityScenario(
             500,
-            25000.0,
+            25000,
             LocalTime.of(2, 0),
             Duration.ofHours(2),
             0.0,
