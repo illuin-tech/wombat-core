@@ -20,7 +20,7 @@ The library requires Java 21+ and adding the following in your `pom.xml`:
 <dependency>
     <groupId>tech.illuin</groupId>
     <artifactId>wombat-core</artifactId>
-    <version>0.16.0</version>
+    <version>0.18.0</version>
 </dependency>
 ```
 
@@ -140,7 +140,6 @@ Below is a list of currently implemented core modules shipped as part of the `wo
 | [`tech.illuin.wombat-module.kubernetes-api`](doc/module/kubernetes-api.md)             | `KUBERNETES_CONTAINER` | Connects to Kubernetes cluster APIs to poll CPU and memory resource metrics.                                         |
 | [`tech.illuin.wombat-module.kubernetes-static`](doc/module/kubernetes-static.md)       | `KUBERNETES_CONTAINER` | Models static Kubernetes container workloads using node counts and superposed temporal scenarios.                    |
 | [`tech.illuin.wombat-module.llm-prometheus`](doc/module/llm-prometheus.md)             | `LLM`                  | Queries Prometheus via PromQL for LLM inference telemetry.                                                           |
-| [`tech.illuin.wombat-module.llm-google`](doc/module/llm-google.md)                     | `LLM`                  | Queries the Google Cloud Monitoring API for LLM inference telemetry.                                                 |
 | [`tech.illuin.wombat-module.llm-static`](doc/module/llm-static.md)                     | `LLM`                  | Models static LLM workloads based on annual request profiles.                                                        |
 | [`tech.illuin.wombat-module.llm-anthropic`](doc/module/llm-anthropic.md)               | `LLM`                  | Queries the Anthropic Admin usage report on demand for per-model token usage over the evaluated time range.          |
 | [`tech.illuin.wombat-module.llm-vertexai`](doc/module/llm-vertexai.md)                 | `LLM`                  | Queries the VertexAI usage report on demand for per-model token usage over the evaluated time range.                 |
