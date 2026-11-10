@@ -143,8 +143,6 @@ Below is a list of currently implemented core modules shipped as part of the `wo
 | [`tech.illuin.wombat-module.llm-static`](doc/module/llm-static.md)                     | `LLM`                  | Models static LLM workloads based on annual request profiles.                                                        |
 | [`tech.illuin.wombat-module.llm-anthropic`](doc/module/llm-anthropic.md)               | `LLM`                  | Queries the Anthropic Admin usage report on demand for per-model token usage over the evaluated time range.          |
 | [`tech.illuin.wombat-module.llm-vertexai`](doc/module/llm-vertexai.md)                 | `LLM`                  | Queries the VertexAI usage report on demand for per-model token usage over the evaluated time range.                 |
-| [`tech.illuin.wombat-module.kubernetes-simulated`](doc/module/kubernetes-simulated.md) | `KUBERNETES_CONTAINER` | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
-| [`tech.illuin.wombat-module.llm-simulated`](doc/module/llm-simulated.md)               | `LLM`                  | Special asset type used by the [Wombat app](https://github.com/illuin-tech/wombat#http-api) for simulation requests. |
 
 #### Default Components
 
