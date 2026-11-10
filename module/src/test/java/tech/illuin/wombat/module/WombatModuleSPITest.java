@@ -3,12 +3,10 @@ package tech.illuin.wombat.module;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIModule;
-import tech.illuin.wombat.module.kubernetes_simulated.KubernetesSimulatedModule;
 import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticModule;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicModule;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIModule;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusModule;
-import tech.illuin.wombat.module.llm_simulated.LLMSimulatedModule;
 import tech.illuin.wombat.module.llm_static.LLMStaticModule;
 
 import java.util.ArrayList;
