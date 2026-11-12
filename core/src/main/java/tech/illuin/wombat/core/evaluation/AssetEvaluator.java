@@ -12,11 +12,11 @@ import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class AssetEvaluator implements AutoCloseable
 {
@@ -24,15 +24,22 @@ public class AssetEvaluator implements AutoCloseable
     private final Map<AssetType, WombatActivityResolver> activityResolvers;
     private final Map<AssetType, WombatEvaluationResolver> impactResolvers;
     private final Map<AssetType, WombatEvaluationResolver> costResolvers;
+    private final ExecutorService executorService;
 
     private static final Logger logger = LoggerFactory.getLogger(AssetEvaluator.class);
 
     public AssetEvaluator(WombatContextProvider contextProvider)
     {
+        this(contextProvider, Executors.newVirtualThreadPerTaskExecutor());
+    }
+
+    public AssetEvaluator(WombatContextProvider contextProvider, ExecutorService executorService)
+    {
         this.activityResolvers = new HashMap<>();
         this.impactResolvers = new HashMap<>();
         this.costResolvers = new HashMap<>();
         this.contextProvider = contextProvider;
+        this.executorService = executorService;
     }
 
     public AssetEvaluator registerActivityResolver(AssetType type, WombatActivityResolver resolver)
@@ -63,30 +70,34 @@ public class AssetEvaluator implements AutoCloseable
 
     public List<AssetEvaluation> evaluate(TimeRange range, AssetFilter filter) throws WombatEvaluationException
     {
-        try {
-            List<AssetEvaluation> outputs = new ArrayList<>();
-            for (Environment environment : this.contextProvider.provide().environments())
-            {
-                for (Asset asset : environment.assets())
-                {
-                    if (filter != null && !filter.accepts(environment.id(), asset.identity().id()))
-                        continue;
+        Queue<AssetEvaluation> outputs = new ConcurrentLinkedQueue<>();
+        for (Environment environment : this.contextProvider.provide().environments())
+        {
+            List<CompletableFuture<Void>> futures = environment.assets().stream()
+                .filter(asset -> filter == null || filter.accepts(environment.id(), asset.identity().id()))
+                .map(asset -> CompletableFuture.runAsync(() -> this.runEvaluation(asset, range, filter, outputs)))
+                .toList();
 
-                    Optional<AssetActivity> activity = this.computeActivity(asset, range, filter);
-                    if (activity.isEmpty())
-                        continue;
-
-                    for (ActivityData activityData : activity.get().activity())
-                    {
-                        this.computeImpact(asset, activityData).ifPresent(outputs::add);
-                        this.computeCost(asset, activityData).ifPresent(outputs::add);
-                    }
-                }
-            }
-            return outputs;
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         }
-        catch (WombatActivityException e) {
-            throw new WombatEvaluationException("An error occurred during evaluation", e);
+        return List.copyOf(outputs);
+    }
+
+    private void runEvaluation(Asset asset, TimeRange range, AssetFilter filter, Queue<AssetEvaluation> outputs)
+    {
+        try {
+            Optional<AssetActivity> activity = this.computeActivity(asset, range, filter);
+            if (activity.isEmpty())
+                return;
+
+            for (ActivityData activityData : activity.get().activity())
+            {
+                this.computeImpact(asset, activityData).ifPresent(outputs::add);
+                this.computeCost(asset, activityData).ifPresent(outputs::add);
+            }
+        }
+        catch (WombatActivityException | WombatEvaluationException e) {
+           logger.error("An error occurred while evaluating asset {}", asset.identity(), e);
         }
     }
 
@@ -138,5 +149,8 @@ public class AssetEvaluator implements AutoCloseable
     }
 
     @Override
-    public void close() throws Exception {}
+    public void close()
+    {
+        this.executorService.close();
+    }
 }
