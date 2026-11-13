@@ -17,7 +17,7 @@
         <jackson-annotations.version>2.22</jackson-annotations.version>
         <jackson.version>2.22.4</jackson.version>
         <fabric8-kubernetes-client.version>8.0.0</fabric8-kubernetes-client.version>
-        <google-auth-library.version>1.55.0</google-auth-library.version>
+        <google-auth-library.version>1.57.0</google-auth-library.version>
     </properties>
 
     <dependencies>
