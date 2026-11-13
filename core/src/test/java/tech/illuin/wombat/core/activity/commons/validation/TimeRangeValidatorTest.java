@@ -1,6 +1,7 @@
-package tech.illuin.wombat.core.activity.commons;
+package tech.illuin.wombat.core.activity.commons.validation;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.core.activity.commons.TimeRange;
 
 import java.time.Instant;
 

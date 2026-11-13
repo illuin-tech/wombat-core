@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.activity.commons;
+package tech.illuin.wombat.core.activity.commons.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

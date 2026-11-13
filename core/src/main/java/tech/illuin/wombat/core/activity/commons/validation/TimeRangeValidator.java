@@ -1,7 +1,8 @@
-package tech.illuin.wombat.core.activity.commons;
+package tech.illuin.wombat.core.activity.commons.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import tech.illuin.wombat.core.activity.commons.TimeRange;
 
 public class TimeRangeValidator implements ConstraintValidator<ValidTimeRange, TimeRange>
 {
