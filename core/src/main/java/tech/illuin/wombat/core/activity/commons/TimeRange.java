@@ -2,6 +2,7 @@ package tech.illuin.wombat.core.activity.commons;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import tech.illuin.wombat.core.activity.commons.validation.ValidTimeRange;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@ValidTimeRange
 public record TimeRange(
     @JsonProperty("start") Instant start,
     @JsonProperty("end") Instant end,

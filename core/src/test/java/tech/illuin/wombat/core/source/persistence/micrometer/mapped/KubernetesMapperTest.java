@@ -20,7 +20,7 @@ import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTa
 class KubernetesMapperTest
 {
     private static final AssetType TYPE_KUBERNETES = AssetType.of("tech.illuin", "wombat-module", "kubernetes-prometheus", ActivityRegime.MEASURED, ServiceFamily.KUBERNETES_CONTAINER);
-    private static final AssetIdentity IDENTITY = AssetIdentity.of("asset-1", "env-1", "Asset 1");
+    private static final AssetIdentity IDENTITY = AssetIdentity.of("asset-1", "env-1", "Asset 1", TYPE_KUBERNETES);
 
     private final KubernetesMapper mapper = new KubernetesMapper();
 

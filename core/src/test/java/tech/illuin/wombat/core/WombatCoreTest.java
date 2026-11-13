@@ -190,7 +190,7 @@ class WombatCoreTest
         @Override
         public AssetIdentity identity()
         {
-            return AssetIdentity.of(this.assetId, "env", this.assetId);
+            return AssetIdentity.of(this.assetId, "env", this.assetId, this.type());
         }
 
         @Override
@@ -218,7 +218,7 @@ class WombatCoreTest
         @Override
         public AssetIdentity identity()
         {
-            return AssetIdentity.of(this.assetId, "env", this.assetId);
+            return AssetIdentity.of(this.assetId, "env", this.assetId, this.type());
         }
 
         @Override

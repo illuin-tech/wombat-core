@@ -1,6 +1,7 @@
 package tech.illuin.wombat.module.kubernetes_static.activity;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticModule;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
@@ -34,7 +35,7 @@ public class KubernetesStaticActivityResolverTest
     void resolvesConstantLoadIntoRelativeUsage()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
-            new AssetIdentity("k8s-static-1", "env-test", "Static Cluster 1"),
+            AssetIdentity.of("k8s-static-1", "env-test", "Static Cluster 1", KubernetesStaticModule.TYPE),
             new KubernetesStaticProfile(
                 ServerProvider.aws,
                 "m5.xlarge",
@@ -71,7 +72,7 @@ public class KubernetesStaticActivityResolverTest
     {
         // Combine baseline (0.10), diurnal (0.10 -> 0.75, 09:00 - 18:00), batch (0.0 -> 0.90, 02:00 - 04:00)
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
-            new AssetIdentity("k8s-static-2", "env-test", "Static Cluster 2"),
+            AssetIdentity.of("k8s-static-2", "env-test", "Static Cluster 2", KubernetesStaticModule.TYPE),
             new KubernetesStaticProfile(
                 ServerProvider.aws,
                 "c5.2xlarge",
@@ -113,7 +114,7 @@ public class KubernetesStaticActivityResolverTest
     void resolvesActivityForMultiNodeClusterWithoutPreMultiplyingLoad()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
-            new AssetIdentity("k8s-static-3", "env-test", "Multi-Node Static Cluster"),
+            AssetIdentity.of("k8s-static-3", "env-test", "Multi-Node Static Cluster", KubernetesStaticModule.TYPE),
             new KubernetesStaticProfile(
                 ServerProvider.aws,
                 "m5.2xlarge",
@@ -135,7 +136,7 @@ public class KubernetesStaticActivityResolverTest
         AssetActivity activity = result.get();
         assertEquals(1, activity.activity().size());
 
-        KubernetesActivityData k8sData = (KubernetesActivityData) activity.activity().get(0);
+        KubernetesActivityData k8sData = (KubernetesActivityData) activity.activity().getFirst();
         assertEquals(ActivityRegime.MODELED, k8sData.regime());
         // Emits single-node relative load 0.50
         assertEquals(CPUUsage.relative(0.50), k8sData.cpuUsage());
@@ -145,7 +146,7 @@ public class KubernetesStaticActivityResolverTest
     void resolvesDailyResolutionWithHourlySampling()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
-            new AssetIdentity("k8s-static-daily", "env-test", "Daily Static Cluster"),
+            AssetIdentity.of("k8s-static-daily", "env-test", "Daily Static Cluster", KubernetesStaticModule.TYPE),
             new KubernetesStaticProfile(
                 ServerProvider.aws,
                 "c5.2xlarge",

@@ -1,6 +1,7 @@
 package tech.illuin.wombat.module.llm_prometheus.connector;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusModule;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
@@ -62,7 +63,7 @@ public class PrometheusMultiClientConfigTest
     private static LLMPrometheusAsset asset(String id, String username, String passwordEnv)
     {
         return new LLMPrometheusAsset(
-            AssetIdentity.of(id, "env", id),
+            AssetIdentity.of(id, "env", id, LLMPrometheusModule.TYPE),
             "http://prometheus", null, username, passwordEnv, Period.ZERO,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
         );

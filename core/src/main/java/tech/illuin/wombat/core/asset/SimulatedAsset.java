@@ -11,6 +11,6 @@ public interface SimulatedAsset extends Asset
     @Override
     default AssetIdentity identity()
     {
-        return AssetIdentity.of("simulated-asset", "simulated-environment", "simulated-asset");
+        return AssetIdentity.of("simulated-asset", "simulated-environment", "simulated-asset", this.type());
     }
 }
