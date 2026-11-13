@@ -22,7 +22,7 @@ import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTa
 class LLMMapperTest
 {
     private static final AssetType TYPE_LLM = AssetType.of("tech.illuin", "wombat-module", "llm-prometheus", ActivityRegime.MEASURED, ServiceFamily.LLM);
-    private static final AssetIdentity IDENTITY = AssetIdentity.of("asset-1", "env-1", "Asset 1");
+    private static final AssetIdentity IDENTITY = AssetIdentity.of("asset-1", "env-1", "Asset 1", TYPE_LLM);
 
     private final LLMMapper mapper = new LLMMapper();
 

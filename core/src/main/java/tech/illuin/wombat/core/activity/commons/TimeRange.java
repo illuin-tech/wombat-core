@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@ValidTimeRange
 public record TimeRange(
     @JsonProperty("start") Instant start,
     @JsonProperty("end") Instant end,

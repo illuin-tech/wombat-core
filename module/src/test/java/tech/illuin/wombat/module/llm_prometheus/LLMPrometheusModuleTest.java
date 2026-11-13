@@ -47,7 +47,7 @@ public class LLMPrometheusModuleTest
         // Proves the module builds its clients from the context's resolver: the credential is read from the
         // environment at source creation, never from the asset the reconciler persisted.
         LLMPrometheusAsset asset = new LLMPrometheusAsset(
-            AssetIdentity.of("p", "env", "P"),
+            AssetIdentity.of("p", "env", "P", LLMPrometheusModule.TYPE),
             "http://prometheus", null, "user", "PROM_PASSWORD", Period.ZERO,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
         );

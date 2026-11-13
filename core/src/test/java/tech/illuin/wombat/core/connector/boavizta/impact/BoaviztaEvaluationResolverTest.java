@@ -131,7 +131,7 @@ class BoaviztaEvaluationResolverTest
         @Override
         public AssetIdentity identity()
         {
-            return AssetIdentity.of("asset", "env", "Asset");
+            return AssetIdentity.of("asset", "env", "Asset", this.type());
         }
     }
 }

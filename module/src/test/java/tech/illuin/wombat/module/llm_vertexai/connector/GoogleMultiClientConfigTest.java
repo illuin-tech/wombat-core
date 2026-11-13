@@ -3,9 +3,9 @@ package tech.illuin.wombat.module.llm_vertexai.connector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIModule;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
-import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
@@ -121,7 +121,7 @@ public class GoogleMultiClientConfigTest
 
     private static LLMVertexAIAsset asset(String id, String credentialsKey)
     {
-        return new LLMVertexAIAsset(AssetIdentity.of(id, "env", id), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
+        return new LLMVertexAIAsset(AssetIdentity.of(id, "env", id, LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
             new LLMVertexAIProfile(500, List.of("gemini-2.5-flash")));
     }
 

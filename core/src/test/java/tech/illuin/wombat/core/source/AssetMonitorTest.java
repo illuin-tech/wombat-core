@@ -191,7 +191,7 @@ class AssetMonitorTest
         @Override
         public AssetIdentity identity()
         {
-            return AssetIdentity.of(this.assetId, "env", this.assetId);
+            return AssetIdentity.of(this.assetId, "env", this.assetId, this.type());
         }
 
         @Override

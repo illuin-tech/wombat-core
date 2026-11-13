@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import feign.Request;
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIModule;
 import tech.illuin.wombat.core.activity.WombatActivityException;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
@@ -45,7 +46,7 @@ class LLMVertexAIActivityResolverTest
 
     private final GoogleClient client = mock(GoogleClient.class);
     private final LLMVertexAIAsset asset = new LLMVertexAIAsset(
-        AssetIdentity.of("llm-google", "prod", "Google LLM"), "https://monitoring.googleapis.com", PROJECT, null,
+        AssetIdentity.of("llm-google", "prod", "Google LLM", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", PROJECT, null,
         new LLMVertexAIProfile(500, List.of(MODEL))
     );
     private final LLMVertexAIActivityResolver resolver = new LLMVertexAIActivityResolver(multi(this.client));

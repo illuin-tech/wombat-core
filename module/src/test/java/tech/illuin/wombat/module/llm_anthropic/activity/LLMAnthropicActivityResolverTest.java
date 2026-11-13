@@ -1,6 +1,7 @@
 package tech.illuin.wombat.module.llm_anthropic.activity;
 
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicModule;
 import tech.illuin.wombat.core.activity.WombatActivityException;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
@@ -40,7 +41,7 @@ class LLMAnthropicActivityResolverTest
 
     private final AnthropicAdminClient client = mock(AnthropicAdminClient.class);
     private final LLMAnthropicAsset asset = new LLMAnthropicAsset(
-        AssetIdentity.of("claude", "prod", "Claude"), null, null, "ANTHROPIC_ADMIN_KEY",
+        AssetIdentity.of("claude", "prod", "Claude", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
         new LLMAnthropicProfile(FRANCE, 500, List.of("claude-opus-5-5"), null, null)
     );
     private final LLMAnthropicActivityResolver resolver = new LLMAnthropicActivityResolver(multi(this.client));
@@ -101,7 +102,7 @@ class LLMAnthropicActivityResolverTest
 
         assertEquals(this.asset.identity(), activity.assetIdentity());
         assertEquals(3, activity.activity().size());
-        LLMActivityData h0 = (LLMActivityData) activity.activity().get(0);
+        LLMActivityData h0 = (LLMActivityData) activity.activity().getFirst();
         assertEquals(new TimeRange(START, START.plusSeconds(3600), Duration.ofHours(1)), h0.range());
         assertEquals(1000, h0.services().get("claude-opus-5-5").outputTokenCount());
         assertEquals(250, h0.services().get("claude-haiku-5-5").outputTokenCount());

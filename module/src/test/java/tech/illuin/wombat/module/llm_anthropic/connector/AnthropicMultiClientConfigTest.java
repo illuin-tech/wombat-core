@@ -3,6 +3,7 @@ package tech.illuin.wombat.module.llm_anthropic.connector;
 import feign.Request;
 import feign.Response;
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicModule;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.ResolvedContext;
@@ -56,7 +57,7 @@ class AnthropicMultiClientConfigTest
         };
 
         LLMAnthropicAsset asset = new LLMAnthropicAsset(
-            AssetIdentity.of("claude", "prod", "Claude"), null, null, "ANTHROPIC_ADMIN_KEY",
+            AssetIdentity.of("claude", "prod", "Claude", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
             new LLMAnthropicProfile(FRANCE, 500, null, null, null)
         );
         ResolvedContext context = new ResolvedContext(

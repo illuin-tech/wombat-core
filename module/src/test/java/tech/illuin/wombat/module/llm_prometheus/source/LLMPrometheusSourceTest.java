@@ -2,6 +2,7 @@ package tech.illuin.wombat.module.llm_prometheus.source;
 
 import com.fasterxml.jackson.databind.node.TextNode;
 import org.junit.jupiter.api.Test;
+import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusModule;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
@@ -36,7 +37,7 @@ class LLMPrometheusSourceTest
             new LLMPrometheusProfile.DynamicProfile("sum(vllm:num_tokens_total)")
         );
         LLMPrometheusAsset asset = new LLMPrometheusAsset(
-            AssetIdentity.of("llm-prom", "prod", "Prom LLM"),
+            AssetIdentity.of("llm-prom", "prod", "Prom LLM", LLMPrometheusModule.TYPE),
             "http://localhost:9090", null, null, null, Period.ZERO, profile
         );
 

@@ -2,7 +2,6 @@ package tech.illuin.wombat.module.llm_vertexai;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
-import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.ResolvedContext;
@@ -71,7 +70,7 @@ public class LLMVertexAIModuleTest
 
     private static LLMVertexAIAsset asset(String credentialsKey)
     {
-        return new LLMVertexAIAsset(AssetIdentity.of("g", "env", "G"), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
+        return new LLMVertexAIAsset(AssetIdentity.of("g", "env", "G", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
             new LLMVertexAIProfile(500, List.of("gemini-2.5-flash")));
     }
 }
