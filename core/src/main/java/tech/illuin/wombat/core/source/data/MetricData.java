@@ -1,6 +1,5 @@
 package tech.illuin.wombat.core.source.data;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
@@ -14,6 +13,5 @@ public interface MetricData
 {
     String serviceId();
 
-    @JsonIgnore
     ServiceFamily serviceFamily();
 }
