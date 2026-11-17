@@ -1,9 +1,16 @@
 package tech.illuin.wombat.core.source.data;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 
 import java.util.Objects;
 
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "family",
+    defaultImpl = KubernetesData.class
+)
 public record KubernetesData(
     String serviceId,
     String cluster,
