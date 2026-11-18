@@ -27,6 +27,38 @@ public interface SecretResolver
      */
     Optional<String> find(String key);
 
+    /**
+     * Checks that {@code key} is bound now, and returns a handle that resolves it again on each fetch.
+     *
+     * @return a {@link Secret} backed by this resolver
+     * @throws MissingSecretException when nothing is bound to {@code key}
+     */
+    default Secret requireAsync(String key)
+    {
+        this.require(key);
+        return new Secret(key, this);
+    }
+
+    /**
+     * Returns a handle that resolves {@code key} on each fetch, this does not check anything upfront.
+     *
+     * @return a {@link Secret} backed by this resolver
+     */
+    default Secret async(String key)
+    {
+        return new Secret(key, this);
+    }
+
+    /**
+     * Checks whether {@code key} is bound now, and if so returns a handle that resolves it again on each fetch.
+     *
+     * @return a {@link Secret} backed by this resolver, empty when nothing is bound to {@code key}
+     */
+    default Optional<Secret> findAsync(String key)
+    {
+        return this.find(key).map(value -> new Secret(key, this));
+    }
+
     static SecretResolver standard()
     {
         return new EnvironmentSecretResolver();
