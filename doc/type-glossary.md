@@ -2,6 +2,8 @@
 
 This document serves as a reference for generic domain types, structures, enums, and data formats used across `wombat-core` and core module configurations.
 
+Property names follow the format: configuration files (YAML) are written in kebab-case (e.g. `instance-type`), and JSON payloads (e.g. the API) in camelCase (e.g. `instanceType`).
+
 ## 1. Core Identity Types
 
 ### `ServiceFamily`
@@ -31,6 +33,13 @@ It is currently composed of the following properties:
 - the asset `id`
 - the asset `environmentId`
 - the asset `type`, see [`AssetType`](#assettype)
+
+### `SecretKey`
+
+The name under which a credential is bound in the configured secret resolver (e.g. an environment variable), never the credential itself: it is safe to store, log and review.
+
+- **Format**: a non-blank string (e.g. `secrets.anthropic.admin-key`); an empty value means no secret, for optional keys.
+- **Usage**: Used by assets requiring credentials, such as the `admin-key` of an Anthropic asset or the `password-key` of a Prometheus asset.
 
 ## 2. Temporal & Time Types
 
@@ -88,6 +97,7 @@ Operational hardware lifespan of server equipment, serialized as a duration stri
 Geographical country location code, adhering to ISO 3166-1 alpha-3 (or alpha-2).
 
 - **Format**: 3-letter (or 2-letter) country code (e.g. `FRA`, `USA`, `DEU`, `SWE`, `GBR`, `IRL`).
+- **World**: `XXX` stands for the world as a whole.
 - **Usage**: Used in server and cloud asset profiles to resolve localized carbon intensity factors (grid emissions).
 
 ### `ServerProvider`

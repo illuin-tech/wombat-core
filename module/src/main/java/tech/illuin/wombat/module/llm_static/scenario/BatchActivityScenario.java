@@ -1,8 +1,10 @@
 package tech.illuin.wombat.module.llm_static.scenario;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter;
@@ -17,24 +19,19 @@ import java.time.ZonedDateTime;
 /**
  * Models scheduled batch workload activity with trigger time, duration, and optional smoothing,
  * with annual request volume distributed across active batch executions.
- *
- * @param outputTokenPerRequest mean output token count per request (>= 0)
- * @param requestPerYear total annual request volume (>= 0.0)
- * @param triggerTime daily start time of batch job
- * @param duration active execution duration
- * @param jitter deterministic variance factor (e.g. 0.05 for +-5%)
- * @param smoothing transition smoothing mode (none, linear ramp, smooth step)
- * @param applicability optional applicability filter
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonClassDescription("Request volume of a scheduled daily batch job")
 public record BatchActivityScenario(
-    @PositiveOrZero @JsonProperty("outputTokenPerRequest") @JsonAlias({"output-token-per-request", "output-token-count"}) int outputTokenPerRequest,
-    @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) @PositiveOrZero int requestPerYear,
-    @NotNull @JsonProperty("triggerTime") @JsonAlias("trigger-time") LocalTime triggerTime,
-    @NotNull @JsonProperty("duration") Duration duration,
-    @JsonProperty("jitter") double jitter,
-    @JsonProperty("smoothing") SmoothingMode smoothing,
-    @JsonProperty("applicability") ApplicabilityFilter applicability
+    // Legacy names, still found in configuration files
+    @PositiveOrZero @JsonPropertyDescription("Mean output tokens per request") @JsonAlias("output-token-count") int outputTokenPerRequest,
+    @PositiveOrZero @JsonPropertyDescription("Annual request count, distributed over the batch runs")
+    @JsonAlias({"requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) int requestPerYear,
+    @NotNull @JsonPropertyDescription("Daily start time of the batch job") LocalTime triggerTime,
+    @NotNull @JsonPropertyDescription("Duration of the batch job (ISO-8601)") Duration duration,
+    @JsonProperty(defaultValue = "0") @JsonPropertyDescription("Deterministic variance factor, e.g. 0.05 for +-5%") double jitter,
+    @JsonProperty(defaultValue = "none") @JsonPropertyDescription("Smoothing of the transitions at both ends of the batch window") SmoothingMode smoothing,
+    @JsonPropertyDescription("Days and months the scenario applies to, always when omitted") ApplicabilityFilter applicability
 ) implements Scenario
 {
     public static final SmoothingMode DEFAULT_SMOOTHING = SmoothingMode.NONE;

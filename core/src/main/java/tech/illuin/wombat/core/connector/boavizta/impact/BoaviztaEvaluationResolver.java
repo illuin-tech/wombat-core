@@ -3,6 +3,7 @@ package tech.illuin.wombat.core.connector.boavizta.impact;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
@@ -31,6 +32,8 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
 
     private static final double NANOCORES_PER_CORE = 1_000_000_000.0;
     private static final double FULL_LOAD = 100.0;
+    /** Boavizta's world average, ISO 3166 having no code for the world. */
+    private static final String WORLD_LOCATION = "WOR";
     private static final String rebalanceWarning = "This usage has been rebalanced by the Wombat service, it does not come from the Boavizta API";
     private static final String timeProrationWarning = "This impact has been prorated to the requested time range by the Wombat service";
 
@@ -178,7 +181,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             new BoaviztaInstanceImpactRequest(
                 getProvider(profile.provider()),
                 profile.instanceType(),
-                new BoaviztaInstanceImpactRequest.Usage(profile.location().alpha3(), List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)))
+                new BoaviztaInstanceImpactRequest.Usage(getLocation(profile.location()), List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)))
             ),
             (int) profile.lifespan().asHours()
         );
@@ -299,6 +302,11 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     {
         return BoaviztaServerProvider.forName(provider)
             .orElseThrow(() -> new IllegalArgumentException("Unsupported Server provider: " + provider));
+    }
+
+    private static String getLocation(Country location)
+    {
+        return location == Country.WORLD ? WORLD_LOCATION : location.alpha3();
     }
 
     private record Share(String serviceId, double share) {}

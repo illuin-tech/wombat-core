@@ -1,19 +1,27 @@
 package tech.illuin.wombat.core.activity.commons;
 
+import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+@JsonClassDescription("ISO 3166-1 alpha-3 country code, XXX for the world")
 public final class Country
 {
     private final Locale locale;
+    private final String alpha2;
+    private final String alpha3;
+    private final String name;
 
     private static final Map<String, Country> indexAlpha2;
     private static final Map<String, Country> indexAlpha3;
+    private static final List<Country> values;
 
     static {
         indexAlpha2 = new HashMap<>();
@@ -25,9 +33,13 @@ public final class Country
             indexAlpha3.put(country.alpha3(), country);
         }
 
-        var world = new Country(Locale.ROOT);
-        indexAlpha2.put("XX", world);
-        indexAlpha3.put("XXX", world);
+        var world = new Country(Locale.ROOT, "XX", "XXX", "World");
+        indexAlpha2.put(world.alpha2(), world);
+        indexAlpha3.put(world.alpha3(), world);
+
+        values = indexAlpha3.values().stream()
+            .sorted(Comparator.comparing(Country::alpha3))
+            .toList();
     }
 
     public static final Country WORLD = ofAlpha2("XX");
@@ -77,15 +89,31 @@ public final class Country
         return indexAlpha3.get(alpha3.toUpperCase());
     }
 
+    /**
+     * @return every known country, ordered by alpha-3 code
+     */
+    public static List<Country> values()
+    {
+        return values;
+    }
+
     public static Optional<Country> ofCode(String code)
     {
         return Optional.ofNullable(ofAlpha2(code))
             .or(() -> Optional.ofNullable(ofAlpha3(code)));
     }
 
-    private Country(Locale locale)
+    private Country(Locale locale, String alpha2, String alpha3, String name)
     {
         this.locale = locale;
+        this.alpha2 = alpha2;
+        this.alpha3 = alpha3;
+        this.name = name;
+    }
+
+    private Country(Locale locale)
+    {
+        this(locale, locale.getCountry(), locale.getISO3Country(), null);
     }
 
     private Country(String alpha2Code)
@@ -95,22 +123,22 @@ public final class Country
 
     public String alpha2()
     {
-        return this.locale.getCountry();
+        return this.alpha2;
     }
 
     @JsonValue
     public String alpha3()
     {
-        return this.locale.getISO3Country();
+        return this.alpha3;
     }
 
     public String displayName()
     {
-        return this.locale.getDisplayCountry(Locale.ENGLISH);
+        return this.displayName(Locale.ENGLISH);
     }
 
     public String displayName(Locale locale)
     {
-        return this.locale.getDisplayCountry(locale);
+        return this.name != null ? this.name : this.locale.getDisplayCountry(locale);
     }
 }

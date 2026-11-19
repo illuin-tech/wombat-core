@@ -27,6 +27,8 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
 {
     private final EcologitsClient client;
 
+    /** Ecologits' world electricity mix, ISO 3166 having no code for the world. */
+    private static final String WORLD_ZONE = "WOR";
     private static final Logger logger = LoggerFactory.getLogger(EcologitsEvaluationResolver.class);
 
     public EcologitsEvaluationResolver(EcologitsClient client)
@@ -127,9 +129,14 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
             ecologitsProvider,
             model,
             outputTokenCount,
-            location.alpha3()
+            electricityMixZone(location)
         );
         return this.client.estimate(request);
+    }
+
+    private static String electricityMixZone(Country location)
+    {
+        return location == Country.WORLD ? WORLD_ZONE : location.alpha3();
     }
 
     private static boolean validate(EcologitsEstimationResponse response)

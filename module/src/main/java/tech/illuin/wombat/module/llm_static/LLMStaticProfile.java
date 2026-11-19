@@ -1,8 +1,9 @@
 package tech.illuin.wombat.module.llm_static;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -17,9 +18,10 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonClassDescription("Models and their modeled traffic")
 public record LLMStaticProfile(
-    @JsonProperty("zoneId") @JsonAlias("zone-id") ZoneId zoneId,
-    @NotNull @NotEmpty @JsonProperty("models") List<@Valid ModelConfig> models
+    @JsonProperty(defaultValue = "UTC") @JsonPropertyDescription("Time zone the scenarios' times are evaluated in, e.g. Europe/Paris") ZoneId zoneId,
+    @NotNull @NotEmpty @JsonPropertyDescription("Models and their scenarios") List<@Valid ModelConfig> models
 ) implements LLMProfile
 {
     public LLMStaticProfile
@@ -39,11 +41,12 @@ public record LLMStaticProfile(
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonClassDescription("Model and its superposed traffic scenarios")
     public record ModelConfig(
-        @NotNull @JsonProperty("provider") LLMProvider provider,
-        @NotBlank @JsonProperty("model") String model,
-        @NotNull @JsonProperty("location") Country location,
-        @NotNull @NotEmpty @JsonProperty("scenarios") List<@Valid Scenario> scenarios
+        @NotNull @JsonPropertyDescription("Foundation model provider") LLMProvider provider,
+        @NotBlank @JsonPropertyDescription("Model identifier, as listed by Ecologits") String model,
+        @NotNull @JsonPropertyDescription("Country where inference is assumed to occur") Country location,
+        @NotNull @NotEmpty @JsonPropertyDescription("Superposed traffic scenarios") List<@Valid Scenario> scenarios
     ) {
         public ModelConfig
         {

@@ -1,7 +1,8 @@
 package tech.illuin.wombat.module.kubernetes_static;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -17,14 +18,15 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 
+@JsonClassDescription("Hardware of the cluster's nodes and their modeled load")
 public record KubernetesStaticProfile(
-    @NotNull @JsonProperty("provider") ServerProvider provider,
-    @NotBlank @JsonProperty("instanceType") @JsonAlias("instance-type") String instanceType,
-    @NotNull @JsonProperty("location") Country location,
-    @NotNull @JsonProperty("lifespan") Lifetime lifespan,
-    @Positive @JsonProperty("nodeCount") @JsonAlias("node-count") int nodeCount,
-    @JsonProperty("zoneId") @JsonAlias("zone-id") ZoneId zoneId,
-    @NotNull @NotEmpty @JsonProperty("scenarios") List<@Valid Scenario> scenarios
+    @NotNull @JsonPropertyDescription("Infrastructure provider") ServerProvider provider,
+    @NotBlank @JsonPropertyDescription("Instance type of the nodes, e.g. c5.2xlarge or n2-standard-8") String instanceType,
+    @NotNull @JsonPropertyDescription("Country hosting the nodes") Country location,
+    @NotNull @JsonPropertyDescription("Expected operational lifespan of the hardware") Lifetime lifespan,
+    @Positive @JsonProperty(defaultValue = "1") @JsonPropertyDescription("Number of identical nodes") int nodeCount,
+    @JsonProperty(defaultValue = "UTC") @JsonPropertyDescription("Time zone the scenarios' times are evaluated in, e.g. Europe/Paris") ZoneId zoneId,
+    @NotNull @NotEmpty @JsonPropertyDescription("Superposed load scenarios") List<@Valid Scenario> scenarios
 ) implements ServerProfile
 {
     public KubernetesStaticProfile

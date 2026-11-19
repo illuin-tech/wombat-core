@@ -20,7 +20,7 @@ public class GoogleClientConfig
     public static GoogleClient create(LLMVertexAIAsset properties, SecretResolver secrets, Client client)
     {
         String serviceAccountJson = properties.usesServiceAccountKey()
-            ? secrets.require(properties.credentialsKey())
+            ? secrets.require(properties.credentialsKey().value())
             : null;
 
         Proxy proxy = null;

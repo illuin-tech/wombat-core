@@ -9,6 +9,7 @@ import tech.illuin.wombat.core.activity.llm.LLMActivityData;
 import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
+import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicProfile;
 import tech.illuin.wombat.module.llm_anthropic.connector.AnthropicAdminClient;
@@ -40,7 +41,7 @@ class LLMAnthropicActivityResolverTest
 
     private final AnthropicAdminClient client = mock(AnthropicAdminClient.class);
     private final LLMAnthropicAsset asset = new LLMAnthropicAsset(
-        AssetIdentity.of("claude", "prod", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
+        AssetIdentity.of("claude", "prod", LLMAnthropicModule.TYPE), null, null, SecretKey.of("ANTHROPIC_ADMIN_KEY"),
         new LLMAnthropicProfile(FRANCE, 500, List.of("claude-opus-5-5"), null, null)
     );
     private final LLMAnthropicActivityResolver resolver = new LLMAnthropicActivityResolver(this.client);

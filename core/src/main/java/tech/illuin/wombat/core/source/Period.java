@@ -1,5 +1,6 @@
 package tech.illuin.wombat.core.source;
 
+import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -13,6 +14,7 @@ import java.util.regex.Pattern;
  * @param value
  * @param unit
  */
+@JsonClassDescription("Duration as an amount and a unit suffix: s (seconds), m (minutes), h (hours), e.g. 5m")
 public record Period(
     long value,
     Unit unit

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.source.Period;
+import tech.illuin.wombat.core.secret.SecretKey;
 
 import java.util.Set;
 
@@ -47,7 +48,7 @@ public class LLMPrometheusAssetTest
     private static LLMPrometheusAsset asset(String username, String passwordEnv)
     {
         return new LLMPrometheusAsset(
-            AssetIdentity.of("p", "env", LLMPrometheusModule.TYPE), "http://prometheus", null, username, passwordEnv, Period.ZERO,
+            AssetIdentity.of("p", "env", LLMPrometheusModule.TYPE), "http://prometheus", null, username, SecretKey.of(passwordEnv), Period.ZERO,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
         );
     }

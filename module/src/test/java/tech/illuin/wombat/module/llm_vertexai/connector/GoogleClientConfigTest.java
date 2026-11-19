@@ -8,6 +8,7 @@ import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.core.secret.SecretResolver;
+import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIProfile;
 
@@ -115,7 +116,7 @@ public class GoogleClientConfigTest
 
     private static LLMVertexAIAsset asset(String id, String credentialsKey)
     {
-        return new LLMVertexAIAsset(AssetIdentity.of(id, "env", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
+        return new LLMVertexAIAsset(AssetIdentity.of(id, "env", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", "projects/my-project", SecretKey.of(credentialsKey),
             new LLMVertexAIProfile(500, List.of("gemini-2.5-flash")));
     }
 

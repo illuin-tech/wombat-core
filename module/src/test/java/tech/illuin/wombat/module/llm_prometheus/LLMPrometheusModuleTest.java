@@ -9,6 +9,7 @@ import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.core.source.WombatSource;
+import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.module.llm_prometheus.source.LLMPrometheusSource;
 
 import java.util.Map;
@@ -60,7 +61,7 @@ public class LLMPrometheusModuleTest
     {
         return new LLMPrometheusAsset(
             AssetIdentity.of("p", "env", LLMPrometheusModule.TYPE),
-            "http://prometheus", null, username, passwordEnv, Period.ZERO,
+            "http://prometheus", null, username, SecretKey.of(passwordEnv), Period.ZERO,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
         );
     }

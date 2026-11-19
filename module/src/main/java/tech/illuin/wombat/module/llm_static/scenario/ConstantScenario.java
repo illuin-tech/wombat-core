@@ -1,7 +1,8 @@
 package tech.illuin.wombat.module.llm_static.scenario;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import jakarta.validation.constraints.PositiveOrZero;
 import tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter;
 
@@ -9,15 +10,13 @@ import java.time.ZonedDateTime;
 
 /**
  * Models a constant baseline annual request count and output token count per request.
- *
- * @param outputTokenPerRequest mean output token count per request (>= 0)
- * @param requestPerYear annual request count (>= 0.0)
- * @param applicability optional applicability filter
  */
+@JsonClassDescription("Constant request volume")
 public record ConstantScenario(
-    @PositiveOrZero @JsonProperty("outputTokenPerRequest") @JsonAlias({"output-token-per-request", "output-token-count"}) int outputTokenPerRequest,
-    @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear"}) @PositiveOrZero int requestPerYear,
-    @JsonProperty("applicability") ApplicabilityFilter applicability
+    // Legacy names, still found in configuration files
+    @PositiveOrZero @JsonPropertyDescription("Mean output tokens per request") @JsonAlias("output-token-count") int outputTokenPerRequest,
+    @PositiveOrZero @JsonPropertyDescription("Annual request count") @JsonAlias("requestsPerYear") int requestPerYear,
+    @JsonPropertyDescription("Days and months the scenario applies to, always when omitted") ApplicabilityFilter applicability
 ) implements Scenario
 {
     public ConstantScenario

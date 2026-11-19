@@ -3,6 +3,7 @@ package tech.illuin.wombat.core.asset;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import jakarta.validation.constraints.NotBlank;
 import tech.illuin.wombat.core.asset.type.AssetType;
 
@@ -14,9 +15,10 @@ import java.util.Objects;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record AssetIdentity(
-    @NotBlank @JsonProperty("id") String id,
-    @NotBlank @JsonProperty("environmentId") @JsonAlias("environment-id") String environmentId,
-    @NotBlank @JsonProperty("type") String assetType
+    @NotBlank @JsonPropertyDescription("Unique identifier of the asset") String id,
+    // The kebab-case @JsonAlias read assets persisted before 0.15, when properties were named that way
+    @NotBlank @JsonPropertyDescription("Identifier of the asset's environment") @JsonAlias("environment-id") String environmentId,
+    @NotBlank @JsonPropertyDescription("Name of the asset-type") @JsonProperty("type") String assetType
 ) {
     public AssetIdentity
     {

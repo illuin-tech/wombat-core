@@ -52,7 +52,7 @@ class GoogleRegionTest
         "me-central2, SA",
         "me-central1, QA",
         "me-west1, IL",
-        "global, ''"
+        "global, XX"
     })
     void testTranslate(String regionIdentifier, String expectedAlpha2)
     {

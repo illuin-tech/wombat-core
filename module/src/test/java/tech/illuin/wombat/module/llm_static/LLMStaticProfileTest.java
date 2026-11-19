@@ -2,6 +2,8 @@ package tech.illuin.wombat.module.llm_static;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
@@ -21,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class LLMStaticProfileTest
 {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    /** Reads configuration files as the app does: kebab-case, from the naming strategy alone. */
+    private final ObjectMapper yamlMapper = YAMLMapper.builder().findAndAddModules().propertyNamingStrategy(PropertyNamingStrategies.KEBAB_CASE).build();
 
     @Test
     void deserializesFromJsonWithCamelCaseProperties() throws JsonProcessingException
@@ -64,7 +68,7 @@ class LLMStaticProfileTest
     }
 
     @Test
-    void deserializesFromJsonWithKebabCaseAliases() throws JsonProcessingException
+    void deserializesFromKebabCaseYaml() throws JsonProcessingException
     {
         String json = """
             {
@@ -86,7 +90,7 @@ class LLMStaticProfileTest
             }
             """;
 
-        LLMStaticProfile profile = this.objectMapper.readValue(json, LLMStaticProfile.class);
+        LLMStaticProfile profile = this.yamlMapper.readValue(json, LLMStaticProfile.class);
 
         assertNotNull(profile);
         assertEquals(ZoneId.of("UTC"), profile.zoneId());

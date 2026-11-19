@@ -18,7 +18,7 @@ class LLMVertexAIProfileTest
     void omittedModelsMeansAllModels() throws Exception
     {
         LLMVertexAIProfile profile = this.mapper.readValue("""
-            {"output-tokens-per-request":500}
+            {"outputTokensPerRequest":500}
             """, LLMVertexAIProfile.class);
 
         assertEquals(List.of(), profile.models());
@@ -39,8 +39,8 @@ class LLMVertexAIProfileTest
     void oldRawFilterConfigurationIsRejected()
     {
         assertThrows(UnrecognizedPropertyException.class, () -> this.mapper.readValue("""
-            {"output-tokens-per-request":500,
-             "dynamic-profile":{"filter":"anything"}}
+            {"outputTokensPerRequest":500,
+             "dynamicProfile":{"filter":"anything"}}
             """, LLMVertexAIProfile.class));
     }
 }
