@@ -5,8 +5,6 @@ import feign.Response;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicModule;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.asset.Environment;
-import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicProfile;
@@ -20,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
-class AnthropicMultiClientConfigTest
+class AnthropicClientConfigTest
 {
     private static final String BODY = """
         {
@@ -60,11 +58,8 @@ class AnthropicMultiClientConfigTest
             AssetIdentity.of("claude", "prod", "Claude", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
             new LLMAnthropicProfile(FRANCE, 500, null, null, null)
         );
-        ResolvedContext context = new ResolvedContext(
-            List.of(new Environment("prod", List.of(asset))),
-            new EnvironmentSecretResolver(Map.of("ANTHROPIC_ADMIN_KEY", "sk-ant-admin-test")::get)
-        );
-        AnthropicAdminClient client = AnthropicMultiClientConfig.create(context, http).get("claude").orElseThrow();
+        EnvironmentSecretResolver secrets = new EnvironmentSecretResolver(Map.of("ANTHROPIC_ADMIN_KEY", "sk-ant-admin-test")::get);
+        AnthropicAdminClient client = AnthropicClientConfig.create(asset, secrets, http);
 
         AnthropicUsageReport report = client.usageReport(
             "2026-10-01T00:00:00Z", "2026-10-01T01:00:00Z", "1m", 1440,

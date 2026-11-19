@@ -231,12 +231,23 @@ LLMMetricResolver llmMetricResolver = new MicrometerLLMMetricResolver(meterRegis
 
 #### Now, assemble the `WombatCore`
 
+The `WombatCore` is also handed `WombatServices`, the system components made available to modules. For now this is the `SecretResolver` modules use to read the credentials their assets reference by variable name (an API key, a password, etc.). `SecretResolver.standard()` reads them from the process environment, which is also what the `WombatCore` falls back to when no `WombatServices` is given.
+
+[Default components](#default-components) are registered per family as factories, `null` meaning there is no default for that part of the pipeline. Assets whose type has neither a module component nor a default for a given part are not evaluated for that part, and an error is logged when the evaluator is created.
+
 ```java
 /* tech.illuin.wombat.core.connector.boavizta.connector.BoaviztaClient boaviztaClient */
 /* tech.illuin.wombat.core.connector.ecologits.connector.EcologitsClient ecologitsClient */
 
+/* Default components are stateless, a single instance can serve every asset */
+WombatActivityResolver k8sActivity = new KubernetesActivityResolver(k8sMetricResolver);
+WombatActivityResolver llmActivity = new LLMActivityResolver(llmMetricResolver);
+WombatEvaluationResolver boavizta = new BoaviztaEvaluationResolver(boaviztaClient);
+WombatEvaluationResolver ecologits = new EcologitsEvaluationResolver(ecologitsClient);
+
 try (WombatCore core = new WombatCore(
     contextProvider,
+    new WombatServices(SecretResolver.standard()),
     metricPersister,
     List.of(
         new KubernetesAPIModule(),
@@ -244,11 +255,11 @@ try (WombatCore core = new WombatCore(
         new LLMStaticModule()
     ),
     defaults -> {
-        defaults.register(KUBERNETES_CONTAINER, new KubernetesActivityResolver(k8sMetricResolver), new BoaviztaEvaluationResolver(boaviztaClient), null);
-        defaults.register(LLM, new LLMActivityResolver(llmMetricResolver), new EcologitsEvaluationResolver(ecologitsClient), null);
+        defaults.register(KUBERNETES_CONTAINER, (services, asset) -> k8sActivity, (services, asset) -> boavizta, null);
+        defaults.register(LLM, (services, asset) -> llmActivity, (services, asset) -> ecologits, null);
     }
 )) {
-    /* The evaluator is stateless, you should reuse it throughout your app ; e.g. make it injectable if applicable */
+    /* The evaluator keeps the resolvers it built for each asset, you should reuse it throughout your app ; e.g. make it injectable if applicable */
     AssetEvaluator evaluator = core.createEvaluator();
     
     Instant now = Instant.now();
@@ -257,9 +268,11 @@ try (WombatCore core = new WombatCore(
 }
 ```
 
+Both the `AssetMonitor` and the `AssetEvaluator` read the context on every call: assets added to it are picked up without rebuilding anything, and the components of removed assets are discarded. When an asset's settings change, call `refresh(asset.identity())` on both so that its components are built again (see [component lifecycle](#component-lifecycle)).
+
 ### Custom Module
 
-Custom modules enable tracking domain-specific assets , integrating custom activity modeling or even custom impact/cost resolving. To create a custom module, define an `Asset` with its profile, implement `WombatModule`, and provide the relevant resolvers (such as a `WombatActivityResolver`).
+Custom modules enable tracking domain-specific assets , integrating custom activity modeling or even custom impact/cost resolving. To create a custom module, define an `Asset` with its profile, implement `WombatModule`, and provide factories for the relevant components (such as a `WombatActivityResolver`).
 
 Here is an example of a custom module providing modeled activity data for LLM traffic:
 
@@ -277,9 +290,9 @@ public class MySimulationModule implements WombatModule
     public Class<? extends Asset> assetClass() { return MySimulationAsset.class; }
 
     @Override
-    public Optional<WombatActivityResolver> createActivityResolver(WombatContext ctx)
+    public Optional<ProcessorFactory<WombatActivityResolver>> activityResolver()
     {
-        return Optional.of(new MySimulationActivityResolver());
+        return Optional.of((services, asset) -> new MySimulationActivityResolver());
     }
 }
 
@@ -350,6 +363,16 @@ public class MySimulationActivityResolver implements WombatActivityResolver
 ```
 
 Once defined, you can register this module in your `WombatCore` as seen [above](#custom-core) or in a Wombat app as documented [here](https://github.com/illuin-tech/wombat#custom-extensions).
+
+#### Component lifecycle
+
+A module never builds its components upfront: each method of `WombatModule` returns a `ProcessorFactory`, which the `AssetMonitor` and `AssetEvaluator` invoke the first time they need a component for it.
+
+* a component is built once per asset identity (`AssetIdentity`) and then kept
+* the component is handed the asset as it currently is on every call, so its settings should be read from there rather than captured by the factory ; anything built by the factory remains as it was built until the asset is refreshed with `refresh(asset.identity())`, or leaves the context
+* if the component implements `AutoCloseable`, it is closed when its asset is refreshed or leaves the context, and when the `AssetMonitor` or `AssetEvaluator` is closed
+* a factory may return the same instance for every asset (as the default components above do), such an instance must then not implement `AutoCloseable` since it would be closed along with the first asset to go ; release its resources from `WombatModule.close()` instead
+* a factory failing leaves nothing behind: its exception propagates to the call that needed the component, and building it is attempted again the next time it is needed
 
 ## How to build
 

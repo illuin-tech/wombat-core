@@ -3,61 +3,51 @@ package tech.illuin.wombat.module.llm_prometheus.connector;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusModule;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
-import tech.illuin.wombat.core.context.ResolvedContext;
-import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
+import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusProfile;
 
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
-public class PrometheusMultiClientConfigTest
+public class PrometheusClientConfigTest
 {
     @Test
-    void buildsAClientPerAssetWithoutAuthentication()
+    void buildsAClientWithoutAuthentication()
     {
-        PrometheusMultiClient multi = PrometheusMultiClientConfig.create(
-            context(Map.of(), asset("p", null, null))
-        );
-        assertTrue(multi.get("p").isPresent());
+        PrometheusClient client = PrometheusClientConfig.create(asset("p", null, null), secrets(Map.of()));
+        assertNotNull(client);
     }
 
     @Test
     void readsTheBasicAuthPasswordFromTheDeclaredVariable()
     {
-        PrometheusMultiClient multi = PrometheusMultiClientConfig.create(
-            context(Map.of("PROM_PASSWORD", "s3cret"), asset("p", "user", "PROM_PASSWORD"))
-        );
-        assertTrue(multi.get("p").isPresent());
+        PrometheusClient client = PrometheusClientConfig.create(asset("p", "user", "PROM_PASSWORD"), secrets(Map.of("PROM_PASSWORD", "s3cret")));
+        assertNotNull(client);
     }
 
     @Test
     void failsRatherThanAuthenticatingWithABlankPassword()
     {
-        // create() runs at source creation, so an unset variable stops the module wiring rather than producing a
-        // client that would 401 on every scrape.
-        WombatContext context = context(Map.of(), asset("p", "user", "PROM_PASSWORD"));
-        MissingSecretException e = assertThrows(MissingSecretException.class, () -> PrometheusMultiClientConfig.create(context));
+        // create() runs at source creation, so an unset variable fails the source rather than producing a client
+        // that would 401 on every scrape.
+        SecretResolver secrets = secrets(Map.of());
+        MissingSecretException e = assertThrows(MissingSecretException.class, () -> PrometheusClientConfig.create(asset("p", "user", "PROM_PASSWORD"), secrets));
 
         assertEquals("PROM_PASSWORD", e.key());
     }
 
-    private static WombatContext context(Map<String, String> environment, LLMPrometheusAsset asset)
+    private static SecretResolver secrets(Map<String, String> environment)
     {
-        return new ResolvedContext(
-            List.of(new Environment("env", List.of(asset))),
-            new EnvironmentSecretResolver(environment::get)
-        );
+        return new EnvironmentSecretResolver(environment::get);
     }
 
     private static LLMPrometheusAsset asset(String id, String username, String passwordEnv)

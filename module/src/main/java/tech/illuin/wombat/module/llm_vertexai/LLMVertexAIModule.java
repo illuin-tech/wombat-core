@@ -5,10 +5,10 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
-import tech.illuin.wombat.core.context.WombatContext;
+import tech.illuin.wombat.core.module.ProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.module.llm_vertexai.activity.LLMVertexAIActivityResolver;
-import tech.illuin.wombat.module.llm_vertexai.connector.GoogleMultiClientConfig;
+import tech.illuin.wombat.module.llm_vertexai.connector.GoogleClientConfig;
 
 import java.util.Optional;
 
@@ -29,8 +29,10 @@ public class LLMVertexAIModule implements WombatModule
     }
 
     @Override
-    public Optional<WombatActivityResolver> createActivityResolver(WombatContext context)
+    public Optional<ProcessorFactory<WombatActivityResolver>> activityResolver()
     {
-        return Optional.of(new LLMVertexAIActivityResolver(GoogleMultiClientConfig.create(context)));
+        return Optional.of((services, asset) -> new LLMVertexAIActivityResolver(
+            GoogleClientConfig.create((LLMVertexAIAsset) asset, services.secrets())
+        ));
     }
 }

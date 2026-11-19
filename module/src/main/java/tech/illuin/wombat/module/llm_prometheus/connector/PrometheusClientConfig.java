@@ -3,7 +3,6 @@ package tech.illuin.wombat.module.llm_prometheus.connector;
 import feign.Client;
 import feign.Feign;
 import feign.jackson.JacksonDecoder;
-import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
 
@@ -11,20 +10,9 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 
-public class PrometheusMultiClientConfig
+public class PrometheusClientConfig
 {
-    public static PrometheusMultiClient create(WombatContext context)
-    {
-        SecretResolver secrets = context.secrets();
-        PrometheusMultiClient multi = new PrometheusMultiClient();
-        context.assets().stream()
-            .filter(LLMPrometheusAsset.class::isInstance)
-            .map(LLMPrometheusAsset.class::cast)
-            .forEach(asset -> multi.register(asset.identity().id(), createClient(asset, secrets)));
-        return multi;
-    }
-
-    private static PrometheusClient createClient(LLMPrometheusAsset properties, SecretResolver secrets)
+    public static PrometheusClient create(LLMPrometheusAsset properties, SecretResolver secrets)
     {
         Feign.Builder builder = Feign.builder()
             .decoder(new JacksonDecoder());

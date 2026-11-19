@@ -17,7 +17,6 @@ import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicProfile;
 import tech.illuin.wombat.module.llm_anthropic.connector.AnthropicAdminClient;
-import tech.illuin.wombat.module.llm_anthropic.connector.AnthropicMultiClient;
 import tech.illuin.wombat.module.llm_anthropic.connector.model.AnthropicUsageReport;
 
 import java.time.Duration;
@@ -28,11 +27,11 @@ import static tech.illuin.wombat.core.activity.commons.TimeRange.toEpochMs;
 
 public class LLMAnthropicActivityResolver implements WombatActivityResolver
 {
-    private final AnthropicMultiClient client;
+    private final AnthropicAdminClient client;
 
     private static final Logger logger = LoggerFactory.getLogger(LLMAnthropicActivityResolver.class);
 
-    public LLMAnthropicActivityResolver(AnthropicMultiClient client)
+    public LLMAnthropicActivityResolver(AnthropicAdminClient client)
     {
         this.client = client;
     }
@@ -97,12 +96,7 @@ public class LLMAnthropicActivityResolver implements WombatActivityResolver
 
     private Map<String, Map<Long, Long>> usage(LLMAnthropicAsset asset, TimeRange range, BucketWidth width) throws WombatActivityException
     {
-        String assetId = asset.identity().id();
-        AnthropicAdminClient adminClient = this.client.get(assetId).orElseThrow(
-            () -> new IllegalStateException("No Anthropic client registered for asset " + assetId)
-        );
-
-        return fetch(adminClient, asset.profile(), range.start(), range.end(), width, assetId);
+        return fetch(this.client, asset.profile(), range.start(), range.end(), width, asset.identity().id());
     }
 
     private static Map<String, Map<Long, Long>> fetch(

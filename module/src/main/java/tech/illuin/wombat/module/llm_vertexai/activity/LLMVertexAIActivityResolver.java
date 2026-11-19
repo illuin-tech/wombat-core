@@ -13,7 +13,6 @@ import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIProfile;
 import tech.illuin.wombat.module.llm_vertexai.connector.GoogleClient;
-import tech.illuin.wombat.module.llm_vertexai.connector.GoogleMultiClient;
 import tech.illuin.wombat.module.llm_vertexai.connector.GoogleRegion;
 import tech.illuin.wombat.module.llm_vertexai.connector.model.GoogleQueryResponse;
 
@@ -23,11 +22,11 @@ import java.util.stream.Collectors;
 
 public class LLMVertexAIActivityResolver implements WombatActivityResolver
 {
-    private final GoogleMultiClient client;
+    private final GoogleClient client;
 
     private static final Logger logger = LoggerFactory.getLogger(LLMVertexAIActivityResolver.class);
 
-    public LLMVertexAIActivityResolver(GoogleMultiClient client)
+    public LLMVertexAIActivityResolver(GoogleClient client)
     {
         this.client = client;
     }
@@ -81,9 +80,6 @@ public class LLMVertexAIActivityResolver implements WombatActivityResolver
     private Map<String, ModelUsage> usage(LLMVertexAIAsset asset, TimeRange range, Set<String> models) throws WombatActivityException
     {
         String assetId = asset.identity().id();
-        GoogleClient googleClient = this.client.get(assetId)
-            .orElseThrow(() -> new IllegalStateException("No Google client registered for asset " + assetId));
-
         String filter = buildFilter(models);
         String period = range.resolution().toSeconds() + "s";
 
@@ -93,7 +89,7 @@ public class LLMVertexAIActivityResolver implements WombatActivityResolver
         String pageToken = null;
         try {
             do {
-                GoogleQueryResponse response = googleClient.query(
+                GoogleQueryResponse response = this.client.query(
                     asset.resourceName(),
                     filter,
                     range.start().toString(),

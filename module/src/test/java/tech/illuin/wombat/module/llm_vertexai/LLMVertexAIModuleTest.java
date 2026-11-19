@@ -3,8 +3,8 @@ package tech.illuin.wombat.module.llm_vertexai;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.asset.Environment;
-import tech.illuin.wombat.core.context.ResolvedContext;
+import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.module.llm_vertexai.activity.LLMVertexAIActivityResolver;
@@ -32,40 +32,36 @@ public class LLMVertexAIModuleTest
     @Test
     void providesAGoogleActivityResolverAndNoSource()
     {
-        // An empty context registers no Google client, so nothing is dialled.
-        Optional<WombatActivityResolver> resolver = this.module.createActivityResolver(new ResolvedContext());
-        assertTrue(resolver.isPresent());
-        assertInstanceOf(LLMVertexAIActivityResolver.class, resolver.get());
-        assertTrue(this.module.createSource(new ResolvedContext()).isEmpty());
+        Optional<ProcessorFactory<WombatActivityResolver>> factory = this.module.activityResolver();
+        assertTrue(factory.isPresent());
+        assertTrue(this.module.source().isEmpty());
     }
 
     @Test
     void resolvingAnAssetWithoutCredentialsKeyDoesNotRequireGoogleCredentialsAtStartup()
     {
-        // Application Default Credentials are resolved lazily on the first request, so wiring must succeed even on
-        // a machine (CI, a laptop) that has none.
-        ResolvedContext context = context(Map.of(), asset(null));
+        // Application Default Credentials are resolved lazily on the first request, so building the resolver must
+        // succeed even on a machine (CI, a laptop) that has none.
+        ProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
 
-        assertTrue(this.module.createActivityResolver(context).isPresent());
+        assertInstanceOf(LLMVertexAIActivityResolver.class, factory.create(services(Map.of()), asset(null)));
     }
 
     @Test
     void resolvingAServiceAccountAssetFailsWhenItsVariableIsUnset()
     {
-        // Proves the module builds its clients from the context's resolver: the credential is read from the
+        // Proves the module builds its clients from the services' resolver: the credential is read from the
         // environment at resolver creation, never from the asset the reconciler persisted.
-        ResolvedContext context = context(Map.of(), asset("GOOGLE_SA_KEY"));
+        ProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
 
-        MissingSecretException e = assertThrows(MissingSecretException.class, () -> this.module.createActivityResolver(context));
+        MissingSecretException e = assertThrows(MissingSecretException.class, () -> factory.create(services(Map.of()), asset("GOOGLE_SA_KEY")));
 
         assertEquals("GOOGLE_SA_KEY", e.key());
     }
 
-    private static ResolvedContext context(Map<String, String> environment, LLMVertexAIAsset asset)
+    private static WombatServices services(Map<String, String> environment)
     {
-        return new ResolvedContext(
-            List.of(new Environment("env", List.of(asset))),
-            new EnvironmentSecretResolver(environment::get));
+        return new WombatServices(new EnvironmentSecretResolver(environment::get));
     }
 
     private static LLMVertexAIAsset asset(String credentialsKey)

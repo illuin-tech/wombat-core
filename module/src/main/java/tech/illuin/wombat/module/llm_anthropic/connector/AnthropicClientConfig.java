@@ -3,7 +3,6 @@ package tech.illuin.wombat.module.llm_anthropic.connector;
 import feign.Client;
 import feign.Feign;
 import feign.jackson.JacksonDecoder;
-import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 
@@ -11,29 +10,18 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 
-public class AnthropicMultiClientConfig
+public class AnthropicClientConfig
 {
-    public static AnthropicMultiClient create(WombatContext context)
+    public static AnthropicAdminClient create(LLMAnthropicAsset properties, SecretResolver secrets)
     {
-        return create(context, null);
+        return create(properties, secrets, null);
     }
 
     /**
      * @param client the HTTP client to use, {@code null} for Feign's default (or a proxied one when the asset sets a
      *               proxy-url); exposed so tests can capture requests without a network
      */
-    public static AnthropicMultiClient create(WombatContext context, Client client)
-    {
-        SecretResolver secrets = context.secrets();
-        AnthropicMultiClient multi = new AnthropicMultiClient();
-        context.assets().stream()
-            .filter(LLMAnthropicAsset.class::isInstance)
-            .map(LLMAnthropicAsset.class::cast)
-            .forEach(asset -> multi.register(asset.identity().id(), createClient(asset, secrets, client)));
-        return multi;
-    }
-
-    private static AnthropicAdminClient createClient(LLMAnthropicAsset properties, SecretResolver secrets, Client client)
+    public static AnthropicAdminClient create(LLMAnthropicAsset properties, SecretResolver secrets, Client client)
     {
         Feign.Builder builder = Feign.builder()
             .decoder(new JacksonDecoder())

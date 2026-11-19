@@ -8,55 +8,61 @@ import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
+import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
+import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.ProcessorPool;
+import tech.illuin.wombat.core.module.WombatServices;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class AssetEvaluator implements AutoCloseable
 {
     private final WombatContextProvider contextProvider;
-    private final Map<AssetType, WombatActivityResolver> activityResolvers;
-    private final Map<AssetType, WombatEvaluationResolver> impactResolvers;
-    private final Map<AssetType, WombatEvaluationResolver> costResolvers;
+    private final ProcessorPool<WombatActivityResolver> activityResolvers;
+    private final ProcessorPool<WombatEvaluationResolver> impactResolvers;
+    private final ProcessorPool<WombatEvaluationResolver> costResolvers;
     private final ExecutorService executorService;
 
     private static final Logger logger = LoggerFactory.getLogger(AssetEvaluator.class);
 
-    public AssetEvaluator(WombatContextProvider contextProvider)
+    public AssetEvaluator(WombatContextProvider contextProvider, WombatServices services)
     {
-        this(contextProvider, Executors.newVirtualThreadPerTaskExecutor());
+        this(contextProvider, services, Executors.newVirtualThreadPerTaskExecutor());
     }
 
-    public AssetEvaluator(WombatContextProvider contextProvider, ExecutorService executorService)
+    public AssetEvaluator(WombatContextProvider contextProvider, WombatServices services, ExecutorService executorService)
     {
-        this.activityResolvers = new HashMap<>();
-        this.impactResolvers = new HashMap<>();
-        this.costResolvers = new HashMap<>();
+        this.activityResolvers = new ProcessorPool<>("activity-resolver", services);
+        this.impactResolvers = new ProcessorPool<>("impact-resolver", services);
+        this.costResolvers = new ProcessorPool<>("cost-resolver", services);
         this.contextProvider = contextProvider;
         this.executorService = executorService;
     }
 
-    public AssetEvaluator registerActivityResolver(AssetType type, WombatActivityResolver resolver)
+    public AssetEvaluator registerActivityResolver(AssetType type, ProcessorFactory<WombatActivityResolver> factory)
     {
-        this.activityResolvers.put(type, resolver);
+        this.activityResolvers.register(type, factory);
         return this;
     }
 
-    public AssetEvaluator registerCostResolver(AssetType type, WombatEvaluationResolver resolver)
+    public AssetEvaluator registerCostResolver(AssetType type, ProcessorFactory<WombatEvaluationResolver> factory)
     {
-        this.costResolvers.put(type, resolver);
+        this.costResolvers.register(type, factory);
         return this;
     }
 
-    public AssetEvaluator registerImpactResolver(AssetType type, WombatEvaluationResolver resolver)
+    public AssetEvaluator registerImpactResolver(AssetType type, ProcessorFactory<WombatEvaluationResolver> factory)
     {
-        this.impactResolvers.put(type, resolver);
+        this.impactResolvers.register(type, factory);
         return this;
     }
 
@@ -70,17 +76,43 @@ public class AssetEvaluator implements AutoCloseable
 
     public List<AssetEvaluation> evaluate(TimeRange range, AssetFilter filter) throws WombatEvaluationException
     {
+        WombatContext context = this.contextProvider.provide();
+        this.retain(context.assets().stream()
+            .map(Asset::identity)
+            .collect(Collectors.toSet())
+        );
+
         Queue<AssetEvaluation> outputs = new ConcurrentLinkedQueue<>();
-        for (Environment environment : this.contextProvider.provide().environments())
+        for (Environment environment : context.environments())
         {
             List<CompletableFuture<Void>> futures = environment.assets().stream()
                 .filter(asset -> filter == null || filter.accepts(environment.id(), asset.identity().id()))
-                .map(asset -> CompletableFuture.runAsync(() -> this.runEvaluation(asset, range, filter, outputs)))
+                .map(asset -> CompletableFuture.runAsync(() -> this.runEvaluation(asset, range, filter, outputs), this.executorService))
                 .toList();
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         }
         return List.copyOf(outputs);
+    }
+
+    /**
+     * Discards the resolvers of the asset identified by {@code identity}, so they are built again on the next call.
+     * <p>
+     * Meant to be called when an asset's settings changed: its resolvers are otherwise kept for as long as the asset is
+     * in the context.
+     */
+    public void refresh(AssetIdentity identity)
+    {
+        this.activityResolvers.invalidate(identity);
+        this.impactResolvers.invalidate(identity);
+        this.costResolvers.invalidate(identity);
+    }
+
+    private void retain(Set<AssetIdentity> identities)
+    {
+        this.activityResolvers.retain(identities);
+        this.impactResolvers.retain(identities);
+        this.costResolvers.retain(identities);
     }
 
     private void runEvaluation(Asset asset, TimeRange range, AssetFilter filter, Queue<AssetEvaluation> outputs)
@@ -103,54 +135,57 @@ public class AssetEvaluator implements AutoCloseable
 
     public Optional<AssetActivity> computeActivity(Asset asset, TimeRange range, AssetFilter filter) throws WombatActivityException
     {
-        WombatActivityResolver resolver = this.activityResolvers.get(asset.type());
+        Optional<WombatActivityResolver> resolver = this.activityResolvers.get(asset);
 
-        if (resolver == null || !resolver.accept(asset))
+        if (resolver.isEmpty() || !resolver.get().accept(asset))
         {
             logger.debug("Skipping asset {}: no activity resolver accepts asset-type {}", asset.identity(), asset.type());
             return Optional.empty();
         }
-        return resolver.resolve(asset, range, filter);
+        return resolver.get().resolve(asset, range, filter);
     }
 
     public Optional<AssetEvaluation> computeImpact(Asset asset, ActivityData activity) throws WombatEvaluationException
     {
-        WombatEvaluationResolver resolver = this.impactResolvers.get(asset.type());
+        Optional<WombatEvaluationResolver> resolver = this.impactResolvers.get(asset);
 
-        if (resolver == null)
+        if (resolver.isEmpty())
         {
             logger.debug("Skipping impact of asset {}: no impact resolver registered for asset-type {}", asset.identity().id(), asset.type());
             return Optional.empty();
         }
-        if (!resolver.accept(asset))
+        if (!resolver.get().accept(asset))
         {
             logger.warn(
                 "Skipping impact of asset {}: impact resolver {} rejects asset-type {} with profile {}",
                 asset.identity().id(),
-                resolver.getClass().getSimpleName(),
+                resolver.get().getClass().getSimpleName(),
                 asset.type().name(),
                 asset.profile().getClass().getName()
             );
             return Optional.empty();
         }
-        return Optional.of(resolver.resolve(asset, activity));
+        return Optional.of(resolver.get().resolve(asset, activity));
     }
 
     public Optional<AssetEvaluation> computeCost(Asset asset, ActivityData activity) throws WombatEvaluationException
     {
-        WombatEvaluationResolver resolver = this.costResolvers.get(asset.type());
+        Optional<WombatEvaluationResolver> resolver = this.costResolvers.get(asset);
 
-        if (resolver == null || !resolver.accept(asset))
+        if (resolver.isEmpty() || !resolver.get().accept(asset))
         {
             logger.debug("Skipping cost of asset {}: no cost resolver accepts asset-type {}", asset.identity().id(), asset.type());
             return Optional.empty();
         }
-        return Optional.of(resolver.resolve(asset, activity));
+        return Optional.of(resolver.get().resolve(asset, activity));
     }
 
     @Override
     public void close()
     {
         this.executorService.close();
+        this.activityResolvers.close();
+        this.impactResolvers.close();
+        this.costResolvers.close();
     }
 }

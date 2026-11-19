@@ -3,13 +3,12 @@ package tech.illuin.wombat.module.llm_anthropic;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.asset.Environment;
-import tech.illuin.wombat.core.context.ResolvedContext;
+import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.module.llm_anthropic.activity.LLMAnthropicActivityResolver;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -31,21 +30,18 @@ public class LLMAnthropicModuleTest
     @Test
     void providesAnActivityResolverAndNoSource()
     {
-        // An empty context registers no Anthropic client, so nothing is dialled.
-        Optional<WombatActivityResolver> resolver = this.module.createActivityResolver(new ResolvedContext());
-        assertTrue(resolver.isPresent());
-        assertInstanceOf(LLMAnthropicActivityResolver.class, resolver.get());
-        assertTrue(this.module.createSource(new ResolvedContext()).isEmpty());
+        // Building the client does not dial Anthropic.
+        Optional<ProcessorFactory<WombatActivityResolver>> factory = this.module.activityResolver();
+        assertTrue(factory.isPresent());
+        assertInstanceOf(LLMAnthropicActivityResolver.class, factory.get().create(services(Map.of("ANTHROPIC_ADMIN_KEY", "k")), asset()));
+        assertTrue(this.module.source().isEmpty());
     }
 
     @Test
     void creatingTheResolverFailsWhenTheAdminKeyIsUnset()
     {
-        ResolvedContext context = new ResolvedContext(
-            List.of(new Environment("env", List.of(asset()))),
-            new EnvironmentSecretResolver(Map.<String, String>of()::get)
-        );
-        MissingSecretException e = assertThrows(MissingSecretException.class, () -> this.module.createActivityResolver(context));
+        ProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
+        MissingSecretException e = assertThrows(MissingSecretException.class, () -> factory.create(services(Map.of()), asset()));
 
         assertEquals("ANTHROPIC_ADMIN_KEY", e.key());
     }
@@ -60,6 +56,11 @@ public class LLMAnthropicModuleTest
     void defaultsToThePublicApiUrl()
     {
         assertEquals(LLMAnthropicAsset.DEFAULT_API_URL, asset().resolvedApiUrl());
+    }
+
+    private static WombatServices services(Map<String, String> environment)
+    {
+        return new WombatServices(new EnvironmentSecretResolver(environment::get));
     }
 
     private static LLMAnthropicAsset asset()
