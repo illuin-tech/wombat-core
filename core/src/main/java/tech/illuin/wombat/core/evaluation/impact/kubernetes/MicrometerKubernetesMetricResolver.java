@@ -21,7 +21,7 @@ public class MicrometerKubernetesMetricResolver implements KubernetesMetricResol
     );
 
     private static final Set<String> TAGS = Set.of(
-        TAG_ENVIRONMENT, TAG_ASSET, TAG_ASSET_NAME, TAG_ASSET_TYPE,
+        TAG_ENVIRONMENT, TAG_ASSET, TAG_ASSET_TYPE,
         TAG_SERVICE, TAG_K8S_CLUSTER, TAG_K8S_NAMESPACE, TAG_K8S_POD, TAG_K8S_CONTAINER
     );
 

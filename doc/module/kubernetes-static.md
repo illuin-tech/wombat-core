@@ -27,7 +27,6 @@ For cross-cutting data formats such as `Duration`, `Lifetime`, `Country`, `Serve
 ```yaml
 id: "k8s-static-backend" # required - Unique identifier for the asset.
 environment-id: "production" # required - Identifier of the environment (e.g. `production`, `simulation`).
-name: "Static Backend Service" # required - Human-readable asset name.
 profile: # required - Static profile configuration.
   provider: "aws" # required - Infrastructure provider (`aws`, `azure`, `gcp`, `ovhcloud`, `scaleway`).
   instance-type: "c5.2xlarge" # required - Machine instance type (e.g. `c5.2xlarge`, `n2-standard-8`).
@@ -71,7 +70,6 @@ A minimal configuration modeling a single node with a static 20% constant baseli
 ```yaml
 id: "k8s-static-backend"
 environment-id: "production"
-name: "Static Backend Service"
 profile:
   provider: "aws"
   instance-type: "c5.xlarge"
@@ -97,7 +95,6 @@ In a realistic SaaS deployment, a 3-node Kubernetes cluster experiences multiple
 ```yaml
 id: "k8s-saas-prod-cluster"
 environment-id: "production"
-name: "Production SaaS Application Cluster"
 profile:
   provider: "gcp"
   instance-type: "n2-standard-8"

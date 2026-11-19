@@ -22,7 +22,7 @@ import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTa
 class LLMMapperTest
 {
     private static final AssetType TYPE_LLM = AssetType.of("tech.illuin", "wombat-module", "llm-prometheus", ActivityRegime.MEASURED, ServiceFamily.LLM);
-    private static final AssetIdentity IDENTITY = AssetIdentity.of("asset-1", "env-1", "Asset 1", TYPE_LLM);
+    private static final AssetIdentity IDENTITY = AssetIdentity.of("asset-1", "env-1", TYPE_LLM);
 
     private final LLMMapper mapper = new LLMMapper();
 
@@ -34,7 +34,6 @@ class LLMMapperTest
 
         assertTrue(tags.contains(Tag.of(TAG_ENVIRONMENT, "env-1")));
         assertTrue(tags.contains(Tag.of(TAG_ASSET, "asset-1")));
-        assertTrue(tags.contains(Tag.of(TAG_ASSET_NAME, "Asset 1")));
         assertTrue(tags.contains(Tag.of(TAG_ASSET_TYPE, TYPE_LLM.name())));
         assertTrue(tags.contains(Tag.of(TAG_SERVICE, "service-1")));
         assertTrue(tags.contains(Tag.of(TAG_LLM_PROVIDER, "mistralai")));

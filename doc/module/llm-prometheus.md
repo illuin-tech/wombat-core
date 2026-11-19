@@ -25,7 +25,6 @@ For cross-cutting data formats such as `Period`, `Country`, and `LLMProvider`, r
 ```yaml
 id: "vllm-mistral-7b" # required - Unique identifier for the asset.
 environment-id: "production" # required - Identifier of the environment (e.g. `production`, `staging`).
-name: "Self-Hosted Mistral 7B Service" # required - Human-readable asset name.
 prometheus-url: "http://prometheus.internal:9090" # required - Base HTTP/HTTPS URL of the Prometheus server.
 proxy-url: "http://proxy.corp.internal:8080" # optional (default: null) - HTTP/HTTPS corporate proxy URL if routing through an outbound proxy.
 username: "wombat-agent" # optional (default: null) - Basic authentication username.
@@ -46,7 +45,6 @@ A minimal configuration scraping output token generation from a local vLLM insta
 ```yaml
 id: "vllm-mistral-7b"
 environment-id: "production"
-name: "Self-Hosted Mistral 7B Service"
 prometheus-url: "http://prometheus.internal:9090"
 period: "5m"
 profile:
@@ -72,7 +70,6 @@ The example below demonstrates:
 # Asset 1: Meta Llama-3-70B Service on Enterprise Gateway
 id: "gateway-llama3-70b"
 environment-id: "production"
-name: "Enterprise Gateway - Llama 3 70B"
 prometheus-url: "https://prometheus-mon.corp.internal:9090"
 proxy-url: "http://proxy.corp.internal:8080"
 username: "wombat-agent"
@@ -90,7 +87,6 @@ profile:
 # Asset 2: Mistral Large Endpoint
 id: "gateway-mistral-large"
 environment-id: "production"
-name: "Enterprise Gateway - Mistral Large"
 prometheus-url: "https://prometheus-mon.corp.internal:9090"
 proxy-url: "http://proxy.corp.internal:8080"
 username: "wombat-agent"

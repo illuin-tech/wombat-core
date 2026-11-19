@@ -44,7 +44,6 @@ For cross-cutting data formats such as `Country` and `LLMProvider`, refer to the
 ```yaml
 id: "vertex-gemini-flash" # required - Unique identifier for the asset.
 environment-id: "production" # required - Identifier of the environment (e.g. `production`, `staging`).
-name: "Vertex AI"  # required - Human-readable asset name.
 google-url: "https://monitoring.googleapis.com" # `String`, Required - Base URL of the Cloud Monitoring API.
 resource-name: "projects/my-gcp-project" # `String`, Required - projects/<id>, folders/<id>, or organizations/<id>.
 credentials-key: "secrets.google.service-account" # `String`, Optional(default: null) - Secret resolver key for a service-account JSON key. Falls back to Application Default Credentials when omitted.
@@ -62,7 +61,6 @@ A minimal configuration resolving Gemini output tokens using Application Default
 ```yaml
 id: "vertex-gemini-flash"
 environment-id: "production"
-name: "Vertex AI - Gemini 2.0 Flash"
 google-url: "https://monitoring.googleapis.com"
 resource-name: "projects/my-gcp-project"
 profile:
@@ -81,7 +79,6 @@ The example below tracks two models as separate services under one asset. Both u
 ```yaml
 id: "vertex-gemini"
 environment-id: "production"
-name: "Vertex AI - Gemini"
 google-url: "https://monitoring.googleapis.com"
 resource-name: "projects/corp-ai-platform"
 credentials-key: "secrets.google.wombat-reader"

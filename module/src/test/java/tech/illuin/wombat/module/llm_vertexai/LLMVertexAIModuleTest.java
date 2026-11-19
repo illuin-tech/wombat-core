@@ -66,7 +66,7 @@ public class LLMVertexAIModuleTest
 
     private static LLMVertexAIAsset asset(String credentialsKey)
     {
-        return new LLMVertexAIAsset(AssetIdentity.of("g", "env", "G", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
+        return new LLMVertexAIAsset(AssetIdentity.of("g", "env", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
             new LLMVertexAIProfile(500, List.of("gemini-2.5-flash")));
     }
 }

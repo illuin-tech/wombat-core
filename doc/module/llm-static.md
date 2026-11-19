@@ -27,7 +27,6 @@ For cross-cutting data formats such as `Duration`, `Country`, `LLMProvider`, `Zo
 ```yaml
 id: "llm-static-assistant" # required - Unique identifier for the asset.
 environment-id: "production" # required - Identifier of the environment (e.g. `production`, `planning`).
-name: "Enterprise Multi-Model Assistant" # required - Human-readable asset name.
 profile: # required - Multi-model profile configuration.
   zone-id: "UTC" # optional (default: UTC) - Default timezone for scenario schedule evaluation (e.g. `UTC`, `Europe/Paris`).
   models: # required - List of foundation models and their respective scenarios.
@@ -71,7 +70,6 @@ A minimal configuration modeling a constant chatbot service using OpenAI `gpt-5.
 ```yaml
 id: "llm-static-chatbot"
 environment-id: "production"
-name: "Customer Support Chatbot"
 profile:
   zone-id: "UTC"
   models:
@@ -96,7 +94,6 @@ Modern enterprise AI platforms distribute tasks across specialized models:
 ```yaml
 id: "enterprise-ai-platform"
 environment-id: "production"
-name: "Corporate Multi-Model AI Platform"
 profile:
   zone-id: "Europe/Paris"
   models:

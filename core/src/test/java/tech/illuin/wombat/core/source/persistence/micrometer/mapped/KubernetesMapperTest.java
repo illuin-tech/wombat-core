@@ -20,7 +20,7 @@ import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTa
 class KubernetesMapperTest
 {
     private static final AssetType TYPE_KUBERNETES = AssetType.of("tech.illuin", "wombat-module", "kubernetes-prometheus", ActivityRegime.MEASURED, ServiceFamily.KUBERNETES_CONTAINER);
-    private static final AssetIdentity IDENTITY = AssetIdentity.of("asset-1", "env-1", "Asset 1", TYPE_KUBERNETES);
+    private static final AssetIdentity IDENTITY = AssetIdentity.of("asset-1", "env-1", TYPE_KUBERNETES);
 
     private final KubernetesMapper mapper = new KubernetesMapper();
 
@@ -32,7 +32,6 @@ class KubernetesMapperTest
 
         assertTrue(tags.contains(Tag.of(TAG_ENVIRONMENT, "env-1")));
         assertTrue(tags.contains(Tag.of(TAG_ASSET, "asset-1")));
-        assertTrue(tags.contains(Tag.of(TAG_ASSET_NAME, "Asset 1")));
         assertTrue(tags.contains(Tag.of(TAG_ASSET_TYPE, TYPE_KUBERNETES.name())));
         assertTrue(tags.contains(Tag.of(TAG_SERVICE, "container-1")));
         assertTrue(tags.contains(Tag.of(TAG_K8S_CLUSTER, "cluster-prod")));

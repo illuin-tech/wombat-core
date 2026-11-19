@@ -186,7 +186,6 @@ class KubernetesActivityResolverMicrometerTest
         Tags tags = Tags.of(
             TAG_ENVIRONMENT, "env-1",
             TAG_ASSET, assetId,
-            TAG_ASSET_NAME, assetId,
             TAG_ASSET_TYPE, "k8s",
             TAG_SERVICE, serviceId,
             TAG_K8S_CLUSTER, cluster,

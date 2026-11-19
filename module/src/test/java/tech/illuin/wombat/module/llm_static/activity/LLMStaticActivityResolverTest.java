@@ -53,7 +53,7 @@ class LLMStaticActivityResolverTest
         );
 
         LLMStaticProfile profile = new LLMStaticProfile(List.of(m1, m2));
-        LLMStaticAsset asset = new LLMStaticAsset(AssetIdentity.of("llm-asset", "test-env", "Test Static Asset", LLMStaticModule.TYPE), profile);
+        LLMStaticAsset asset = new LLMStaticAsset(AssetIdentity.of("llm-asset", "test-env", LLMStaticModule.TYPE), profile);
 
         // 100 seconds range
         TimeRange range = new TimeRange(Instant.ofEpochSecond(0), Instant.ofEpochSecond(100));
@@ -89,7 +89,7 @@ class LLMStaticActivityResolverTest
     void resolvesConstantScenarioAcrossTimeSlots()
     {
         LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-static-1", "env-test", "Static LLM 1", LLMStaticModule.TYPE),
+            AssetIdentity.of("llm-static-1", "env-test", LLMStaticModule.TYPE),
             new LLMStaticProfile(
                 LLMProvider.openai,
                 "gpt-4o",
@@ -130,7 +130,7 @@ class LLMStaticActivityResolverTest
         int batchTotalRequests = (int) (63_072_000 * (2.0 / 24.0) * 1.0);
 
         LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-static-2", "env-test", "Static LLM 2", LLMStaticModule.TYPE),
+            AssetIdentity.of("llm-static-2", "env-test", LLMStaticModule.TYPE),
             new LLMStaticProfile(
                 LLMProvider.openai,
                 "gpt-4o",
@@ -189,7 +189,7 @@ class LLMStaticActivityResolverTest
         );
 
         LLMStaticProfile profile = new LLMStaticProfile(List.of(m1, m2));
-        LLMStaticAsset asset = new LLMStaticAsset(AssetIdentity.of("llm-asset", "test-env", "Test Static Asset", LLMStaticModule.TYPE), profile);
+        LLMStaticAsset asset = new LLMStaticAsset(AssetIdentity.of("llm-asset", "test-env", LLMStaticModule.TYPE), profile);
 
         TimeRange range = new TimeRange(Instant.ofEpochSecond(0), Instant.ofEpochSecond(100));
         AssetFilter filter = new AssetFilter(new AssetFilter.Environment("test-env", Set.of(new AssetFilter.Asset("llm-asset", Set.of("mistral-large-latest")))));
@@ -211,7 +211,7 @@ class LLMStaticActivityResolverTest
         int userTotalRequests = (int) (31_536_000 * (9.0 / 24.0) * (2.0 / Math.PI));
 
         LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-static-daily", "env-test", "Daily Static LLM", LLMStaticModule.TYPE),
+            AssetIdentity.of("llm-static-daily", "env-test", LLMStaticModule.TYPE),
             new LLMStaticProfile(
                 LLMProvider.openai,
                 "gpt-4o",
@@ -262,7 +262,7 @@ class LLMStaticActivityResolverTest
     void resolvesSevenDayAggregateBatchActivityScenario()
     {
         LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-batch-7d", "env-test", "Batch 7D Asset", LLMStaticModule.TYPE),
+            AssetIdentity.of("llm-batch-7d", "env-test", LLMStaticModule.TYPE),
             new LLMStaticProfile(
                 LLMProvider.openai,
                 "gpt-4o",
@@ -294,7 +294,7 @@ class LLMStaticActivityResolverTest
     {
         int targetAnnualRequests = 100_000;
         LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-user-year", "env-test", "User Year Asset", LLMStaticModule.TYPE),
+            AssetIdentity.of("llm-user-year", "env-test", LLMStaticModule.TYPE),
             new LLMStaticProfile(
                 LLMProvider.openai,
                 "gpt-4o",
@@ -325,7 +325,7 @@ class LLMStaticActivityResolverTest
     {
         int targetAnnualRequests = 50_000;
         LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-batch-year", "env-test", "Batch Year Asset", LLMStaticModule.TYPE),
+            AssetIdentity.of("llm-batch-year", "env-test", LLMStaticModule.TYPE),
             new LLMStaticProfile(
                 LLMProvider.openai,
                 "gpt-4o",
@@ -357,7 +357,7 @@ class LLMStaticActivityResolverTest
         ApplicabilityFilter janFilter = new ApplicabilityFilter(Set.of(), Set.of(JANUARY));
 
         LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-jan-asset", "env-test", "Jan Only Asset", LLMStaticModule.TYPE),
+            AssetIdentity.of("llm-jan-asset", "env-test", LLMStaticModule.TYPE),
             new LLMStaticProfile(
                 LLMProvider.openai,
                 "gpt-4o",
@@ -402,7 +402,7 @@ class LLMStaticActivityResolverTest
         );
 
         LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-weekday-asset", "env-test", "Weekday Asset", LLMStaticModule.TYPE),
+            AssetIdentity.of("llm-weekday-asset", "env-test", LLMStaticModule.TYPE),
             new LLMStaticProfile(
                 LLMProvider.openai,
                 "gpt-4o",

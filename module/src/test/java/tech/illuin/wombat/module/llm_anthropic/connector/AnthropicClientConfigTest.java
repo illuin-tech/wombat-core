@@ -55,7 +55,7 @@ class AnthropicClientConfigTest
         };
 
         LLMAnthropicAsset asset = new LLMAnthropicAsset(
-            AssetIdentity.of("claude", "prod", "Claude", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
+            AssetIdentity.of("claude", "prod", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
             new LLMAnthropicProfile(FRANCE, 500, null, null, null)
         );
         EnvironmentSecretResolver secrets = new EnvironmentSecretResolver(Map.of("ANTHROPIC_ADMIN_KEY", "sk-ant-admin-test")::get);

@@ -27,7 +27,6 @@ For cross-cutting data formats such as `Country`, refer to the [Generic Type Glo
 ```yaml
 id: "anthropic-org" # required - Unique identifier for the asset.
 environment-id: "production" # required - Identifier of the environment (e.g. `production`, `staging`).
-name: "Anthropic Organization" # required - Human-readable asset name.
 admin-key: "secrets.anthropic.admin-key" # required - Secret resolver key for the Anthropic Admin API key (`sk-ant-admin...`); a standard API key is rejected by the usage report endpoint.
 api-url: "https://api.anthropic.com" # optional (default: https://api.anthropic.com) - Base URL of the Anthropic API.
 proxy-url: "http://proxy.corp.internal:8080" # optional (default: null) - HTTP corporate proxy URL; must include a host and a port.
@@ -56,7 +55,6 @@ A minimal configuration accounting for the whole Anthropic organization, with th
 ```yaml
 id: "anthropic-org"
 environment-id: "production"
-name: "Anthropic Organization"
 admin-key: "secrets.anthropic.admin-key"
 profile:
   location: "USA"
@@ -78,7 +76,6 @@ The example below demonstrates:
 # Asset 1: Customer Support Assistant Workspace
 id: "anthropic-support"
 environment-id: "production"
-name: "Anthropic - Customer Support Assistant"
 admin-key: "secrets.anthropic.admin-key"
 proxy-url: "http://proxy.corp.internal:8080"
 profile:
@@ -94,7 +91,6 @@ profile:
 # Asset 2: R&D Agents API Keys
 id: "anthropic-research"
 environment-id: "production"
-name: "Anthropic - R&D Agents"
 admin-key: "secrets.anthropic.admin-key"
 proxy-url: "http://proxy.corp.internal:8080"
 profile:

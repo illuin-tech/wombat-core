@@ -30,7 +30,7 @@ This is critical for internal orchestration purposes but also communicated in ou
 It is currently composed of the following properties:
 - the asset `id`
 - the asset `environmentId`
-- the asset `name`
+- the asset `type`, see [`AssetType`](#assettype)
 
 ## 2. Temporal & Time Types
 

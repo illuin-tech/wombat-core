@@ -66,7 +66,7 @@ public class LLMAnthropicModuleTest
     private static LLMAnthropicAsset asset()
     {
         return new LLMAnthropicAsset(
-            AssetIdentity.of("a", "env", "A", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
+            AssetIdentity.of("a", "env", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
             new LLMAnthropicProfile(FRANCE, 500, null, null, null)
         );
     }

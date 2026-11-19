@@ -17,6 +17,7 @@ import tech.illuin.wombat.module.llm_static.scenario.ConstantScenario;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
@@ -27,12 +28,13 @@ class AssetJsonTest
     private static final String TYPE = LLMStaticModule.TYPE.name();
 
     private static final LLMStaticAsset ASSET = new LLMStaticAsset(
-        AssetIdentity.of("llm", "env", "LLM", LLMStaticModule.TYPE),
+        AssetIdentity.of("llm", "env", LLMStaticModule.TYPE),
         new LLMStaticProfile(List.of(new LLMStaticProfile.ModelConfig(
             LLMProvider.mistralai, "mistral-large-latest", Country.FRANCE, List.of(new ConstantScenario(500, 1000, null))
         )))
     );
 
+    /** The payload still carries a {@code name}, as assets persisted before it was dropped from the identity do. */
     @Test
     void read_fillsTheIdentityTypeFromTheTypeProperty() throws Exception
     {
@@ -54,7 +56,7 @@ class AssetJsonTest
             """.formatted(TYPE), Asset.class);
 
         LLMStaticAsset read = assertInstanceOf(LLMStaticAsset.class, asset);
-        assertEquals(AssetIdentity.of("llm", "env", "LLM", TYPE), read.identity());
+        assertEquals(AssetIdentity.of("llm", "env", TYPE), read.identity());
     }
 
     @Test
@@ -65,6 +67,7 @@ class AssetJsonTest
 
         JsonNode node = mapper.readTree(json);
         assertEquals(TYPE, node.get("type").asText());
+        assertFalse(node.has("name"));
         assertEquals(1, json.split("\"type\":\"" + TYPE + "\"", -1).length - 1);
         assertEquals(ASSET, mapper.readValue(json, Asset.class));
     }

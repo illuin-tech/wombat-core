@@ -45,7 +45,7 @@ class LLMVertexAIActivityResolverTest
 
     private final GoogleClient client = mock(GoogleClient.class);
     private final LLMVertexAIAsset asset = new LLMVertexAIAsset(
-        AssetIdentity.of("llm-google", "prod", "Google LLM", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", PROJECT, null,
+        AssetIdentity.of("llm-google", "prod", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", PROJECT, null,
         new LLMVertexAIProfile(500, List.of(MODEL))
     );
     private final LLMVertexAIActivityResolver resolver = new LLMVertexAIActivityResolver(this.client);
