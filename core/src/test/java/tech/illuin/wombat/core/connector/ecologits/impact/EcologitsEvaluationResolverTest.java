@@ -14,12 +14,15 @@ import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.connector.ecologits.connector.EcologitsClient;
+import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationRequest;
 import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationResponse;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
 import tech.illuin.wombat.core.evaluation.impact.llm.LLMImpact;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -96,6 +99,24 @@ class EcologitsEvaluationResolverTest
         // Footprint total equals sum of service footprints
         float expectedGwp = (float) (impact1.footprint().gwp().totalValue() + impact2.footprint().gwp().totalValue());
         assertEquals(expectedGwp, impact.footprint().gwp().totalValue(), 1e-4);
+    }
+
+    /** ISO 3166 has no code for the world, Ecologits names its electricity mix WOR. */
+    @Test
+    void resolve_worldLocation_requestsTheWorldElectricityMix() throws Exception
+    {
+        List<EcologitsEstimationRequest> requests = new ArrayList<>();
+        EcologitsEvaluationResolver capturing = new EcologitsEvaluationResolver(req -> {
+            requests.add(req);
+            return dummyResponse(req.outputTokenCount());
+        });
+
+        TestAsset asset = new TestAsset(LLM_TYPE, new TestLLMProfile(LLMProvider.google_genai, "gemini-2.5-pro", Country.WORLD));
+        LLMServiceActivity service = new LLMServiceActivity(LLMProvider.google_genai, "gemini-2.5-pro", Country.WORLD, 1000L, 10.0);
+        TimeRange range = new TimeRange(Instant.ofEpochMilli(0), Instant.ofEpochMilli(1000));
+        capturing.resolve(asset, new LLMActivityData(ActivityRegime.MEASURED, Set.of("gemini-2.5-pro"), range, Map.of("gemini-2.5-pro", service)));
+
+        assertEquals(List.of("WOR"), requests.stream().map(EcologitsEstimationRequest::electricityMixZone).toList());
     }
 
     private static EcologitsEstimationResponse dummyResponse(double value)

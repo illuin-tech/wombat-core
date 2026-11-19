@@ -1,15 +1,17 @@
 package tech.illuin.wombat.module.kubernetes_static.scenario.tools;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import java.time.DayOfWeek;
 import java.time.Month;
 import java.time.ZonedDateTime;
 import java.util.Set;
 
+@JsonClassDescription("Days and months a scenario applies to")
 public record ApplicabilityFilter(
-    @JsonProperty("daysOfWeek") Set<DayOfWeek> daysOfWeek,
-    @JsonProperty("months") Set<Month> months
+    @JsonPropertyDescription("Days of the week the scenario applies to, every day when empty") Set<DayOfWeek> daysOfWeek,
+    @JsonPropertyDescription("Months the scenario applies to, every month when empty") Set<Month> months
 ) {
     public static final ApplicabilityFilter ALWAYS = new ApplicabilityFilter(Set.of(), Set.of());
 

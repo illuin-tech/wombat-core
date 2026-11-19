@@ -9,10 +9,10 @@ import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record AssetType(
-    @NotBlank @JsonProperty("namespace") String namespace,
-    @NotBlank @JsonProperty("localName") String localName,
-    @NotNull @JsonProperty("regime") ActivityRegime regime,
-    @NotNull @JsonProperty("family") ServiceFamily family
+    @NotBlank String namespace,
+    @NotBlank String localName,
+    @NotNull ActivityRegime regime,
+    @NotNull ServiceFamily family
 ) {
     public AssetType
     {

@@ -1,10 +1,13 @@
 package tech.illuin.wombat.core.activity.commons;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.List;
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -120,5 +123,38 @@ class CountryTest
             assertNotNull(fromAlpha3, "Expected country for ISO3 code " + country.alpha3() + " to be present");
             assertSame(country, fromAlpha3);
         }
+    }
+
+    @Test
+    void testValuesListsEveryCountryOnceByAlpha3()
+    {
+        List<Country> values = Country.values();
+
+        assertEquals(Locale.getISOCountries().length + 1, values.size());
+        assertTrue(values.contains(Country.FRANCE));
+        assertTrue(values.contains(Country.WORLD));
+        assertEquals(values.stream().map(Country::alpha3).sorted().toList(), values.stream().map(Country::alpha3).toList());
+        assertThrows(UnsupportedOperationException.class, () -> values.add(Country.FRANCE));
+    }
+
+    @Test
+    void testWorldHasItsOwnCodesAndName()
+    {
+        assertEquals("XX", Country.WORLD.alpha2());
+        assertEquals("XXX", Country.WORLD.alpha3());
+        assertEquals("World", Country.WORLD.displayName());
+        assertEquals("World", Country.WORLD.displayName(Locale.FRENCH));
+        assertSame(Country.WORLD, Country.ofAlpha3("XXX"));
+        assertSame(Country.WORLD, Country.ofCode("XX").orElseThrow());
+    }
+
+    @Test
+    void testJsonRoundTripIncludingWorld() throws Exception
+    {
+        ObjectMapper mapper = JsonMapper.builder().build();
+
+        assertEquals("\"XXX\"", mapper.writeValueAsString(Country.WORLD));
+        for (Country country : Country.values())
+            assertSame(country, mapper.readValue(mapper.writeValueAsString(country), Country.class));
     }
 }

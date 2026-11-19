@@ -1,8 +1,10 @@
 package tech.illuin.wombat.module.llm_static.scenario;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter;
@@ -15,24 +17,19 @@ import java.time.ZonedDateTime;
 /**
  * Models user activity between opening and closing times with configurable curve shape,
  * with annual request volume distributed across active periods and modulated by mathematical curves.
- *
- * @param outputTokenPerRequest mean output token count per request (>= 0)
- * @param requestPerYear total annual request volume (>= 0.0)
- * @param openingTime start time of user activity window
- * @param closingTime end time of user activity window
- * @param curve mathematical curve profile (sinusoidal, trapezoidal, bell)
- * @param jitter deterministic variance factor (e.g. 0.05 for +-5%)
- * @param applicability optional applicability filter
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonClassDescription("Request volume following user activity over a daily window")
 public record UserActivityScenario(
-    @PositiveOrZero @JsonProperty("outputTokenPerRequest") @JsonAlias({"output-token-per-request", "output-token-count"}) int outputTokenPerRequest,
-    @JsonProperty("requestPerYear") @JsonAlias({"request-per-year", "requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) @PositiveOrZero int requestPerYear,
-    @NotNull @JsonProperty("openingTime") @JsonAlias("opening-time") LocalTime openingTime,
-    @NotNull @JsonProperty("closingTime") @JsonAlias("closing-time") LocalTime closingTime,
-    @JsonProperty("curve") CurveShape curve,
-    @JsonProperty("jitter") double jitter,
-    @JsonProperty("applicability") ApplicabilityFilter applicability
+    // Legacy names, still found in configuration files
+    @PositiveOrZero @JsonPropertyDescription("Mean output tokens per request") @JsonAlias("output-token-count") int outputTokenPerRequest,
+    @PositiveOrZero @JsonPropertyDescription("Annual request count, distributed over the activity windows")
+    @JsonAlias({"requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) int requestPerYear,
+    @NotNull @JsonPropertyDescription("Start of the daily activity window") LocalTime openingTime,
+    @NotNull @JsonPropertyDescription("End of the daily activity window") LocalTime closingTime,
+    @JsonProperty(defaultValue = "bell") @JsonPropertyDescription("Shape of the activity over the window") CurveShape curve,
+    @JsonProperty(defaultValue = "0") @JsonPropertyDescription("Deterministic variance factor, e.g. 0.05 for +-5%") double jitter,
+    @JsonPropertyDescription("Days and months the scenario applies to, always when omitted") ApplicabilityFilter applicability
 ) implements Scenario
 {
     public static final CurveShape DEFAULT_CURVE = CurveShape.BELL;

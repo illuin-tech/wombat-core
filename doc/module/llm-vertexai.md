@@ -46,7 +46,7 @@ id: "vertex-gemini-flash" # required - Unique identifier for the asset.
 environment-id: "production" # required - Identifier of the environment (e.g. `production`, `staging`).
 google-url: "https://monitoring.googleapis.com" # `String`, Required - Base URL of the Cloud Monitoring API.
 resource-name: "projects/my-gcp-project" # `String`, Required - projects/<id>, folders/<id>, or organizations/<id>.
-credentials-key: "secrets.google.service-account" # `String`, Optional(default: null) - Secret resolver key for a service-account JSON key. Falls back to Application Default Credentials when omitted.
+credentials-key: "secrets.google.service-account" # `SecretKey`, Optional(default: null) - Secret resolver key for a service-account JSON key. Falls back to Application Default Credentials when omitted.
 proxy-url: "http://proxy.corp.internal:8080" # optional (default: null) - HTTP corporate proxy URL; must include a host and a port.
 profile: # `LLMVertexAIProfile`, Required - LLM profile and Cloud Monitoring query configuration.
   models: # optional (default: all models) - Restricts the usage report to these model identifiers.

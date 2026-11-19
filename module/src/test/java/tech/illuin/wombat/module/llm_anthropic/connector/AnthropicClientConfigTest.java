@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicModule;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
+import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicProfile;
 import tech.illuin.wombat.module.llm_anthropic.connector.model.AnthropicUsageReport;
@@ -55,7 +56,7 @@ class AnthropicClientConfigTest
         };
 
         LLMAnthropicAsset asset = new LLMAnthropicAsset(
-            AssetIdentity.of("claude", "prod", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
+            AssetIdentity.of("claude", "prod", LLMAnthropicModule.TYPE), null, null, SecretKey.of("ANTHROPIC_ADMIN_KEY"),
             new LLMAnthropicProfile(FRANCE, 500, null, null, null)
         );
         EnvironmentSecretResolver secrets = new EnvironmentSecretResolver(Map.of("ANTHROPIC_ADMIN_KEY", "sk-ant-admin-test")::get);

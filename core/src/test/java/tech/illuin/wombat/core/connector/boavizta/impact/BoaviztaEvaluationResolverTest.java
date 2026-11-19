@@ -118,6 +118,26 @@ class BoaviztaEvaluationResolverTest
         assertEquals(3, k8sImpact.nodeCount());
     }
 
+    /** ISO 3166 has no code for the world, Boavizta names it WOR. */
+    @Test
+    void resolve_worldLocation_requestsTheWorldAverage() throws Exception
+    {
+        BoaviztaClient client = mock(BoaviztaClient.class);
+        BoaviztaEvaluationResolver evalResolver = new BoaviztaEvaluationResolver(client);
+
+        when(client.getInstanceConfig(eq(BoaviztaServerProvider.aws), eq("c5a.4xlarge")))
+            .thenReturn(new BoaviztaInstanceConfigResponse(new BoaviztaInstanceConfigResponse.IntConfigItem(16), null, null, null, null, null));
+        when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaInstanceImpactRequest.class)))
+            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
+
+        TestAsset asset = new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", Country.WORLD, Lifetime.ofHours(1000), 1));
+        TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-01T01:00:00Z"), Duration.ofHours(1));
+        evalResolver.resolve(asset, new KubernetesActivityData(ActivityRegime.MODELED, Set.of("srv-1"), range, CPUUsage.relative(0.50), Map.of("srv-1", 1.0), Map.of()));
+
+        verify(client, atLeastOnce()).getInstanceImpact(eq(true), anyInt(), anySet(), argThat(request -> "WOR".equals(request.usage().usageLocation())));
+        verify(client, never()).getInstanceImpact(eq(true), anyInt(), anySet(), argThat(request -> !"WOR".equals(request.usage().usageLocation())));
+    }
+
     private record TestServerProfile(
         ServerProvider provider,
         String instanceType,

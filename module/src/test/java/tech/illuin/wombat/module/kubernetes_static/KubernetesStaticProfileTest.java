@@ -2,6 +2,8 @@ package tech.illuin.wombat.module.kubernetes_static;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
@@ -25,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class KubernetesStaticProfileTest
 {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    /** Reads configuration files as the app does: kebab-case, from the naming strategy alone. */
+    private final ObjectMapper yamlMapper = YAMLMapper.builder().findAndAddModules().propertyNamingStrategy(PropertyNamingStrategies.KEBAB_CASE).build();
 
     @Test
     void deserializesFromJsonWithCamelCaseProperties() throws JsonProcessingException
@@ -61,7 +65,7 @@ class KubernetesStaticProfileTest
     }
 
     @Test
-    void deserializesFromJsonWithKebabCaseAliases() throws JsonProcessingException
+    void deserializesFromKebabCaseYaml() throws JsonProcessingException
     {
         String json = """
             {
@@ -79,7 +83,7 @@ class KubernetesStaticProfileTest
             }
             """;
 
-        KubernetesStaticProfile profile = this.objectMapper.readValue(json, KubernetesStaticProfile.class);
+        KubernetesStaticProfile profile = this.yamlMapper.readValue(json, KubernetesStaticProfile.class);
 
         assertNotNull(profile);
         assertEquals(ServerProvider.gcp, profile.provider());
@@ -90,7 +94,7 @@ class KubernetesStaticProfileTest
     }
 
     @Test
-    void deserializesNodeCountInCamelCaseAndKebabCase() throws JsonProcessingException
+    void deserializesNodeCountFromJsonAndKebabCaseYaml() throws JsonProcessingException
     {
         String camelCaseJson = """
             {
@@ -128,7 +132,7 @@ class KubernetesStaticProfileTest
             }
             """;
 
-        KubernetesStaticProfile kebabProfile = this.objectMapper.readValue(kebabCaseJson, KubernetesStaticProfile.class);
+        KubernetesStaticProfile kebabProfile = this.yamlMapper.readValue(kebabCaseJson, KubernetesStaticProfile.class);
         assertNotNull(kebabProfile);
         assertEquals(4, kebabProfile.nodeCount());
     }

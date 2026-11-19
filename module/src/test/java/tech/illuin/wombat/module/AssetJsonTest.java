@@ -49,7 +49,7 @@ class AssetJsonTest
                   "provider": "mistralai",
                   "model": "mistral-large-latest",
                   "location": "FRA",
-                  "scenarios": [{"type": "constant", "output-token-per-request": 500, "request-per-year": 1000}]
+                  "scenarios": [{"type": "constant", "outputTokenPerRequest": 500, "requestPerYear": 1000}]
                 }]
               }
             }

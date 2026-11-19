@@ -1,5 +1,6 @@
 package tech.illuin.wombat.core.asset.profile;
 
+import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -7,6 +8,7 @@ import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@JsonClassDescription("Duration as an amount and a unit suffix: h (hours), d (days), m (months), y (years), e.g. 5y; a bare amount is in hours")
 public record Lifetime(
     long value,
     Unit unit

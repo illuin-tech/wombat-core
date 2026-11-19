@@ -2,6 +2,8 @@ package tech.illuin.wombat.module.llm_static.scenario;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter;
 
@@ -16,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ScenarioSerializationTest
 {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    /** Reads configuration files as the app does: kebab-case, from the naming strategy alone. */
+    private final ObjectMapper yamlMapper = YAMLMapper.builder().findAndAddModules().propertyNamingStrategy(PropertyNamingStrategies.KEBAB_CASE).build();
 
     @Test
     void deserializesConstantScenario() throws JsonProcessingException
@@ -44,7 +48,7 @@ public class ScenarioSerializationTest
     }
 
     @Test
-    void deserializesConstantScenarioWithKebabCaseAliases() throws JsonProcessingException
+    void deserializesConstantScenarioFromKebabCaseYaml() throws JsonProcessingException
     {
         String json = """
             {
@@ -54,7 +58,7 @@ public class ScenarioSerializationTest
             }
             """;
 
-        Scenario scenario = this.objectMapper.readValue(json, Scenario.class);
+        Scenario scenario = this.yamlMapper.readValue(json, Scenario.class);
         assertInstanceOf(ConstantScenario.class, scenario);
 
         ConstantScenario constant = (ConstantScenario) scenario;
@@ -92,7 +96,7 @@ public class ScenarioSerializationTest
     }
 
     @Test
-    void deserializesUserActivityScenarioWithLegacyAndKebabCaseAliases() throws JsonProcessingException
+    void deserializesUserActivityScenarioFromKebabCaseYamlWithLegacyNames() throws JsonProcessingException
     {
         String json = """
             {
@@ -105,7 +109,7 @@ public class ScenarioSerializationTest
             }
             """;
 
-        Scenario scenario = this.objectMapper.readValue(json, Scenario.class);
+        Scenario scenario = this.yamlMapper.readValue(json, Scenario.class);
         assertInstanceOf(UserActivityScenario.class, scenario);
 
         UserActivityScenario userActivity = (UserActivityScenario) scenario;
@@ -145,7 +149,7 @@ public class ScenarioSerializationTest
     }
 
     @Test
-    void deserializesBatchActivityScenarioWithLegacyAndKebabCaseAliases() throws JsonProcessingException
+    void deserializesBatchActivityScenarioFromKebabCaseYamlWithLegacyNames() throws JsonProcessingException
     {
         String json = """
             {
@@ -158,7 +162,7 @@ public class ScenarioSerializationTest
             }
             """;
 
-        Scenario scenario = this.objectMapper.readValue(json, Scenario.class);
+        Scenario scenario = this.yamlMapper.readValue(json, Scenario.class);
         assertInstanceOf(BatchActivityScenario.class, scenario);
 
         BatchActivityScenario batchActivity = (BatchActivityScenario) scenario;
