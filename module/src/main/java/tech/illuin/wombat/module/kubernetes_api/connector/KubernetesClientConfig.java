@@ -5,23 +5,12 @@ import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
-import tech.illuin.wombat.core.context.WombatContext;
 
 import java.io.File;
 
-public class KubernetesMultiClusterClientConfig
+public class KubernetesClientConfig
 {
-    public static KubernetesMultiClusterClient create(WombatContext context)
-    {
-        KubernetesMultiClusterClient multi = new KubernetesMultiClusterClient();
-        context.assets().stream()
-            .filter(KubernetesAPIAsset.class::isInstance)
-            .map(KubernetesAPIAsset.class::cast)
-            .forEach(cluster -> multi.register(cluster.identity().id(), createClient(cluster)));
-        return multi;
-    }
-
-    private static KubernetesClient createClient(KubernetesAPIAsset properties)
+    public static KubernetesClient create(KubernetesAPIAsset properties)
     {
         Config config = Config.fromKubeconfig(
             properties.context().orElse(null),

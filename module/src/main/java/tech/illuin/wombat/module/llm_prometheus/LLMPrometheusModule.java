@@ -4,10 +4,10 @@ import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
-import tech.illuin.wombat.core.context.WombatContext;
+import tech.illuin.wombat.core.module.ProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.source.WombatSource;
-import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusMultiClientConfig;
+import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusClientConfig;
 import tech.illuin.wombat.module.llm_prometheus.source.LLMPrometheusSource;
 
 import java.util.Optional;
@@ -29,8 +29,10 @@ public class LLMPrometheusModule implements WombatModule
     }
 
     @Override
-    public Optional<WombatSource> createSource(WombatContext context)
+    public Optional<ProcessorFactory<WombatSource>> source()
     {
-        return Optional.of(new LLMPrometheusSource(PrometheusMultiClientConfig.create(context)));
+        return Optional.of((services, asset) -> new LLMPrometheusSource(
+            PrometheusClientConfig.create((LLMPrometheusAsset) asset, services.secrets())
+        ));
     }
 }

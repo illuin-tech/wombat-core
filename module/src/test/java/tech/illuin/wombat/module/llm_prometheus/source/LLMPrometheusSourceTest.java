@@ -12,7 +12,6 @@ import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusProfile;
 import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusClient;
-import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusMultiClient;
 import tech.illuin.wombat.module.llm_prometheus.connector.model.PrometheusQueryResponse;
 
 import java.time.Instant;
@@ -50,9 +49,7 @@ class LLMPrometheusSourceTest
 
         when(client.query("sum(vllm:num_tokens_total)")).thenReturn(response);
 
-        PrometheusMultiClient multiClient = new PrometheusMultiClient();
-        multiClient.register("llm-prom", client);
-        LLMPrometheusSource source = new LLMPrometheusSource(multiClient);
+        LLMPrometheusSource source = new LLMPrometheusSource(client);
 
         List<MetricData> dataList = source.source(Instant.now(), null, asset);
         assertEquals(1, dataList.size());

@@ -3,7 +3,6 @@ package tech.illuin.wombat.module.llm_vertexai.connector;
 import feign.Feign;
 import feign.Client;
 import feign.jackson.JacksonDecoder;
-import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
 
@@ -11,25 +10,14 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 
-public class GoogleMultiClientConfig
+public class GoogleClientConfig
 {
-    public static GoogleMultiClient create(WombatContext context)
+    public static GoogleClient create(LLMVertexAIAsset properties, SecretResolver secrets)
     {
-        return create(context, null);
+        return create(properties, secrets, null);
     }
 
-    public static GoogleMultiClient create(WombatContext context, Client client)
-    {
-        SecretResolver secrets = context.secrets();
-        GoogleMultiClient multi = new GoogleMultiClient();
-        context.assets().stream()
-            .filter(LLMVertexAIAsset.class::isInstance)
-            .map(LLMVertexAIAsset.class::cast)
-            .forEach(asset -> multi.register(asset.identity().id(), createClient(asset, secrets, client)));
-        return multi;
-    }
-
-    private static GoogleClient createClient(LLMVertexAIAsset properties, SecretResolver secrets, Client client)
+    public static GoogleClient create(LLMVertexAIAsset properties, SecretResolver secrets, Client client)
     {
         String serviceAccountJson = properties.usesServiceAccountKey()
             ? secrets.require(properties.credentialsKey())

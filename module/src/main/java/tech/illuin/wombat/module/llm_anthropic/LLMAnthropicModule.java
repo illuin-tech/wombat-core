@@ -5,10 +5,10 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
-import tech.illuin.wombat.core.context.WombatContext;
+import tech.illuin.wombat.core.module.ProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.module.llm_anthropic.activity.LLMAnthropicActivityResolver;
-import tech.illuin.wombat.module.llm_anthropic.connector.AnthropicMultiClientConfig;
+import tech.illuin.wombat.module.llm_anthropic.connector.AnthropicClientConfig;
 
 import java.util.Optional;
 
@@ -29,8 +29,10 @@ public class LLMAnthropicModule implements WombatModule
     }
 
     @Override
-    public Optional<WombatActivityResolver> createActivityResolver(WombatContext context)
+    public Optional<ProcessorFactory<WombatActivityResolver>> activityResolver()
     {
-        return Optional.of(new LLMAnthropicActivityResolver(AnthropicMultiClientConfig.create(context)));
+        return Optional.of((services, asset) -> new LLMAnthropicActivityResolver(
+            AnthropicClientConfig.create((LLMAnthropicAsset) asset, services.secrets())
+        ));
     }
 }

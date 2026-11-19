@@ -2,16 +2,15 @@ package tech.illuin.wombat.module.llm_prometheus;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
-import tech.illuin.wombat.core.context.ResolvedContext;
+import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.core.source.WombatSource;
 import tech.illuin.wombat.module.llm_prometheus.source.LLMPrometheusSource;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -35,28 +34,34 @@ public class LLMPrometheusModuleTest
     @Test
     void providesAPrometheusSource()
     {
-        // An empty context registers no Prometheus client, so nothing is dialled.
-        Optional<WombatSource> source = this.module.createSource(new ResolvedContext());
-        assertTrue(source.isPresent());
-        assertInstanceOf(LLMPrometheusSource.class, source.get());
+        // Building the client does not dial Prometheus.
+        Optional<ProcessorFactory<WombatSource>> factory = this.module.source();
+        assertTrue(factory.isPresent());
+        assertInstanceOf(LLMPrometheusSource.class, factory.get().create(services(Map.of()), asset(null, null)));
     }
 
     @Test
     void sourcingABasicAuthAssetFailsWhenItsVariableIsUnset()
     {
-        // Proves the module builds its clients from the context's resolver: the credential is read from the
+        // Proves the module builds its clients from the services' resolver: the credential is read from the
         // environment at source creation, never from the asset the reconciler persisted.
-        LLMPrometheusAsset asset = new LLMPrometheusAsset(
-            AssetIdentity.of("p", "env", "P", LLMPrometheusModule.TYPE),
-            "http://prometheus", null, "user", "PROM_PASSWORD", Period.ZERO,
-            new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
-        );
-        ResolvedContext context = new ResolvedContext(
-            List.of(new Environment("env", List.of(asset))),
-            new EnvironmentSecretResolver(Map.<String, String>of()::get)
-        );
-        MissingSecretException e = assertThrows(MissingSecretException.class, () -> this.module.createSource(context));
+        ProcessorFactory<WombatSource> factory = this.module.source().orElseThrow();
+        MissingSecretException e = assertThrows(MissingSecretException.class, () -> factory.create(services(Map.of()), asset("user", "PROM_PASSWORD")));
 
         assertEquals("PROM_PASSWORD", e.key());
+    }
+
+    private static WombatServices services(Map<String, String> environment)
+    {
+        return new WombatServices(new EnvironmentSecretResolver(environment::get));
+    }
+
+    private static LLMPrometheusAsset asset(String username, String passwordEnv)
+    {
+        return new LLMPrometheusAsset(
+            AssetIdentity.of("p", "env", "P", LLMPrometheusModule.TYPE),
+            "http://prometheus", null, username, passwordEnv, Period.ZERO,
+            new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
+        );
     }
 }

@@ -19,7 +19,6 @@ import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIProfile;
 import tech.illuin.wombat.module.llm_vertexai.connector.GoogleClient;
-import tech.illuin.wombat.module.llm_vertexai.connector.GoogleMultiClient;
 import tech.illuin.wombat.module.llm_vertexai.connector.model.GoogleQueryResponse;
 
 import java.nio.charset.StandardCharsets;
@@ -49,7 +48,7 @@ class LLMVertexAIActivityResolverTest
         AssetIdentity.of("llm-google", "prod", "Google LLM", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", PROJECT, null,
         new LLMVertexAIProfile(500, List.of(MODEL))
     );
-    private final LLMVertexAIActivityResolver resolver = new LLMVertexAIActivityResolver(multi(this.client));
+    private final LLMVertexAIActivityResolver resolver = new LLMVertexAIActivityResolver(this.client);
 
     @Test
     void queriesTheWholeRangeOnceAlignedOnItsResolution() throws Exception
@@ -178,16 +177,6 @@ class LLMVertexAIActivityResolverTest
     }
 
     @Test
-    void failsWhenNoClientIsRegisteredForTheAsset()
-    {
-        LLMVertexAIActivityResolver resolver = new LLMVertexAIActivityResolver(new GoogleMultiClient());
-
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> resolver.resolve(this.asset, THREE_HOURS, null));
-
-        assertTrue(e.getMessage().contains("llm-google"), e.getMessage());
-    }
-
-    @Test
     void acceptsOnlyVertexAIAssets()
     {
         assertTrue(this.resolver.accept(this.asset));
@@ -291,12 +280,5 @@ class LLMVertexAIActivityResolverTest
     private static GoogleQueryResponse response(String json) throws Exception
     {
         return MAPPER.readValue(json, GoogleQueryResponse.class);
-    }
-
-    private static GoogleMultiClient multi(GoogleClient client)
-    {
-        GoogleMultiClient multi = new GoogleMultiClient();
-        multi.register("llm-google", client);
-        return multi;
     }
 }

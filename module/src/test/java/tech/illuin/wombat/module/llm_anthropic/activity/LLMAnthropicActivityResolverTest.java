@@ -12,7 +12,6 @@ import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicProfile;
 import tech.illuin.wombat.module.llm_anthropic.connector.AnthropicAdminClient;
-import tech.illuin.wombat.module.llm_anthropic.connector.AnthropicMultiClient;
 import tech.illuin.wombat.module.llm_anthropic.connector.model.AnthropicUsageReport;
 import tech.illuin.wombat.module.llm_anthropic.connector.model.AnthropicUsageReport.Bucket;
 import tech.illuin.wombat.module.llm_anthropic.connector.model.AnthropicUsageReport.Result;
@@ -44,7 +43,7 @@ class LLMAnthropicActivityResolverTest
         AssetIdentity.of("claude", "prod", "Claude", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
         new LLMAnthropicProfile(FRANCE, 500, List.of("claude-opus-5-5"), null, null)
     );
-    private final LLMAnthropicActivityResolver resolver = new LLMAnthropicActivityResolver(multi(this.client));
+    private final LLMAnthropicActivityResolver resolver = new LLMAnthropicActivityResolver(this.client);
 
     @Test
     void sumsOutputTokensPerModelAcrossBucketsAndPages() throws WombatActivityException
@@ -137,12 +136,5 @@ class LLMAnthropicActivityResolverTest
     private void stubEmpty()
     {
         when(this.client.usageReport(any(), any(), any(), anyInt(), any(), any(), any(), any())).thenReturn(new AnthropicUsageReport(List.of(), false, null));
-    }
-
-    private static AnthropicMultiClient multi(AnthropicAdminClient client)
-    {
-        AnthropicMultiClient multi = new AnthropicMultiClient();
-        multi.register("claude", client);
-        return multi;
     }
 }

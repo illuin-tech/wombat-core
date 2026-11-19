@@ -5,11 +5,9 @@ import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIModule;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.asset.Environment;
-import tech.illuin.wombat.core.context.ResolvedContext;
-import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
+import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIProfile;
 
@@ -22,36 +20,35 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class GoogleMultiClientConfigTest
+public class GoogleClientConfigTest
 {
     @Test
-    void buildsAClientPerAssetRelyingOnApplicationDefaultCredentials()
+    void buildsAClientRelyingOnApplicationDefaultCredentials()
     {
-        GoogleMultiClient multi = GoogleMultiClientConfig.create(
-            context(Map.of(), asset("g", null)));
+        GoogleClient client = GoogleClientConfig.create(asset("g", null), secrets(Map.of()));
 
-        assertTrue(multi.get("g").isPresent());
+        assertNotNull(client);
     }
 
     @Test
     void buildsAClientFromAServiceAccountKeyReadFromTheDeclaredVariable() throws Exception
     {
-        GoogleMultiClient multi = GoogleMultiClientConfig.create(
-            context(Map.of("GOOGLE_SA_KEY", serviceAccountJson()), asset("g", "GOOGLE_SA_KEY")));
+        GoogleClient client = GoogleClientConfig.create(asset("g", "GOOGLE_SA_KEY"), secrets(Map.of("GOOGLE_SA_KEY", serviceAccountJson())));
 
-        assertTrue(multi.get("g").isPresent());
+        assertNotNull(client);
     }
 
     @Test
     void failsWhenTheServiceAccountVariableIsUnset()
     {
-        WombatContext context = context(Map.of(), asset("g", "GOOGLE_SA_KEY"));
+        SecretResolver secrets = secrets(Map.of());
 
         MissingSecretException e = assertThrows(MissingSecretException.class,
-            () -> GoogleMultiClientConfig.create(context));
+            () -> GoogleClientConfig.create(asset("g", "GOOGLE_SA_KEY"), secrets));
 
         assertEquals("GOOGLE_SA_KEY", e.key());
     }
@@ -59,9 +56,9 @@ public class GoogleMultiClientConfigTest
     @Test
     void failsOnAMalformedServiceAccountKey()
     {
-        WombatContext context = context(Map.of("GOOGLE_SA_KEY", "not json"), asset("g", "GOOGLE_SA_KEY"));
+        SecretResolver secrets = secrets(Map.of("GOOGLE_SA_KEY", "not json"));
 
-        assertThrows(IllegalStateException.class, () -> GoogleMultiClientConfig.create(context));
+        assertThrows(IllegalStateException.class, () -> GoogleClientConfig.create(asset("g", "GOOGLE_SA_KEY"), secrets));
     }
 
     @Test
@@ -89,8 +86,7 @@ public class GoogleMultiClientConfigTest
             LLMVertexAIAsset base = asset("g", "GOOGLE_SA_KEY");
             LLMVertexAIAsset proxied = new LLMVertexAIAsset(base.identity(), "http://monitoring.invalid", base.resourceName(),
                 base.credentialsKey(), "http://127.0.0.1:" + proxy.getAddress().getPort(), base.profile());
-            GoogleClient client = GoogleMultiClientConfig.create(context(Map.of("GOOGLE_SA_KEY", mapper.writeValueAsString(json)), proxied))
-                .get("g").orElseThrow();
+            GoogleClient client = GoogleClientConfig.create(proxied, secrets(Map.of("GOOGLE_SA_KEY", mapper.writeValueAsString(json))));
 
             assertEquals(List.of(), client.query("projects/my-project", "f", "start", "end", "3600s", null).timeSeries());
             assertTrue(requests.stream().anyMatch(request -> request.startsWith("POST http://oauth.invalid/token")), requests.toString());
@@ -108,15 +104,13 @@ public class GoogleMultiClientConfigTest
         for (String url : List.of("http://localhost", "https://localhost:8080", "http://user:pass@localhost:8080", "http://localhost:8080/path"))
         {
             LLMVertexAIAsset invalid = new LLMVertexAIAsset(base.identity(), base.googleUrl(), base.resourceName(), null, url, base.profile());
-            assertThrows(IllegalStateException.class, () -> GoogleMultiClientConfig.create(context(Map.of(), invalid)), url);
+            assertThrows(IllegalStateException.class, () -> GoogleClientConfig.create(invalid, secrets(Map.of())), url);
         }
     }
 
-    private static WombatContext context(Map<String, String> environment, LLMVertexAIAsset asset)
+    private static SecretResolver secrets(Map<String, String> environment)
     {
-        return new ResolvedContext(
-            List.of(new Environment("env", List.of(asset))),
-            new EnvironmentSecretResolver(environment::get));
+        return new EnvironmentSecretResolver(environment::get);
     }
 
     private static LLMVertexAIAsset asset(String id, String credentialsKey)

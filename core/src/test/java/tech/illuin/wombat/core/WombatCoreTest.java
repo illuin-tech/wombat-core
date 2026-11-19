@@ -11,7 +11,6 @@ import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.context.ResolvedContext;
-import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
@@ -21,6 +20,7 @@ import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.AssetEvaluator;
 import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
+import tech.illuin.wombat.core.module.ProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.source.Monitorable;
 import tech.illuin.wombat.core.source.Period;
@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 import static java.util.Collections.emptyList;
@@ -81,6 +82,22 @@ class WombatCoreTest
     }
 
     @Test
+    void createMonitor_sourcesAssetsAddedAfterItsCreation()
+    {
+        SourcingModule module = new SourcingModule();
+        List<Asset> assets = new CopyOnWriteArrayList<>();
+        WombatContextProvider context = () -> new ResolvedContext(List.of(new Environment("env", List.copyOf(assets))));
+
+        // Neither the asset nor its type are known when the monitor is created.
+        try (WombatCore core = core(context, module); AssetMonitor monitor = core.createMonitor()) {
+            assets.add(sourceable("a1"));
+            monitor.trigger();
+        }
+
+        assertEquals(List.of("a1"), module.source.sampled);
+    }
+
+    @Test
     void createCalculator_resolvesOnlyAssetsServedByAnImpactResolver() throws Exception
     {
         ResolvingModule resolving = new ResolvingModule();
@@ -89,7 +106,7 @@ class WombatCoreTest
         // asset's own module as the only thing able to resolve an impact.
         Consumer<WombatCore.CoreDefaults> defaults = registry -> registry.register(
             ServiceFamily.LLM,
-            (asset, range, filter) -> Optional.of(new AssetActivity(
+            (services, resolved) -> (asset, range, filter) -> Optional.of(new AssetActivity(
                 asset.identity(),
                 List.of(new LLMActivityData(
                     ActivityRegime.MODELED,
@@ -102,8 +119,8 @@ class WombatCoreTest
                     0
                 ))
             )),
-            SERVES_NOTHING,
-            SERVES_NOTHING
+            (services, asset) -> SERVES_NOTHING,
+            (services, asset) -> SERVES_NOTHING
         );
 
         // The sourceable asset's module provides no impact-resolver, so only the modeled one is calculated.
@@ -113,6 +130,16 @@ class WombatCoreTest
 
             assertEquals(1, impacts.size());
             assertEquals("static-1", impacts.getFirst().assetIdentity().id());
+        }
+    }
+
+    @Test
+    void createCalculator_skipsAssetTypesWithoutAnyResolver() throws Exception
+    {
+        // No defaults are registered, and the module provides no activity-resolver: there is nothing to evaluate with.
+        try (WombatCore core = core(context(modeled("static-1")), new ResolvingModule()) ; AssetEvaluator evaluator = assertDoesNotThrow(() -> core.createEvaluator()))
+        {
+            assertEquals(List.of(), evaluator.evaluate(RANGE, AssetFilter.none()));
         }
     }
 
@@ -152,8 +179,7 @@ class WombatCoreTest
     }
 
     /**
-     * Stands in for "no default at this level": registration succeeds, so nothing fails at wiring time, and the
-     * evaluator then skips every asset it is offered.
+     * Stands in for a default that serves nothing at this level: the evaluator skips every asset it is offered.
      */
     private static final WombatEvaluationResolver SERVES_NOTHING = new WombatEvaluationResolver()
     {
@@ -254,9 +280,9 @@ class WombatCoreTest
         }
 
         @Override
-        public Optional<WombatSource> createSource(WombatContext context)
+        public Optional<ProcessorFactory<WombatSource>> source()
         {
-            return Optional.of(this.source);
+            return Optional.of((services, asset) -> this.source);
         }
 
         @Override
@@ -283,9 +309,9 @@ class WombatCoreTest
         }
 
         @Override
-        public Optional<WombatEvaluationResolver> createImpactResolver(WombatContext ctx)
+        public Optional<ProcessorFactory<WombatEvaluationResolver>> impactResolver()
         {
-            return Optional.of((resolved, data) -> new AssetImpact(
+            return Optional.of((services, asset) -> (resolved, data) -> new AssetImpact(
                 resolved.identity(),
                 null,
                 emptyList(),

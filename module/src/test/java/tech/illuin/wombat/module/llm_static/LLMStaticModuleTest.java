@@ -22,7 +22,7 @@ public class LLMStaticModuleTest
     @Test
     void providesAStaticActivityResolver()
     {
-        Optional<WombatActivityResolver> resolver = this.module.createActivityResolver(null);
+        Optional<WombatActivityResolver> resolver = this.module.activityResolver().map(factory -> factory.create(null, null));
         assertTrue(resolver.isPresent());
         assertInstanceOf(LLMStaticActivityResolver.class, resolver.get());
     }
@@ -34,6 +34,6 @@ public class LLMStaticModuleTest
     @Test
     void leavesTheImpactToTheFamilyDefault()
     {
-        assertTrue(this.module.createImpactResolver(null).isEmpty());
+        assertTrue(this.module.impactResolver().isEmpty());
     }
 }

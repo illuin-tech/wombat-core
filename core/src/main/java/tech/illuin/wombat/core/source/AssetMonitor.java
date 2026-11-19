@@ -6,7 +6,11 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
+import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.ProcessorPool;
+import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.core.source.persistence.WombatMetricPersister;
 import tech.illuin.wombat.core.source.persistence.WombatPersistenceException;
@@ -14,12 +18,15 @@ import tech.illuin.wombat.core.source.persistence.WombatPersistenceException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class AssetMonitor implements AutoCloseable
 {
     private final WombatContextProvider contextProvider;
-    private final Map<AssetType, WombatSource> sources;
+    private final ProcessorPool<WombatSource> sources;
     private final WombatMetricPersister persister;
     private final ExecutorService executorService;
     private final Map<AssetIdentity, Semaphore> semaphores;
@@ -27,14 +34,14 @@ public class AssetMonitor implements AutoCloseable
 
     private static final Logger logger = LoggerFactory.getLogger(AssetMonitor.class);
 
-    public AssetMonitor(WombatContextProvider contextProvider, WombatMetricPersister persister)
+    public AssetMonitor(WombatContextProvider contextProvider, WombatServices services, WombatMetricPersister persister)
     {
-        this(contextProvider, persister, Executors.newVirtualThreadPerTaskExecutor());
+        this(contextProvider, services, persister, Executors.newVirtualThreadPerTaskExecutor());
     }
 
-    public AssetMonitor(WombatContextProvider contextProvider, WombatMetricPersister persister, ExecutorService executorService)
+    public AssetMonitor(WombatContextProvider contextProvider, WombatServices services, WombatMetricPersister persister, ExecutorService executorService)
     {
-        this.sources = new ConcurrentHashMap<>();
+        this.sources = new ProcessorPool<>("source", services);
         this.contextProvider = contextProvider;
         this.persister = persister;
         this.executorService = executorService;
@@ -42,31 +49,33 @@ public class AssetMonitor implements AutoCloseable
         this.lastActivation = new ConcurrentHashMap<>();
     }
 
-    public AssetMonitor register(AssetType type, WombatSource source)
+    public AssetMonitor register(AssetType type, ProcessorFactory<WombatSource> factory)
     {
-        if (this.sources.containsKey(type))
+        if (this.sources.supports(type))
         {
-            logger.trace("Source for {} was already registered with type {}", type.name(), this.sources.get(type).getClass().getSimpleName());
+            logger.trace("Source for {} was already registered", type.name());
             return this;
         }
-        this.sources.put(type, source);
-
-        logger.debug("Registered wombat source {} for asset-type {}", source.getClass().getSimpleName(), type.name());
+        this.sources.register(type, factory);
         return this;
     }
 
     public void trigger()
     {
         Instant heartbeat = Instant.now();
+        WombatContext context = this.contextProvider.provide();
 
-        for (Environment environment : this.contextProvider.provide().environments())
+        this.prune(context.assets().stream()
+            .map(Asset::identity)
+            .collect(Collectors.toSet())
+        );
+
+        for (Environment environment : context.environments())
         {
             environment.assets().stream()
                 .filter(asset -> asset instanceof Monitorable)
-                .filter(asset -> this.sources.containsKey(asset.type()))
-                .filter(asset -> this.sources.get(asset.type()).accept(asset))
+                .filter(asset -> this.sources.supports(asset.type()))
                 .forEach(asset -> {
-                    WombatSource source = this.sources.get(asset.type());
                     Instant lastActivated = this.lastActivation.computeIfAbsent(asset.identity(), id -> Instant.MIN);
 
                     Monitorable monitorable = (Monitorable) asset;
@@ -78,15 +87,14 @@ public class AssetMonitor implements AutoCloseable
                     }
                     this.lastActivation.put(asset.identity(), heartbeat);
 
-                    Semaphore semaphore = this.semaphores.computeIfAbsent(asset.identity(), id -> new Semaphore(1, true));
+                    Semaphore semaphore = this.semaphore(asset.identity());
                     this.executorService.execute(() -> {
                         semaphore.acquireUninterruptibly();
                         try {
                             this.runSource(
                                 heartbeat,
                                 lastActivated != Instant.MIN ? lastActivated : null,
-                                asset,
-                                source
+                                asset
                             );
                         }
                         finally {
@@ -97,11 +105,36 @@ public class AssetMonitor implements AutoCloseable
         }
     }
 
-    private void runSource(Instant heartbeat, Instant lastActivation, Asset asset, WombatSource source)
+    /**
+     * Discards the source of the asset identified by {@code identity}, so it is built again on the next trigger.
+     * <p>
+     * Meant to be called when an asset's settings changed: its source is otherwise kept for as long as the asset is in
+     * the context. Waits for an ongoing run of that asset to complete before discarding its source.
+     */
+    public void refresh(AssetIdentity identity)
     {
+        Semaphore semaphore = this.semaphore(identity);
+        semaphore.acquireUninterruptibly();
+        try {
+            this.sources.invalidate(identity);
+        }
+        finally {
+            semaphore.release();
+        }
+    }
+
+    private void runSource(Instant heartbeat, Instant lastActivation, Asset asset)
+    {
+        Optional<WombatSource> source = this.sources.get(asset);
+        if (source.isEmpty() || !source.get().accept(asset))
+        {
+            logger.trace("Skipping asset {}: no source accepts asset-type {}", asset.identity().id(), asset.type().name());
+            return;
+        }
+
         try {
             logger.debug("Monitor triggered for asset {}", asset.identity().id());
-            List<MetricData> data = source.source(heartbeat, lastActivation, asset);
+            List<MetricData> data = source.get().source(heartbeat, lastActivation, asset);
             this.persister.persist(asset.identity(), asset.type(), data);
         }
         catch (WombatSourceException | WombatPersistenceException e) {
@@ -109,9 +142,36 @@ public class AssetMonitor implements AutoCloseable
         }
     }
 
+    /**
+     * Forgets everything kept for assets that are no longer in the context.
+     */
+    private void prune(Set<AssetIdentity> identities)
+    {
+        this.lastActivation.keySet().retainAll(identities);
+
+        List<AssetIdentity> removed = this.semaphores.keySet().stream()
+            .filter(id -> !identities.contains(id))
+            .toList();
+
+        // Discarded from the executor, so that a run still in progress for a removed asset does not hold up the trigger.
+        for (AssetIdentity identity : removed)
+        {
+            this.executorService.execute(() -> {
+                this.refresh(identity);
+                this.semaphores.remove(identity);
+            });
+        }
+    }
+
+    private Semaphore semaphore(AssetIdentity identity)
+    {
+        return this.semaphores.computeIfAbsent(identity, id -> new Semaphore(1, true));
+    }
+
     @Override
     public void close()
     {
         this.executorService.close();
+        this.sources.close();
     }
 }

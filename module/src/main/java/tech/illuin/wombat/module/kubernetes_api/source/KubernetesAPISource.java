@@ -3,6 +3,7 @@ package tech.illuin.wombat.module.kubernetes_api.source;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.Asset;
@@ -10,22 +11,21 @@ import tech.illuin.wombat.core.source.WombatSource;
 import tech.illuin.wombat.core.source.data.KubernetesData;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
-import tech.illuin.wombat.module.kubernetes_api.connector.KubernetesMultiClusterClient;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class KubernetesAPISource implements WombatSource
+public class KubernetesAPISource implements WombatSource, AutoCloseable
 {
-    private final KubernetesMultiClusterClient multiClusterApi;
+    private final KubernetesClient client;
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesAPISource.class);
 
-    public KubernetesAPISource(KubernetesMultiClusterClient multiClusterApi)
+    public KubernetesAPISource(KubernetesClient client)
     {
-        this.multiClusterApi = multiClusterApi;
+        this.client = client;
     }
 
     @Override
@@ -39,11 +39,9 @@ public class KubernetesAPISource implements WombatSource
     {
         KubernetesAPIAsset kubernetesAsset = (KubernetesAPIAsset) asset;
 
-        String clusterId = asset.identity().id();
         logger.trace("Persisting pods usages for kubernetes config {}", asset.identity().id());
 
-        List<PodMetrics> podMetricsList = this.multiClusterApi.get(asset.identity().id())
-            .orElseThrow(() -> new IllegalStateException("No client registered for cluster " + clusterId))
+        List<PodMetrics> podMetricsList = this.client
             .top()
             .pods()
             .inNamespace(kubernetesAsset.namespace())
@@ -51,6 +49,12 @@ public class KubernetesAPISource implements WombatSource
             .getItems();
 
         return this.outputToTarget(podMetricsList, kubernetesAsset);
+    }
+
+    @Override
+    public void close()
+    {
+        this.client.close();
     }
 
     private List<MetricData> outputToTarget(List<PodMetrics> podMetricsList, KubernetesAPIAsset properties)
