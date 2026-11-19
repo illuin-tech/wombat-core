@@ -4,7 +4,6 @@ public final class MicrometerTags
 {
     public static final String TAG_ENVIRONMENT = "wombat.environment";
     public static final String TAG_ASSET = "wombat.asset";
-    public static final String TAG_ASSET_NAME = "wombat.asset.name";
     public static final String TAG_ASSET_TYPE = "wombat.asset.type";
     public static final String TAG_SERVICE = "wombat.service";
 

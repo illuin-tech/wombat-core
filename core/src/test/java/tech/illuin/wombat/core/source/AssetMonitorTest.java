@@ -296,7 +296,7 @@ class AssetMonitorTest
         @Override
         public AssetIdentity identity()
         {
-            return AssetIdentity.of(this.assetId, "env", this.assetId, this.type());
+            return AssetIdentity.of(this.assetId, "env", this.type());
         }
 
         @Override
@@ -323,7 +323,7 @@ class AssetMonitorTest
         @Override
         public AssetIdentity identity()
         {
-            return AssetIdentity.of(this.assetId, "env", this.assetId, this.type());
+            return AssetIdentity.of(this.assetId, "env", this.type());
         }
 
         @Override

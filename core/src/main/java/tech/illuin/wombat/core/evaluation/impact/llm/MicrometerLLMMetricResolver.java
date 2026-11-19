@@ -24,7 +24,7 @@ public class MicrometerLLMMetricResolver implements LLMMetricResolver
     );
 
     private static final Set<String> TAGS = Set.of(
-        TAG_ENVIRONMENT, TAG_ASSET, TAG_ASSET_NAME, TAG_ASSET_TYPE,
+        TAG_ENVIRONMENT, TAG_ASSET, TAG_ASSET_TYPE,
         TAG_SERVICE, TAG_LLM_PROVIDER, TAG_LLM_MODEL, TAG_LLM_LOCATION
     );
 

@@ -16,32 +16,28 @@ import java.util.Objects;
 public record AssetIdentity(
     @NotBlank @JsonProperty("id") String id,
     @NotBlank @JsonProperty("environmentId") @JsonAlias("environment-id") String environmentId,
-    @NotBlank @JsonProperty("name") String name,
     @NotBlank @JsonProperty("type") String assetType
 ) {
     public AssetIdentity
     {
         Objects.requireNonNull(id, "id must not be null");
         Objects.requireNonNull(environmentId, "environmentId must not be null");
-        Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(assetType, "assetType must not be null");
         if (id.isBlank())
             throw new IllegalArgumentException("id must not be blank");
         if (environmentId.isBlank())
             throw new IllegalArgumentException("environmentId must not be blank");
-        if (name.isBlank())
-            throw new IllegalArgumentException("name must not be blank");
         if (assetType.isBlank())
             throw new IllegalArgumentException("assetType must not be blank");
     }
 
-    public static AssetIdentity of(String id, String environmentId, String name, String assetType)
+    public static AssetIdentity of(String id, String environmentId, String assetType)
     {
-        return new AssetIdentity(id, environmentId, name, assetType);
+        return new AssetIdentity(id, environmentId, assetType);
     }
 
-    public static AssetIdentity of(String id, String environmentId, String name, AssetType assetType)
+    public static AssetIdentity of(String id, String environmentId, AssetType assetType)
     {
-        return new AssetIdentity(id, environmentId, name, assetType.name());
+        return new AssetIdentity(id, environmentId, assetType.name());
     }
 }

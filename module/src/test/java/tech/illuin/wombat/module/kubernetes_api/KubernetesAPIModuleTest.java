@@ -71,7 +71,7 @@ public class KubernetesAPIModuleTest
     private static KubernetesAPIAsset asset(Path kubeconfig)
     {
         return new KubernetesAPIAsset(
-            AssetIdentity.of("k", "env", "K", KubernetesAPIModule.TYPE),
+            AssetIdentity.of("k", "env", KubernetesAPIModule.TYPE),
             kubeconfig.toString(), "default", Optional.empty(), Optional.empty(), Period.ZERO, null
         );
     }

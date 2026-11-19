@@ -240,7 +240,6 @@ class LLMActivityResolverMicrometerTest
         Tags tags = Tags.of(
             TAG_ENVIRONMENT, "env-1",
             TAG_ASSET, assetId,
-            TAG_ASSET_NAME, assetId,
             TAG_ASSET_TYPE, "llm",
             TAG_SERVICE, serviceId,
             TAG_LLM_PROVIDER, provider.name(),

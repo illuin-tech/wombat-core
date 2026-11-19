@@ -115,7 +115,7 @@ public class GoogleClientConfigTest
 
     private static LLMVertexAIAsset asset(String id, String credentialsKey)
     {
-        return new LLMVertexAIAsset(AssetIdentity.of(id, "env", id, LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
+        return new LLMVertexAIAsset(AssetIdentity.of(id, "env", LLMVertexAIModule.TYPE), "https://monitoring.googleapis.com", "projects/my-project", credentialsKey,
             new LLMVertexAIProfile(500, List.of("gemini-2.5-flash")));
     }
 

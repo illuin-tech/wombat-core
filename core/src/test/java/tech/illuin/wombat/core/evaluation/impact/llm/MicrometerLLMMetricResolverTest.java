@@ -65,7 +65,6 @@ class MicrometerLLMMetricResolverTest
         Tags tagsWithoutService = Tags.of(
             TAG_ENVIRONMENT, "env-1",
             TAG_ASSET, "asset-1",
-            TAG_ASSET_NAME, "asset-1",
             TAG_ASSET_TYPE, "llm",
             TAG_LLM_PROVIDER, LLMProvider.openai.name(),
             TAG_LLM_MODEL, "gpt-4o",
@@ -83,7 +82,6 @@ class MicrometerLLMMetricResolverTest
         Tags tags = Tags.of(
             TAG_ENVIRONMENT, "env-1",
             TAG_ASSET, "asset-1",
-            TAG_ASSET_NAME, "asset-1",
             TAG_ASSET_TYPE, "llm",
             TAG_SERVICE, "service-1",
             TAG_LLM_PROVIDER, LLMProvider.openai.name(),
@@ -147,7 +145,6 @@ class MicrometerLLMMetricResolverTest
         Tags tags = Tags.of(
             TAG_ENVIRONMENT, "env-1",
             TAG_ASSET, assetId,
-            TAG_ASSET_NAME, assetId,
             TAG_ASSET_TYPE, "llm",
             TAG_SERVICE, serviceId,
             TAG_LLM_PROVIDER, provider.name(),

@@ -35,7 +35,7 @@ public class KubernetesStaticActivityResolverTest
     void resolvesConstantLoadIntoRelativeUsage()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
-            AssetIdentity.of("k8s-static-1", "env-test", "Static Cluster 1", KubernetesStaticModule.TYPE),
+            AssetIdentity.of("k8s-static-1", "env-test", KubernetesStaticModule.TYPE),
             new KubernetesStaticProfile(
                 ServerProvider.aws,
                 "m5.xlarge",
@@ -72,7 +72,7 @@ public class KubernetesStaticActivityResolverTest
     {
         // Combine baseline (0.10), diurnal (0.10 -> 0.75, 09:00 - 18:00), batch (0.0 -> 0.90, 02:00 - 04:00)
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
-            AssetIdentity.of("k8s-static-2", "env-test", "Static Cluster 2", KubernetesStaticModule.TYPE),
+            AssetIdentity.of("k8s-static-2", "env-test", KubernetesStaticModule.TYPE),
             new KubernetesStaticProfile(
                 ServerProvider.aws,
                 "c5.2xlarge",
@@ -114,7 +114,7 @@ public class KubernetesStaticActivityResolverTest
     void resolvesActivityForMultiNodeClusterWithoutPreMultiplyingLoad()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
-            AssetIdentity.of("k8s-static-3", "env-test", "Multi-Node Static Cluster", KubernetesStaticModule.TYPE),
+            AssetIdentity.of("k8s-static-3", "env-test", KubernetesStaticModule.TYPE),
             new KubernetesStaticProfile(
                 ServerProvider.aws,
                 "m5.2xlarge",
@@ -146,7 +146,7 @@ public class KubernetesStaticActivityResolverTest
     void resolvesDailyResolutionWithHourlySampling()
     {
         KubernetesStaticAsset asset = new KubernetesStaticAsset(
-            AssetIdentity.of("k8s-static-daily", "env-test", "Daily Static Cluster", KubernetesStaticModule.TYPE),
+            AssetIdentity.of("k8s-static-daily", "env-test", KubernetesStaticModule.TYPE),
             new KubernetesStaticProfile(
                 ServerProvider.aws,
                 "c5.2xlarge",

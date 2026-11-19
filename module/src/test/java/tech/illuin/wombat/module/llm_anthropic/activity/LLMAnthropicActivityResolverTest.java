@@ -40,7 +40,7 @@ class LLMAnthropicActivityResolverTest
 
     private final AnthropicAdminClient client = mock(AnthropicAdminClient.class);
     private final LLMAnthropicAsset asset = new LLMAnthropicAsset(
-        AssetIdentity.of("claude", "prod", "Claude", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
+        AssetIdentity.of("claude", "prod", LLMAnthropicModule.TYPE), null, null, "ANTHROPIC_ADMIN_KEY",
         new LLMAnthropicProfile(FRANCE, 500, List.of("claude-opus-5-5"), null, null)
     );
     private final LLMAnthropicActivityResolver resolver = new LLMAnthropicActivityResolver(this.client);

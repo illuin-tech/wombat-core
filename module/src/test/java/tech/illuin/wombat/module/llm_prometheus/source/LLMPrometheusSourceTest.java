@@ -36,7 +36,7 @@ class LLMPrometheusSourceTest
             new LLMPrometheusProfile.DynamicProfile("sum(vllm:num_tokens_total)")
         );
         LLMPrometheusAsset asset = new LLMPrometheusAsset(
-            AssetIdentity.of("llm-prom", "prod", "Prom LLM", LLMPrometheusModule.TYPE),
+            AssetIdentity.of("llm-prom", "prod", LLMPrometheusModule.TYPE),
             "http://localhost:9090", null, null, null, Period.ZERO, profile
         );
 

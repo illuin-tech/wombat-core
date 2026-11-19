@@ -21,7 +21,6 @@ public class LLMMapper implements MappedMicrometerMetricPersister.Mapper
         return List.of(
             Tag.of(TAG_ENVIRONMENT, identity.environmentId()),
             Tag.of(TAG_ASSET, identity.id()),
-            Tag.of(TAG_ASSET_NAME, identity.name()),
             Tag.of(TAG_ASSET_TYPE, type.name()),
             Tag.of(TAG_SERVICE, data.serviceId()),
             Tag.of(TAG_LLM_PROVIDER, llmData.provider().name()),

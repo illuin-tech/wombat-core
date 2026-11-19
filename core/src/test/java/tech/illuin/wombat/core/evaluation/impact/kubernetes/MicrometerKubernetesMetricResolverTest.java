@@ -112,7 +112,6 @@ class MicrometerKubernetesMetricResolverTest
         Tags tagsWithoutService = Tags.of(
             TAG_ENVIRONMENT, "env-1",
             TAG_ASSET, "asset-1",
-            TAG_ASSET_NAME, "asset-1",
             TAG_ASSET_TYPE, "k8s",
             TAG_K8S_CLUSTER, "cluster-1",
             TAG_K8S_NAMESPACE, "ns-1",
@@ -224,7 +223,6 @@ class MicrometerKubernetesMetricResolverTest
         Tags tags = Tags.of(
             TAG_ENVIRONMENT, "env-1",
             TAG_ASSET, assetId,
-            TAG_ASSET_NAME, assetId,
             TAG_ASSET_TYPE, "k8s",
             TAG_SERVICE, serviceId,
             TAG_K8S_CLUSTER, cluster,

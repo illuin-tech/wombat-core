@@ -53,7 +53,7 @@ public class PrometheusClientConfigTest
     private static LLMPrometheusAsset asset(String id, String username, String passwordEnv)
     {
         return new LLMPrometheusAsset(
-            AssetIdentity.of(id, "env", id, LLMPrometheusModule.TYPE),
+            AssetIdentity.of(id, "env", LLMPrometheusModule.TYPE),
             "http://prometheus", null, username, passwordEnv, Period.ZERO,
             new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
         );
