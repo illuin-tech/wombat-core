@@ -32,7 +32,7 @@ public class KubernetesAPIModule implements WombatModule
     public Optional<ProcessorFactory<WombatSource>> source()
     {
         return Optional.of((services, asset) -> new KubernetesAPISource(
-            KubernetesClientConfig.create((KubernetesAPIAsset) asset)
+            KubernetesClientConfig.create((KubernetesAPIAsset) asset, services.secrets())
         ));
     }
 }

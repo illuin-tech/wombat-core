@@ -41,6 +41,7 @@ import java.util.stream.StreamSupport;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -123,7 +124,7 @@ class AssetConfigurationTest
             """, Asset.class));
 
         assertEquals("env", kubernetes.identity().environmentId());
-        assertEquals("/etc/kubeconfig", kubernetes.configPath());
+        assertNull(kubernetes.kubeconfigKey());
         assertEquals(Duration.ofSeconds(10), kubernetes.readTimeout().orElseThrow());
         assertEquals("m5.large", kubernetes.profile().instanceType());
 
