@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.evaluation.cost.commons.AssetCost;
+import tech.illuin.wombat.core.evaluation.cost.commons.Money;
 import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
 import tech.illuin.wombat.core.evaluation.impact.commons.Footprint;
 import tech.illuin.wombat.core.evaluation.impact.commons.ImpactProvider;
@@ -23,16 +24,17 @@ class AssetEvaluationTest
     void type_isSerialized_soThatAnImpactIsToldFromACost()
     {
         JsonNode impact = this.objectMapper.valueToTree(new AssetImpact(IDENTITY, Footprint.sum(List.of()), List.of(), ImpactProvider.ECOLOGITS, null));
-        JsonNode cost = this.objectMapper.valueToTree(new AssetCost(IDENTITY, null));
+        JsonNode cost = this.objectMapper.valueToTree(new AssetCost(IDENTITY, Money.of(12.5, "EUR"), List.of(), null));
 
         assertEquals("IMPACT", impact.get("type").asText());
         assertEquals("COST", cost.get("type").asText());
+        assertEquals("EUR", cost.get("cost").get("currency").asText());
     }
 
     @Test
     void type_isIgnored_whenReadBack() throws Exception
     {
-        AssetCost cost = new AssetCost(IDENTITY, null);
+        AssetCost cost = new AssetCost(IDENTITY, Money.of(12.5, "EUR"), List.of(), null);
 
         assertEquals(cost, this.objectMapper.readValue(this.objectMapper.writeValueAsString(cost), AssetCost.class));
     }
