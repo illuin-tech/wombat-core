@@ -18,11 +18,9 @@ import tech.illuin.wombat.core.module.ProcessorPool;
 import tech.illuin.wombat.core.module.WombatServices;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class AssetEvaluator implements AutoCloseable
 {
@@ -122,13 +120,16 @@ public class AssetEvaluator implements AutoCloseable
             if (activity.isEmpty())
                 return;
 
-            for (ActivityData activityData : activity.get().activity())
-            {
-                this.computeImpact(asset, activityData).ifPresent(outputs::add);
-                this.computeCost(asset, activityData).ifPresent(outputs::add);
-            }
+            List<CompletableFuture<Void>> futures = activity.get().activity().stream()
+                .flatMap(activityData -> Stream.of(
+                    this.computeImpactAsync(asset, activityData).thenAccept(result -> result.ifPresent(outputs::add)),
+                    this.computeCostAsync(asset, activityData).thenAccept(result -> result.ifPresent(outputs::add))
+                ))
+                .toList();
+
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         }
-        catch (WombatActivityException | WombatEvaluationException e) {
+        catch (WombatActivityException e) {
            logger.error("An error occurred while evaluating asset {}", asset.identity(), e);
         }
     }
@@ -168,6 +169,19 @@ public class AssetEvaluator implements AutoCloseable
         return Optional.of(resolver.get().resolve(asset, activity));
     }
 
+    public CompletableFuture<Optional<AssetEvaluation>> computeImpactAsync(Asset asset, ActivityData activity)
+    {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return this.computeImpact(asset, activity);
+            }
+            catch (WombatEvaluationException e) {
+                logger.error("An error occurred while evaluating asset {}", asset.identity(), e);
+                return Optional.empty();
+            }
+        }, this.executorService);
+    }
+
     public Optional<AssetEvaluation> computeCost(Asset asset, ActivityData activity) throws WombatEvaluationException
     {
         Optional<WombatEvaluationResolver> resolver = this.costResolvers.get(asset);
@@ -178,6 +192,19 @@ public class AssetEvaluator implements AutoCloseable
             return Optional.empty();
         }
         return Optional.of(resolver.get().resolve(asset, activity));
+    }
+
+    public CompletableFuture<Optional<AssetEvaluation>> computeCostAsync(Asset asset, ActivityData activity)
+    {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return this.computeCost(asset, activity);
+            }
+            catch (WombatEvaluationException e) {
+                logger.error("An error occurred while evaluating asset {}", asset.identity(), e);
+                return Optional.empty();
+            }
+        }, this.executorService);
     }
 
     @Override
