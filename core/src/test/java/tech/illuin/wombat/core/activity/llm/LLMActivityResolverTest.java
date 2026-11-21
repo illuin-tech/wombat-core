@@ -3,7 +3,6 @@ package tech.illuin.wombat.core.activity.llm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.illuin.wombat.core.activity.WombatActivityException;
@@ -11,8 +10,10 @@ import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
 
@@ -31,7 +32,7 @@ class LLMActivityResolverTest
     @Mock
     private LLMMetricResolver metricResolver;
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    @Mock
     private Asset asset;
 
     @Mock
@@ -43,18 +44,19 @@ class LLMActivityResolverTest
     private final Instant END = Instant.parse("2026-01-01T02:00:00Z");
     private final Duration RESOLUTION = Duration.ofHours(1);
     private final String ASSET_ID = "llm-asset-1";
+    private final AssetType TYPE = type(ServiceFamily.LLM);
+    private final AssetIdentity IDENTITY = AssetIdentity.of(ASSET_ID, "env-1", TYPE.name());
 
     @BeforeEach
     void setUp()
     {
         resolver = new LLMActivityResolver(metricResolver);
-        lenient().when(asset.type().regime()).thenReturn(ActivityRegime.MODELED);
+        lenient().when(asset.type()).thenReturn(TYPE);
     }
 
     @Test
     void accept_whenLLMFamily_returnsTrue()
     {
-        when(asset.type().family()).thenReturn(ServiceFamily.LLM);
 
         assertTrue(resolver.accept(asset));
     }
@@ -62,14 +64,10 @@ class LLMActivityResolverTest
     @Test
     void accept_whenNotLLMFamily_returnsFalse()
     {
-        when(asset.type().family()).thenReturn(null);
-        assertFalse(resolver.accept(asset));
-
         Arrays.stream(ServiceFamily.values())
             .filter(family -> family != ServiceFamily.LLM)
-            .findFirst()
-            .ifPresent(otherFamily -> {
-                when(asset.type().family()).thenReturn(otherFamily);
+            .forEach(family -> {
+                when(asset.type()).thenReturn(type(family));
                 assertFalse(resolver.accept(asset));
             });
     }
@@ -78,7 +76,7 @@ class LLMActivityResolverTest
     void resolve_whenAllSlotsHaveNoActivities_returnsEmpty() throws WombatActivityException
     {
         TimeRange range = new TimeRange(START, END, RESOLUTION);
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(metricResolver.serviceActivitiesPerBucket(any(), eq(ASSET_ID))).thenReturn(Map.of());
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, filter);
@@ -95,7 +93,7 @@ class LLMActivityResolverTest
         long t1 = toEpochMs(mid);
         long t2 = toEpochMs(END);
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(filter.filterServiceIds(asset)).thenReturn(Set.of("mistral-large", "gpt-4o"));
 
         LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
@@ -141,7 +139,7 @@ class LLMActivityResolverTest
         long t0 = toEpochMs(START);
         long t2 = toEpochMs(END);
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
 
         LLMServiceActivity activity = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
         when(metricResolver.serviceActivitiesPerBucket(range, ASSET_ID)).thenReturn(Map.of(t0, Map.of("mistral-large", activity)));
@@ -164,7 +162,7 @@ class LLMActivityResolverTest
         long t0 = toEpochMs(START);
         long t1 = toEpochMs(START.plus(RESOLUTION));
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
 
         LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
         LLMServiceActivity s2 = new LLMServiceActivity(LLMProvider.openai, "gpt-4o", FRANCE, 1500L, 30.0);
@@ -190,7 +188,7 @@ class LLMActivityResolverTest
         long t0 = toEpochMs(START);
         long t1 = toEpochMs(START.plus(RESOLUTION));
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(filter.filterServiceIds(asset)).thenReturn(Set.of("matched-by-key", "gpt-4o"));
 
         // Match 1: key is in filter ("matched-by-key")
@@ -231,7 +229,7 @@ class LLMActivityResolverTest
         long t0 = toEpochMs(START);
         long t1 = toEpochMs(START.plus(RESOLUTION));
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(filter.filterServiceIds(asset)).thenReturn(Set.of("non-existent-filter"));
 
         LLMServiceActivity s1 = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
@@ -249,7 +247,7 @@ class LLMActivityResolverTest
         long t0 = toEpochMs(START);
         long t2 = toEpochMs(END);
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
 
         LLMServiceActivity activity = new LLMServiceActivity(LLMProvider.mistralai, "mistral-large", FRANCE, 500L, 10.0);
         when(metricResolver.serviceActivitiesPerBucket(range, ASSET_ID)).thenReturn(Map.of(
@@ -262,5 +260,10 @@ class LLMActivityResolverTest
         assertEquals(1, result.orElseThrow().activity().size());
         assertEquals(START, result.get().activity().getFirst().range().start());
         verify(metricResolver, times(1)).serviceActivitiesPerBucket(any(), anyString());
+    }
+
+    private static AssetType type(ServiceFamily family)
+    {
+        return AssetType.of("test", "asset", ActivityRegime.MODELED, family);
     }
 }

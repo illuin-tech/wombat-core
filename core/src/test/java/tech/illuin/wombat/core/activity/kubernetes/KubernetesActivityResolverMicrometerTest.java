@@ -7,7 +7,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.illuin.wombat.core.activity.WombatActivityException;
@@ -15,7 +14,9 @@ import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.ClusterInfo;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.MicrometerKubernetesMetricResolver;
@@ -28,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static tech.illuin.wombat.core.source.persistence.micrometer.MicrometerTags.*;
 
@@ -38,7 +40,7 @@ class KubernetesActivityResolverMicrometerTest
     private MicrometerKubernetesMetricResolver metricResolver;
     private KubernetesActivityResolver resolver;
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    @Mock
     private Asset asset;
 
     @Mock
@@ -48,6 +50,8 @@ class KubernetesActivityResolverMicrometerTest
     private static final Instant END = Instant.parse("2026-01-01T02:00:00Z");
     private static final Duration RESOLUTION = Duration.ofHours(1);
     private static final String ASSET_ID = "k8s-asset-1";
+    private static final AssetType TYPE = type(ServiceFamily.KUBERNETES_CONTAINER);
+    private static final AssetIdentity IDENTITY = AssetIdentity.of(ASSET_ID, "env-1", TYPE.name());
 
     @BeforeEach
     void setUp()
@@ -55,26 +59,22 @@ class KubernetesActivityResolverMicrometerTest
         this.registry = new SimpleMeterRegistry();
         this.metricResolver = new MicrometerKubernetesMetricResolver(this.registry);
         this.resolver = new KubernetesActivityResolver(this.metricResolver);
+        lenient().when(this.asset.type()).thenReturn(TYPE);
     }
 
     @Test
     void accept_whenKubernetesContainer_returnsTrue()
     {
-        when(this.asset.type().family()).thenReturn(ServiceFamily.KUBERNETES_CONTAINER);
         assertTrue(this.resolver.accept(this.asset));
     }
 
     @Test
     void accept_whenNotKubernetesContainer_returnsFalse()
     {
-        when(this.asset.type().family()).thenReturn(null);
-        assertFalse(this.resolver.accept(this.asset));
-
         Arrays.stream(ServiceFamily.values())
             .filter(family -> family != ServiceFamily.KUBERNETES_CONTAINER)
-            .findFirst()
-            .ifPresent(otherFamily -> {
-                when(this.asset.type().family()).thenReturn(otherFamily);
+            .forEach(family -> {
+                when(this.asset.type()).thenReturn(type(family));
                 assertFalse(this.resolver.accept(this.asset));
             });
     }
@@ -82,7 +82,7 @@ class KubernetesActivityResolverMicrometerTest
     @Test
     void resolve_whenRegistryEmpty_returnsEmpty() throws WombatActivityException
     {
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         TimeRange range = new TimeRange(START, END, RESOLUTION);
 
         Optional<AssetActivity> result = this.resolver.resolve(this.asset, range, this.filter);
@@ -93,7 +93,7 @@ class KubernetesActivityResolverMicrometerTest
     void resolve_whenTargetAssetHasNoMetrics_returnsEmpty() throws WombatActivityException
     {
         recordK8sMetric("other-asset", "service-x", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         TimeRange range = new TimeRange(START, END, RESOLUTION);
 
         Optional<AssetActivity> result = this.resolver.resolve(this.asset, range, this.filter);
@@ -106,8 +106,7 @@ class KubernetesActivityResolverMicrometerTest
         recordK8sMetric(ASSET_ID, "service-a", "cluster-1", "ns-1", "pod-1", 100.0, 1024.0);
         recordK8sMetric(ASSET_ID, "service-b", "cluster-2", "ns-2", "pod-2", 300.0, 2048.0);
 
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
-        when(this.asset.type().regime()).thenReturn(ActivityRegime.MEASURED);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         when(this.filter.filterServiceIds(this.asset)).thenReturn(Set.of("service-a", "service-b"));
 
         TimeRange range = new TimeRange(START, END, RESOLUTION); // 2 slots of 1 hour
@@ -150,7 +149,7 @@ class KubernetesActivityResolverMicrometerTest
     {
         recordK8sMetric(ASSET_ID, "service-a", "cluster-1", "ns-1", "pod-1", 200.0, 1024.0);
 
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         TimeRange range = new TimeRange(START, START.plus(RESOLUTION), RESOLUTION);
 
         Optional<AssetActivity> result = this.resolver.resolve(this.asset, range, null);
@@ -169,7 +168,7 @@ class KubernetesActivityResolverMicrometerTest
         recordK8sMetric(ASSET_ID, "service-a", "cluster-1", "ns-1", "pod-1", 150.0, 1024.0);
         recordK8sMetric("asset-2", "service-b", "cluster-2", "ns-2", "pod-2", 450.0, 2048.0);
 
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         TimeRange range = new TimeRange(START, START.plus(RESOLUTION), RESOLUTION);
 
         Optional<AssetActivity> result = this.resolver.resolve(this.asset, range, null);
@@ -203,5 +202,10 @@ class KubernetesActivityResolverMicrometerTest
             .tags(tags)
             .register(this.registry)
             .record(ram);
+    }
+
+    private static AssetType type(ServiceFamily family)
+    {
+        return AssetType.of("test", "asset", ActivityRegime.MEASURED, family);
     }
 }
