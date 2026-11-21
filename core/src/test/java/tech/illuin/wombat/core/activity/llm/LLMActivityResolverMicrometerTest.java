@@ -7,7 +7,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.illuin.wombat.core.activity.WombatActivityException;
@@ -16,8 +15,10 @@ import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.impact.llm.MicrometerLLMMetricResolver;
 
@@ -39,7 +40,7 @@ class LLMActivityResolverMicrometerTest
     private MicrometerLLMMetricResolver metricResolver;
     private LLMActivityResolver resolver;
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    @Mock
     private Asset asset;
 
     @Mock
@@ -49,6 +50,8 @@ class LLMActivityResolverMicrometerTest
     private static final Instant END = Instant.parse("2026-01-01T02:00:00Z");
     private static final Duration RESOLUTION = Duration.ofHours(1);
     private static final String ASSET_ID = "llm-asset-1";
+    private static final AssetType TYPE = type(ServiceFamily.LLM);
+    private static final AssetIdentity IDENTITY = AssetIdentity.of(ASSET_ID, "env-1", TYPE.name());
 
     @BeforeEach
     void setUp()
@@ -56,27 +59,22 @@ class LLMActivityResolverMicrometerTest
         this.registry = new SimpleMeterRegistry();
         this.metricResolver = new MicrometerLLMMetricResolver(this.registry);
         this.resolver = new LLMActivityResolver(this.metricResolver);
-        lenient().when(this.asset.type().regime()).thenReturn(ActivityRegime.MODELED);
+        lenient().when(this.asset.type()).thenReturn(TYPE);
     }
 
     @Test
     void accept_whenLLMFamily_returnsTrue()
     {
-        when(this.asset.type().family()).thenReturn(ServiceFamily.LLM);
         assertTrue(this.resolver.accept(this.asset));
     }
 
     @Test
     void accept_whenNotLLMFamily_returnsFalse()
     {
-        when(this.asset.type().family()).thenReturn(null);
-        assertFalse(this.resolver.accept(this.asset));
-
         Arrays.stream(ServiceFamily.values())
             .filter(family -> family != ServiceFamily.LLM)
-            .findFirst()
-            .ifPresent(otherFamily -> {
-                when(this.asset.type().family()).thenReturn(otherFamily);
+            .forEach(family -> {
+                when(this.asset.type()).thenReturn(type(family));
                 assertFalse(this.resolver.accept(this.asset));
             });
     }
@@ -84,7 +82,7 @@ class LLMActivityResolverMicrometerTest
     @Test
     void resolve_whenRegistryEmpty_returnsEmpty() throws WombatActivityException
     {
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         TimeRange range = new TimeRange(START, END, RESOLUTION);
 
         Optional<AssetActivity> result = this.resolver.resolve(this.asset, range, this.filter);
@@ -95,7 +93,7 @@ class LLMActivityResolverMicrometerTest
     void resolve_whenTargetAssetHasNoMetrics_returnsEmpty() throws WombatActivityException
     {
         recordLLMMetric("other-asset", "service-1", LLMProvider.openai, "gpt-4o", "USA", 500, 10);
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         TimeRange range = new TimeRange(START, END, RESOLUTION);
 
         Optional<AssetActivity> result = this.resolver.resolve(this.asset, range, this.filter);
@@ -108,7 +106,7 @@ class LLMActivityResolverMicrometerTest
         recordLLMMetric(ASSET_ID, "mistral-service", LLMProvider.mistralai, "mistral-large", "FRA", 500, 10);
         recordLLMMetric(ASSET_ID, "openai-service", LLMProvider.openai, "gpt-4o", "USA", 1500, 30);
 
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         when(this.filter.filterServiceIds(this.asset)).thenReturn(Set.of("mistral-service", "openai-service"));
 
         TimeRange range = new TimeRange(START, END, RESOLUTION); // 2 slots of 1 hour
@@ -162,7 +160,7 @@ class LLMActivityResolverMicrometerTest
         recordLLMMetric(ASSET_ID, "svc-1", LLMProvider.mistralai, "mistral-large", "FRA", 500, 10);
         recordLLMMetric(ASSET_ID, "svc-2", LLMProvider.openai, "gpt-4o", "USA", 1500, 30);
 
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         TimeRange range = new TimeRange(START, START.plus(RESOLUTION), RESOLUTION);
 
         Optional<AssetActivity> result = this.resolver.resolve(this.asset, range, null);
@@ -183,7 +181,7 @@ class LLMActivityResolverMicrometerTest
         recordLLMMetric(ASSET_ID, "arbitrary-key", LLMProvider.openai, "gpt-4o", "USA", 200, 4);
         recordLLMMetric(ASSET_ID, "unrelated-key", LLMProvider.mistralai, "unrelated-model", "FRA", 300, 6);
 
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         when(this.filter.filterServiceIds(this.asset)).thenReturn(Set.of("matched-by-key", "gpt-4o"));
 
         TimeRange range = new TimeRange(START, START.plus(RESOLUTION), RESOLUTION);
@@ -207,7 +205,7 @@ class LLMActivityResolverMicrometerTest
     {
         recordLLMMetric(ASSET_ID, "svc-1", LLMProvider.mistralai, "mistral-large", "FRA", 500, 10);
 
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         when(this.filter.filterServiceIds(this.asset)).thenReturn(Set.of("non-existent-filter"));
 
         TimeRange range = new TimeRange(START, START.plus(RESOLUTION), RESOLUTION);
@@ -222,7 +220,7 @@ class LLMActivityResolverMicrometerTest
         recordLLMMetric(ASSET_ID, "svc-1", LLMProvider.mistralai, "mistral-large", "FRA", 500, 10);
         recordLLMMetric("other-asset", "svc-2", LLMProvider.openai, "gpt-4o", "USA", 1500, 30);
 
-        when(this.asset.identity().id()).thenReturn(ASSET_ID);
+        when(this.asset.identity()).thenReturn(IDENTITY);
         TimeRange range = new TimeRange(START, START.plus(RESOLUTION), RESOLUTION);
 
         Optional<AssetActivity> result = this.resolver.resolve(this.asset, range, null);
@@ -256,5 +254,10 @@ class LLMActivityResolverMicrometerTest
             .tags(tags)
             .register(this.registry)
             .record(requests);
+    }
+
+    private static AssetType type(ServiceFamily family)
+    {
+        return AssetType.of("test", "asset", ActivityRegime.MODELED, family);
     }
 }

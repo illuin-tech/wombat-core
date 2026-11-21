@@ -3,7 +3,6 @@ package tech.illuin.wombat.core.activity.kubernetes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.illuin.wombat.core.activity.WombatActivityException;
@@ -11,6 +10,9 @@ import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.type.ActivityRegime;
+import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.ClusterInfo;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.ContainerLocation;
@@ -30,7 +32,7 @@ class KubernetesActivityResolverTest
     @Mock
     private KubernetesMetricResolver metricResolver;
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    @Mock
     private Asset asset;
 
     @Mock
@@ -42,17 +44,19 @@ class KubernetesActivityResolverTest
     private final Instant END = Instant.parse("2026-01-01T02:00:00Z");
     private final Duration RESOLUTION = Duration.ofHours(1);
     private final String ASSET_ID = "container-1";
+    private final AssetType TYPE = type(ServiceFamily.KUBERNETES_CONTAINER);
+    private final AssetIdentity IDENTITY = AssetIdentity.of(ASSET_ID, "env-1", TYPE.name());
 
     @BeforeEach
     void setUp()
     {
         resolver = new KubernetesActivityResolver(metricResolver);
+        lenient().when(asset.type()).thenReturn(TYPE);
     }
 
     @Test
     void accept_whenKubernetesContainer_returnsTrue()
     {
-        when(asset.type().family()).thenReturn(ServiceFamily.KUBERNETES_CONTAINER);
 
         assertTrue(resolver.accept(asset));
     }
@@ -60,14 +64,10 @@ class KubernetesActivityResolverTest
     @Test
     void accept_whenNotKubernetesContainer_returnsFalse()
     {
-        when(asset.type().family()).thenReturn(null);
-        assertFalse(resolver.accept(asset));
-
         Arrays.stream(ServiceFamily.values())
             .filter(family -> family != ServiceFamily.KUBERNETES_CONTAINER)
-            .findFirst()
-            .ifPresent(otherFamily -> {
-                when(asset.type().family()).thenReturn(otherFamily);
+            .forEach(family -> {
+                when(asset.type()).thenReturn(type(family));
                 assertFalse(resolver.accept(asset));
             });
     }
@@ -77,7 +77,7 @@ class KubernetesActivityResolverTest
     void resolve_whenAllSlotsHaveNoMetrics_returnsEmpty() throws WombatActivityException
     {
         TimeRange range = new TimeRange(START, END, RESOLUTION);
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(metricResolver.averageCpuPerBucket(any(), anyList())).thenReturn(Map.of());
 
         Optional<AssetActivity> result = resolver.resolve(asset, range, filter);
@@ -97,7 +97,7 @@ class KubernetesActivityResolverTest
         long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(filter.filterServiceIds(asset)).thenReturn(Set.of("service-a"));
 
         when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.45, t1, 0.90));
@@ -146,7 +146,7 @@ class KubernetesActivityResolverTest
         long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.45));
         when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of());
         when(metricResolver.containerLocations(range, assetIds)).thenReturn(Map.of());
@@ -172,7 +172,7 @@ class KubernetesActivityResolverTest
         long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.45, t2, 0.90));
         when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of());
         when(metricResolver.containerLocations(range, assetIds)).thenReturn(Map.of());
@@ -192,7 +192,7 @@ class KubernetesActivityResolverTest
         long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.2));
         when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of());
         when(metricResolver.containerLocations(range, assetIds)).thenReturn(Map.of());
@@ -213,7 +213,7 @@ class KubernetesActivityResolverTest
         long step = RESOLUTION.toMillis();
         List<String> assetIds = List.of(ASSET_ID);
 
-        when(asset.identity().id()).thenReturn(ASSET_ID);
+        when(asset.identity()).thenReturn(IDENTITY);
         when(metricResolver.averageCpuPerBucket(range, assetIds)).thenReturn(Map.of(t0, 0.5));
         when(metricResolver.containerSharesPerBucket(range, assetIds)).thenReturn(Map.of());
 
@@ -239,5 +239,10 @@ class KubernetesActivityResolverTest
         assertFalse(locations.containsKey("empty-container"));
         assertTrue(locations.containsKey("multi-container"));
         assertEquals(new ClusterInfo("cluster-first", "ns-first"), locations.get("multi-container"));
+    }
+
+    private static AssetType type(ServiceFamily family)
+    {
+        return AssetType.of("test", "asset", ActivityRegime.MEASURED, family);
     }
 }
