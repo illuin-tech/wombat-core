@@ -20,12 +20,14 @@ Use this module when:
 
 The module registers the asset type `tech.illuin.wombat-module.kubernetes-api` (`KubernetesAPIAsset`) with an associated server profile (`KubernetesAPIServerProfile`).
 
-For cross-cutting data formats such as `Period`, `Duration`, `Lifetime`, `Country`, and `ServerProvider`, refer to the [Generic Type Glossary](../type-glossary.md).
+For cross-cutting data formats such as `Period`, `Duration`, `Lifetime`, `Country`, `ServerProvider` and `SecretKey`, refer to the [Generic Type Glossary](../type-glossary.md).
+
+The secret referenced by `kubeconfig-key` must resolve to the full YAML content of a kubeconfig. It is parsed in memory, with no file behind it: certificates and keys must be inlined (`certificate-authority-data`, `client-certificate-data`, `client-key-data`), since relative file references have nothing to resolve against.
 
 ```yaml
 id: "k8s-prod-cluster-01" # required - Unique identifier for the monitored asset.
 environment-id: "production" # required - Identifier of the target environment (e.g. `production`, `staging`).
-config-path: "/etc/wombat/kubeconfig" # required - Absolute or relative file path to the kubeconfig file.
+kubeconfig-key: "secrets.kubernetes.prod" # required - Secret holding the kubeconfig contents, resolved by the configured secret resolver.
 namespace: "payments-api" # optional (default: null) - Kubernetes namespace to restrict metric polling (polls all namespaces if omitted).
 context: "prod-cluster-ctx" # optional (default: active context) - Kubeconfig context name to target.
 read-timeout: "PT10S" # optional (default: client default) - HTTP read timeout for Kubernetes API requests.
@@ -39,12 +41,12 @@ profile: # required - Server hardware profile configuration.
 
 ## Basic Setup
 
-A minimal configuration monitoring a single local or standard Kubernetes cluster using default credentials and polling all namespaces every 5 minutes.
+A minimal configuration monitoring a single local or standard Kubernetes cluster, polling all namespaces every 5 minutes.
 
 ```yaml
 id: "k8s-prod-cluster-01"
 environment-id: "production"
-config-path: "/etc/wombat/kubeconfig"
+kubeconfig-key: "secrets.kubernetes.prod"
 period: "5m"
 profile:
   provider: "aws"
@@ -68,7 +70,7 @@ The scenario below demonstrates:
 # Asset 1: AWS EKS Payments Service Cluster
 id: "k8s-aws-fra-payments"
 environment-id: "production-eu"
-config-path: "/var/secrets/k8s/kubeconfig-enterprise.yaml"
+kubeconfig-key: "secrets.kubernetes.enterprise"
 context: "arn:aws:eks:eu-west-3:123456789012:cluster/prod-fra-payments"
 namespace: "payments-api"
 read-timeout: "PT10S"
@@ -84,7 +86,7 @@ profile:
 # Asset 2: GCP GKE Analytics & Batch Cluster
 id: "k8s-gcp-deu-analytics"
 environment-id: "production-eu"
-config-path: "/var/secrets/k8s/kubeconfig-enterprise.yaml"
+kubeconfig-key: "secrets.kubernetes.enterprise"
 context: "gke_enterprise-analytics_europe-west3_prod-batch-cluster"
 read-timeout: "PT15S"
 period: "2m"
