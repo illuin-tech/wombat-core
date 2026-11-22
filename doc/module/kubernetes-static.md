@@ -18,6 +18,8 @@ Use this module when:
 
 Workload activity is resolved by evaluating superposed temporal scenarios (constant loads, daytime user traffic curves, and scheduled batch jobs) at hourly or sub-hourly precision over any requested evaluation time range.
 
+Loads are fractions of one node's capacity, from `0.0` to `1.0`. A scenario that could exceed full capacity is rejected, its jitter included: a peak of `0.95` with a `0.10` jitter could reach 104.5%.
+
 ## Configuration Specification
 
 The module registers the asset type `tech.illuin.wombat-module.kubernetes-static` (`KubernetesStaticAsset`) with a profile configuration (`KubernetesStaticProfile`).

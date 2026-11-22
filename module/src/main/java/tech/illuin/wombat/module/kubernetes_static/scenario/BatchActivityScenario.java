@@ -3,6 +3,7 @@ package tech.illuin.wombat.module.kubernetes_static.scenario;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import tech.illuin.wombat.module.kubernetes_static.scenario.tools.ApplicabilityFilter;
@@ -21,8 +22,8 @@ import java.time.ZonedDateTime;
  */
 @JsonClassDescription("Load of a scheduled daily batch job")
 public record BatchActivityScenario(
-    @PositiveOrZero @JsonPropertyDescription("Fraction of the server capacity outside the batch window") double baselineLoad,
-    @PositiveOrZero @JsonPropertyDescription("Fraction of the server capacity during the batch window") double peakLoad,
+    @PositiveOrZero @DecimalMax("1.0") @JsonPropertyDescription("Fraction of the server capacity outside the batch window, from 0 to 1") double baselineLoad,
+    @PositiveOrZero @DecimalMax("1.0") @JsonPropertyDescription("Fraction of the server capacity during the batch window, from 0 to 1, jitter included") double peakLoad,
     @NotNull @JsonPropertyDescription("Daily start time of the batch job") LocalTime triggerTime,
     @NotNull @JsonPropertyDescription("Duration of the batch job (ISO-8601)") Duration duration,
     @JsonProperty(defaultValue = "0") @JsonPropertyDescription("Deterministic variance factor, e.g. 0.05 for +-5%") double jitter,
@@ -53,6 +54,13 @@ public record BatchActivityScenario(
     public boolean isApplicable(ZonedDateTime dateTime)
     {
         return this.applicability.isApplicable(dateTime);
+    }
+
+    /* The jitter moves the load by up to its ratio either way, from the baseline up to the peak */
+    @Override
+    public double maxLoad()
+    {
+        return Math.max(this.baselineLoad, this.peakLoad) * (1.0 + Math.max(0.0, this.jitter));
     }
 
     @Override
