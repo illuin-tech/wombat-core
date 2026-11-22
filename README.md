@@ -236,8 +236,9 @@ The `WombatCore` is also handed `WombatServices`, the system components made ava
 [Default components](#default-components) are registered per family as factories, `null` meaning there is no default for that part of the pipeline. Assets whose type has neither a module component nor a default for a given part are not evaluated for that part, and an error is logged when the evaluator is created.
 
 ```java
-/* tech.illuin.wombat.core.connector.boavizta.connector.BoaviztaClient boaviztaClient */
-/* tech.illuin.wombat.core.connector.ecologits.connector.EcologitsClient ecologitsClient */
+/* From wombat-core-module, against the public APIs or your own instances; the second argument is an optional HTTP proxy, e.g. "http://proxy:3128" */
+BoaviztaClient boaviztaClient = BoaviztaClientConfig.create("https://api.boavizta.org/v1/", null);
+EcologitsClient ecologitsClient = EcologitsClientConfig.create("https://api.ecologits.ai/", null);
 
 /* Default components are stateless, a single instance can serve every asset */
 WombatActivityResolver k8sActivity = new KubernetesActivityResolver(k8sMetricResolver);
