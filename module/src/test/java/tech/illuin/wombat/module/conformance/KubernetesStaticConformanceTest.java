@@ -86,7 +86,6 @@ class KubernetesStaticConformanceTest
     }
 
     @Test
-    @Disabled("H1: embedded impacts follow Boavizta's default lifetime, not the profile's lifespan, -50% with 3 years against 6")
     void followsTheProfileLifespan() throws WombatActivityException, WombatEvaluationException
     {
         TimeRange range = new TimeRange(MONDAY_START, MONDAY_START.plus(Duration.ofDays(1)), Duration.ofHours(1));

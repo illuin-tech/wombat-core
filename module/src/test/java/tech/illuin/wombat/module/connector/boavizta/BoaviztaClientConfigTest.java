@@ -66,6 +66,8 @@ class BoaviztaClientConfigTest
         JsonNode body = new ObjectMapper().readTree(request.body());
         assertEquals("c5.2xlarge", body.path("instance_type").asText());
         assertEquals(30.0, body.path("usage").path("time_workload").path(0).path("load_percentage").asDouble());
+        /* Left out when unset, for Boavizta to apply its default */
+        assertFalse(body.path("usage").has("hours_life_time"), body.toString());
 
         assertEquals(0.25f, response.impacts().get("gwp").embedded().value());
         assertEquals(1.5f, response.impacts().get("gwp").use().value());
