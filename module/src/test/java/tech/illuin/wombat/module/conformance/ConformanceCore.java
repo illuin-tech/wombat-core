@@ -23,7 +23,7 @@ import java.util.Objects;
  * A {@link WombatCore} with the module under test, and the engine under test as its family's default impact component,
  * as the README's custom core registers them.
  */
-final class ConformanceCore
+public final class ConformanceCore
 {
     private final WombatModule module;
     private final CanonicalEngine engine;
@@ -31,7 +31,7 @@ final class ConformanceCore
     private static final String ENVIRONMENT = "conformance";
     private static final Duration HOUR = Duration.ofHours(1);
 
-    ConformanceCore(WombatModule module, CanonicalEngine engine)
+    public ConformanceCore(WombatModule module, CanonicalEngine engine)
     {
         this.module = Objects.requireNonNull(module, "module cannot be null");
         this.engine = Objects.requireNonNull(engine, "engine cannot be null");

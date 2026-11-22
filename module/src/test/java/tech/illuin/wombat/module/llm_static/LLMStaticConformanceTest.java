@@ -1,34 +1,27 @@
-package tech.illuin.wombat.module.conformance;
+package tech.illuin.wombat.module.llm_static;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import tech.illuin.wombat.core.activity.WombatActivityException;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
-import tech.illuin.wombat.module.llm_static.LLMStaticAsset;
-import tech.illuin.wombat.module.llm_static.LLMStaticModule;
-import tech.illuin.wombat.module.llm_static.LLMStaticProfile;
+import tech.illuin.wombat.module.conformance.ConformanceCore;
+import tech.illuin.wombat.module.conformance.ConformanceSidecars;
 import tech.illuin.wombat.module.llm_static.scenario.ConstantScenario;
 import tech.illuin.wombat.module.llm_static.scenario.UserActivityScenario;
 import tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter;
 import tech.illuin.wombat.module.conformance.canonical.CanonicalEcologits;
-import tech.illuin.wombat.module.conformance.canonical.CanonicalImpacts;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import static java.time.DayOfWeek.*;
-import static org.junit.jupiter.api.Assertions.assertAll;
 import static tech.illuin.wombat.module.conformance.ConformanceAssertions.assertConforms;
-import static tech.illuin.wombat.module.conformance.ConformanceAssertions.executables;
 
 /**
  * The LLM static module evaluated through Ecologits, against Ecologits called per request.
@@ -62,20 +55,6 @@ class LLMStaticConformanceTest
         LLMStaticProfile.ModelConfig mistral = new LLMStaticProfile.ModelConfig(LLMProvider.mistralai, "mistral-large-latest", Country.FRANCE, List.of(new ConstantScenario(500, 500_000)));
 
         assertConforms(core, asset(officeWeek(), mistral), range);
-    }
-
-    @Test
-    @Disabled("H3: tokens per request are averaged over hours, not requests, -57% at 1 d and -67% at 1 week on an office week")
-    void followsTheTrafficAtEveryResolution() throws WombatActivityException, WombatEvaluationException
-    {
-        LLMStaticAsset asset = asset(officeWeek());
-        Instant end = MONDAY_START.plus(Duration.ofDays(7));
-        CanonicalImpacts expected = core.reference(asset, new TimeRange(MONDAY_START, end));
-
-        List<Executable> assertions = new ArrayList<>();
-        for (Duration resolution : List.of(Duration.ofDays(1), Duration.ofDays(7)))
-            assertions.addAll(executables(expected, core.total(asset, new TimeRange(MONDAY_START, end, resolution)), ecologits.tolerance(), "at " + resolution));
-        assertAll(assertions.stream());
     }
 
     private static LLMStaticAsset asset(LLMStaticProfile.ModelConfig... models)

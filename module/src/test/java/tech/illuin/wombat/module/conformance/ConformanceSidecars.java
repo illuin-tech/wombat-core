@@ -14,7 +14,7 @@ import java.time.Duration;
  * The Boavizta and Ecologits sidecars, started once for every conformance test. Testcontainers removes them when the JVM
  * exits.
  */
-final class ConformanceSidecars
+public final class ConformanceSidecars
 {
     /* The images the app ships (compose/, wombat-k8s), pinned by digest: boaviztapi 2.4.1 and ecologits-api 0.0.2 */
     private static final String BOAVIZTA_IMAGE = "ghcr.io/boavizta/boaviztapi@sha256:bc9b2756bc7fdea3d632d03931fd0a955dd2bbbe90003e0ca61891a7f2a3e4e8";
@@ -26,8 +26,7 @@ final class ConformanceSidecars
 
     private static final Logger logger = LoggerFactory.getLogger(ConformanceSidecars.class);
 
-    static
-    {
+    static {
         boavizta.start();
         ecologits.start();
         logger.info("Conformance sidecars: boaviztapi {}, ecologits {}", boaviztaVersion(), ecologitsVersion());

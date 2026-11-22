@@ -14,24 +14,24 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-final class ConformanceAssertions
+public final class ConformanceAssertions
 {
     private ConformanceAssertions() {}
 
     /** Wombat's impacts of {@code asset} over {@code range}, within the engine's tolerance of what the engine itself gives. */
-    static void assertConforms(ConformanceCore core, Asset asset, TimeRange range) throws WombatActivityException, WombatEvaluationException
+    public static void assertConforms(ConformanceCore core, Asset asset, TimeRange range) throws WombatActivityException, WombatEvaluationException
     {
         assertMatches(core.reference(asset, range), core.total(asset, range), core.engine().tolerance());
     }
 
     /** Every criterion and phase of {@code actual} within {@code tolerance} of {@code expected}. */
-    static void assertMatches(CanonicalImpacts expected, CanonicalImpacts actual, Tolerance tolerance)
+    public static void assertMatches(CanonicalImpacts expected, CanonicalImpacts actual, Tolerance tolerance)
     {
         assertAll(executables(expected, actual, tolerance, "").stream());
     }
 
     /** The assertions of {@link #assertMatches}, to group several comparisons into one {@code assertAll}. */
-    static List<Executable> executables(CanonicalImpacts expected, CanonicalImpacts actual, Tolerance tolerance, String context)
+    public static List<Executable> executables(CanonicalImpacts expected, CanonicalImpacts actual, Tolerance tolerance, String context)
     {
         return Stream.of(
             phases("gwp", expected.gwp(), actual.gwp(), tolerance, context),

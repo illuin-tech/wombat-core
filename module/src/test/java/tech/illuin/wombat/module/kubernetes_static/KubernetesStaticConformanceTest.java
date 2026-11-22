@@ -1,4 +1,4 @@
-package tech.illuin.wombat.module.conformance;
+package tech.illuin.wombat.module.kubernetes_static;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -10,9 +10,8 @@ import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
-import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticAsset;
-import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticModule;
-import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticProfile;
+import tech.illuin.wombat.module.conformance.ConformanceCore;
+import tech.illuin.wombat.module.conformance.ConformanceSidecars;
 import tech.illuin.wombat.module.kubernetes_static.scenario.BatchActivityScenario;
 import tech.illuin.wombat.module.kubernetes_static.scenario.ConstantScenario;
 import tech.illuin.wombat.module.kubernetes_static.scenario.Scenario;
