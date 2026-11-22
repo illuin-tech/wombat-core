@@ -1,0 +1,32 @@
+name: Conformance
+
+# Wombat's figures against Boavizta and Ecologits themselves, run as sidecars: kept out of the build, which needs no Docker
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ '*' ]
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: 'temurin'
+      - name: Run the conformance tests
+        run: mvn clean -B test -Pconformance -Dgpg.skip=true --file pom.xml
+      - name: Upload surefire artifact
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: conformance-surefire
+          path: module/target/surefire-reports/*

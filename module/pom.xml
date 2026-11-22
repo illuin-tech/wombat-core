@@ -92,7 +92,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!-- They need Docker and the sidecars: run with -Pconformance -->
+                    <!-- These tests need Docker: the Conformance workflow runs them with -Pconformance -->
                     <excludes>
                         <exclude>**/conformance/**</exclude>
                     </excludes>
