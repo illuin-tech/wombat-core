@@ -1,6 +1,7 @@
 package tech.illuin.wombat.module.kubernetes_static;
 
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import tech.illuin.wombat.core.activity.WombatActivityException;
@@ -37,6 +38,7 @@ import static tech.illuin.wombat.module.conformance.ConformanceAssertions.execut
 /**
  * The Kubernetes static module evaluated through Boavizta, against one canonical Boavizta call over the whole range.
  */
+@Tag("conformance")
 class KubernetesStaticConformanceTest
 {
     private static final CanonicalBoavizta boavizta = new CanonicalBoavizta(ConformanceSidecars.boaviztaUri());

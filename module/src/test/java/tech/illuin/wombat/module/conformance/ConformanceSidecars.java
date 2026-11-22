@@ -35,23 +35,23 @@ public final class ConformanceSidecars
     private ConformanceSidecars() {}
 
     /** The base URI the app is configured with, e.g. {@code https://api.boavizta.org/v1/}. */
-    static URI boaviztaUri()
+    public static URI boaviztaUri()
     {
         return uri(boavizta, BOAVIZTA_PORT, "/v1/");
     }
 
-    static URI ecologitsUri()
+    public static URI ecologitsUri()
     {
         return uri(ecologits, ECOLOGITS_PORT, "/");
     }
 
-    static String boaviztaVersion()
+    public static String boaviztaVersion()
     {
         return exec(boavizta, "pip show boaviztapi | sed -n 's/^Version: //p'");
     }
 
     /* The API image's own tag says nothing of the library it wraps, whose version sets the methodology */
-    static String ecologitsVersion()
+    public static String ecologitsVersion()
     {
         return exec(ecologits, "ls -d /app/.venv/lib/python*/site-packages/ecologits-*.dist-info | sed 's/.*ecologits-//; s/.dist-info//'");
     }

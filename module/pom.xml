@@ -93,9 +93,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- These tests need Docker: the Conformance workflow runs them with -Pconformance -->
-                    <excludes>
-                        <exclude>**/conformance/**</exclude>
-                    </excludes>
+                    <excludedGroups>conformance</excludedGroups>
                 </configuration>
             </plugin>
         </plugins>
@@ -110,10 +108,8 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <excludes combine.self="override"/>
-                            <includes>
-                                <include>**/conformance/**/*Test.java</include>
-                            </includes>
+                            <excludedGroups combine.self="override"/>
+                            <groups>conformance</groups>
                         </configuration>
                     </plugin>
                 </plugins>

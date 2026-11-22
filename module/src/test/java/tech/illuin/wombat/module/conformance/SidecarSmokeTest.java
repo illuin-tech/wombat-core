@@ -1,5 +1,6 @@
 package tech.illuin.wombat.module.conformance;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceImpactRequest;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Wombat's clients and the canonical engines read the same figures for the same request, so that any gap the conformance
  * tests find lies in Wombat's calculation, not in the plumbing.
  */
+@Tag("conformance")
 class SidecarSmokeTest
 {
     /* Wombat's client reads floats */

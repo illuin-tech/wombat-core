@@ -37,13 +37,13 @@ public final class ConformanceCore
         this.engine = Objects.requireNonNull(engine, "engine cannot be null");
     }
 
-    CanonicalEngine engine()
+    public CanonicalEngine engine()
     {
         return this.engine;
     }
 
     /** Wombat's impacts of {@code asset} over {@code range}, one per slot of its resolution. */
-    List<AssetImpact> evaluate(Asset asset, TimeRange range) throws WombatEvaluationException
+    public List<AssetImpact> evaluate(Asset asset, TimeRange range) throws WombatEvaluationException
     {
         try (WombatCore core = this.core(asset); AssetEvaluator evaluator = core.createEvaluator())
         {
@@ -52,7 +52,7 @@ public final class ConformanceCore
     }
 
     /** Wombat's impacts of {@code asset} over {@code range}, summed over the slots in {@code double}. */
-    CanonicalImpacts total(Asset asset, TimeRange range) throws WombatEvaluationException
+    public CanonicalImpacts total(Asset asset, TimeRange range) throws WombatEvaluationException
     {
         return this.evaluate(asset, range).stream()
             .map(impact -> CanonicalImpacts.of(impact.footprint()))
@@ -62,7 +62,7 @@ public final class ConformanceCore
     }
 
     /** What the engine itself gives for {@code asset} over {@code range}, from the activity the module resolves hourly. */
-    CanonicalImpacts reference(Asset asset, TimeRange range) throws WombatActivityException
+    public CanonicalImpacts reference(Asset asset, TimeRange range) throws WombatActivityException
     {
         try (WombatCore core = this.core(asset); AssetEvaluator evaluator = core.createEvaluator())
         {

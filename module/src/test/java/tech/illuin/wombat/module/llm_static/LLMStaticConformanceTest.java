@@ -1,5 +1,6 @@
 package tech.illuin.wombat.module.llm_static;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.WombatActivityException;
 import tech.illuin.wombat.core.activity.commons.Country;
@@ -26,6 +27,7 @@ import static tech.illuin.wombat.module.conformance.ConformanceAssertions.assert
 /**
  * The LLM static module evaluated through Ecologits, against Ecologits called per request.
  */
+@Tag("conformance")
 class LLMStaticConformanceTest
 {
     private static final CanonicalEcologits ecologits = new CanonicalEcologits(ConformanceSidecars.ecologitsUri());
