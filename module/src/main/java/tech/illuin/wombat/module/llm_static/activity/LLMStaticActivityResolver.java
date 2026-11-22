@@ -11,14 +11,19 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.module.llm_static.LLMStaticAsset;
 import tech.illuin.wombat.module.llm_static.LLMStaticProfile;
-import tech.illuin.wombat.module.llm_static.scenario.ScenarioResult;
+import tech.illuin.wombat.module.llm_static.scenario.Scenario;
 import tech.illuin.wombat.module.llm_static.scenario.evaluator.CompositeScenarioEvaluator;
 import tech.illuin.wombat.module.llm_static.scenario.evaluator.ScenarioEvaluator;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.Year;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -26,12 +31,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LLMStaticActivityResolver implements WombatActivityResolver
 {
     private final ScenarioEvaluator evaluator;
+    /* Per model, as its scenarios set it once and for all */
+    private final Map<LLMStaticProfile.ModelConfig, Double> areas = new ConcurrentHashMap<>();
 
-    private static final Duration ONE_YEAR = Duration.ofDays(365);
+    /* Any non-leap year: only its months' lengths and its days' local times are read */
+    private static final Year REFERENCE_YEAR = Year.of(2026);
 
     public LLMStaticActivityResolver()
     {
@@ -69,24 +78,19 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
                 if (!serviceIds.isEmpty() && !serviceIds.contains(serviceId))
                     continue;
 
-                double totalRequestPerYear = 0.0;
-                double totalOutputTokenPerRequest = 0.0;
-
-                for (TimeRange subSlot : subSlots)
+                double area = this.areas.computeIfAbsent(modelConfig, config -> this.averageYearArea(config.scenarios()));
+                /* Requests stay fractional: a low volume rounded per slot would drift from its annual total */
+                double requestCount = 0.0;
+                if (area > 0.0)
                 {
-                    Instant midpoint = subSlot.start().plus(subSlot.resolution().dividedBy(2));
-                    ZonedDateTime zonedDateTime = midpoint.atZone(zone);
-                    ScenarioResult result = this.evaluator.evaluate(zonedDateTime, modelConfig.scenarios());
-
-                    totalRequestPerYear += result.requestPerYear();
-                    totalOutputTokenPerRequest += result.outputTokenPerRequest();
+                    for (TimeRange subSlot : subSlots)
+                    {
+                        Instant midpoint = subSlot.start().plus(subSlot.resolution().dividedBy(2));
+                        double shape = this.evaluator.evaluate(midpoint.atZone(zone), modelConfig.scenarios());
+                        requestCount += modelConfig.requestPerYear() * shape * hours(subSlot.resolution()) / area;
+                    }
                 }
-
-                double meanRequestPerYear = subSlots.isEmpty() ? 0.0 : totalRequestPerYear / subSlots.size();
-                double meanOutputTokenPerRequest = subSlots.isEmpty() ? 0.0 : totalOutputTokenPerRequest / subSlots.size();
-
-                int requestCount = requestCountOver(meanRequestPerYear, slot.resolution());
-                long outputTokenCount = (long) (meanOutputTokenPerRequest * requestCount);
+                long outputTokenCount = Math.round(requestCount * modelConfig.outputTokenPerRequest());
 
                 serviceActivities.put(serviceId, new LLMServiceActivity(
                     modelConfig.provider(),
@@ -116,8 +120,30 @@ public class LLMStaticActivityResolver implements WombatActivityResolver
         return slotResolution;
     }
 
-    private static int requestCountOver(double requestsPerYear, Duration duration)
+    /**
+     * The area under the scenarios' shape over an average 365-day year, in level-hours: for each month and weekday, a day
+     * sampled at each hour's midpoint, as the slots are, weighted by the days that month holds, spread evenly over the
+     * weekdays. One scale for all time, whatever a given year's calendar.
+     */
+    private double averageYearArea(List<Scenario> scenarios)
     {
-        return (int) Math.round(requestsPerYear * ((double) duration.toSeconds() / ONE_YEAR.toSeconds()));
+        double area = 0.0;
+        for (Month month : Month.values())
+        {
+            double monthArea = 0.0;
+            for (DayOfWeek dayOfWeek : DayOfWeek.values())
+            {
+                LocalDate day = REFERENCE_YEAR.atMonth(month).atDay(1).with(TemporalAdjusters.nextOrSame(dayOfWeek));
+                for (int hour = 0; hour < 24; hour++)
+                    monthArea += this.evaluator.evaluate(day.atTime(hour, 30).atZone(ZoneOffset.UTC), scenarios);
+            }
+            area += monthArea * month.length(false) / DayOfWeek.values().length;
+        }
+        return area;
+    }
+
+    private static double hours(Duration duration)
+    {
+        return duration.toNanos() / (double) Duration.ofHours(1).toNanos();
     }
 }

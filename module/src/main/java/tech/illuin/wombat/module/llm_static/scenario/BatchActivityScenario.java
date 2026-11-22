@@ -1,6 +1,5 @@
 package tech.illuin.wombat.module.llm_static.scenario;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -17,16 +16,12 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
 /**
- * Models scheduled batch workload activity with trigger time, duration, and optional smoothing,
- * with annual request volume distributed across active batch executions.
+ * Models a scheduled daily batch job, at the scenario's level over its window, with optional smoothing at both ends.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonClassDescription("Request volume of a scheduled daily batch job")
+@JsonClassDescription("Traffic of a scheduled daily batch job")
 public record BatchActivityScenario(
-    // Legacy names, still found in configuration files
-    @PositiveOrZero @JsonPropertyDescription("Mean output tokens per request") @JsonAlias("output-token-count") int outputTokenPerRequest,
-    @PositiveOrZero @JsonPropertyDescription("Annual request count, distributed over the batch runs")
-    @JsonAlias({"requestsPerYear", "peak-request-per-year", "peakRequestPerYear", "peakRequestsPerYear"}) int requestPerYear,
+    @PositiveOrZero @JsonProperty(defaultValue = "1.0") @JsonPropertyDescription("Relative traffic level over the batch window, only its ratio to the model's other scenarios matters") Double level,
     @NotNull @JsonPropertyDescription("Daily start time of the batch job") LocalTime triggerTime,
     @NotNull @JsonPropertyDescription("Duration of the batch job (ISO-8601)") Duration duration,
     @JsonProperty(defaultValue = "0") @JsonPropertyDescription("Deterministic variance factor, e.g. 0.05 for +-5%") double jitter,
@@ -38,18 +33,19 @@ public record BatchActivityScenario(
 
     public BatchActivityScenario
     {
+        level = level != null ? level : DEFAULT_LEVEL;
         smoothing = smoothing != null ? smoothing : DEFAULT_SMOOTHING;
         applicability = applicability != null ? applicability : ApplicabilityFilter.ALWAYS;
     }
 
-    public BatchActivityScenario(int outputTokenPerRequest, int requestPerYear, LocalTime triggerTime, Duration duration, double jitter, SmoothingMode smoothing)
+    public BatchActivityScenario(double level, LocalTime triggerTime, Duration duration, SmoothingMode smoothing)
     {
-        this(outputTokenPerRequest, requestPerYear, triggerTime, duration, jitter, smoothing, ApplicabilityFilter.ALWAYS);
+        this(level, triggerTime, duration, 0.0, smoothing, ApplicabilityFilter.ALWAYS);
     }
 
-    public BatchActivityScenario(int outputTokenPerRequest, int requestPerYear, LocalTime triggerTime, Duration duration)
+    public BatchActivityScenario(double level, LocalTime triggerTime, Duration duration)
     {
-        this(outputTokenPerRequest, requestPerYear, triggerTime, duration, 0.0, DEFAULT_SMOOTHING, ApplicabilityFilter.ALWAYS);
+        this(level, triggerTime, duration, 0.0, DEFAULT_SMOOTHING, ApplicabilityFilter.ALWAYS);
     }
 
     @Override
@@ -59,7 +55,7 @@ public record BatchActivityScenario(
     }
 
     @Override
-    public double evaluateRequestPerYear(ZonedDateTime dateTime)
+    public double shape(ZonedDateTime dateTime)
     {
         if (dateTime == null || !this.isApplicable(dateTime))
             return 0.0;
@@ -71,37 +67,7 @@ public record BatchActivityScenario(
             return 0.0;
 
         double progress = this.computeProgress(activeTrigger, dateTime);
-        double factor = this.smoothing.calculateFactor(progress);
-
-        double rawRequest = this.calculatePeakRate() * factor;
-        return DeterministicJitter.apply(rawRequest, this.jitter, dateTime);
-    }
-
-    @Override
-    public @PositiveOrZero int outputTokenPerRequest()
-    {
-        return this.outputTokenPerRequest;
-    }
-
-    private double calculatePeakRate()
-    {
-        if (this.requestPerYear <= 0.0 || this.duration == null || this.duration.isZero() || this.duration.isNegative())
-            return 0.0;
-
-        double fDays = this.applicability.annualActiveFraction();
-        if (fDays <= 0.0)
-            return 0.0;
-
-        double fBatch = (double) this.duration.toNanos() / (double) Duration.ofDays(1).toNanos();
-        if (fBatch <= 0.0)
-            return 0.0;
-
-        double iSmoothing = this.smoothing.integralFactor();
-        if (iSmoothing <= 0.0)
-            return 0.0;
-
-        double fActive = fDays * fBatch * iSmoothing;
-        return fActive > 0.0 ? this.requestPerYear / fActive : 0.0;
+        return DeterministicJitter.apply(this.level * this.smoothing.calculateFactor(progress), this.jitter, dateTime);
     }
 
     private ZonedDateTime resolveActiveTrigger(ZonedDateTime localDateTime, ZoneId zone)
@@ -167,16 +133,6 @@ public record BatchActivityScenario(
                     double x = (1.0 - progress) / ramp;
                     yield x * x * (3.0 - 2.0 * x);
                 }
-            };
-        }
-
-        public double integralFactor()
-        {
-            return switch (this)
-            {
-                case NONE -> 1.0;
-                case LINEAR_RAMP -> 0.9;
-                case SMOOTH_STEP -> 0.9;
             };
         }
     }

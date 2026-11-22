@@ -27,8 +27,7 @@ public class ScenarioSerializationTest
         String json = """
             {
                 "type": "constant",
-                "outputTokenPerRequest": 200,
-                "requestPerYear": 50000,
+                "level": 0.2,
                 "applicability": {
                     "daysOfWeek": ["MONDAY", "TUESDAY"],
                     "months": ["JANUARY", "FEBRUARY"]
@@ -36,223 +35,86 @@ public class ScenarioSerializationTest
             }
             """;
 
-        Scenario scenario = this.objectMapper.readValue(json, Scenario.class);
-        assertInstanceOf(ConstantScenario.class, scenario);
-
-        ConstantScenario constant = (ConstantScenario) scenario;
-        assertEquals(200, constant.outputTokenPerRequest());
-        assertEquals(50000.0, constant.requestPerYear());
-        assertNotNull(constant.applicability());
+        ConstantScenario constant = assertInstanceOf(ConstantScenario.class, this.objectMapper.readValue(json, Scenario.class));
+        assertEquals(0.2, constant.level());
         assertEquals(Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY), constant.applicability().daysOfWeek());
         assertEquals(Set.of(Month.JANUARY, Month.FEBRUARY), constant.applicability().months());
     }
 
     @Test
-    void deserializesConstantScenarioFromKebabCaseYaml() throws JsonProcessingException
+    void deserializesUserActivityScenarioFromKebabCaseYaml() throws JsonProcessingException
     {
-        String json = """
-            {
-                "type": "constant",
-                "output-token-per-request": 150,
-                "request-per-year": 12000
-            }
+        String yaml = """
+            type: user_activity
+            level: 0.8
+            opening-time: "08:30:00"
+            closing-time: "17:30:00"
+            curve: sinusoidal
+            jitter: 0.05
+            applicability:
+              days-of-week: [MONDAY, FRIDAY]
             """;
 
-        Scenario scenario = this.yamlMapper.readValue(json, Scenario.class);
-        assertInstanceOf(ConstantScenario.class, scenario);
-
-        ConstantScenario constant = (ConstantScenario) scenario;
-        assertEquals(150, constant.outputTokenPerRequest());
-        assertEquals(12000.0, constant.requestPerYear());
-        assertEquals(ApplicabilityFilter.ALWAYS, constant.applicability());
-    }
-
-    @Test
-    void deserializesUserActivityScenario() throws JsonProcessingException
-    {
-        String json = """
-            {
-                "type": "user_activity",
-                "outputTokenPerRequest": 250,
-                "requestPerYear": 8000,
-                "openingTime": "09:00:00",
-                "closingTime": "18:00:00",
-                "curve": "sinusoidal",
-                "jitter": 0.05
-            }
-            """;
-
-        Scenario scenario = this.objectMapper.readValue(json, Scenario.class);
-        assertInstanceOf(UserActivityScenario.class, scenario);
-
-        UserActivityScenario userActivity = (UserActivityScenario) scenario;
-        assertEquals(250, userActivity.outputTokenPerRequest());
-        assertEquals(8000.0, userActivity.requestPerYear());
-        assertEquals(LocalTime.of(9, 0), userActivity.openingTime());
-        assertEquals(LocalTime.of(18, 0), userActivity.closingTime());
-        assertEquals(UserActivityScenario.CurveShape.SINUSOIDAL, userActivity.curve());
-        assertEquals(0.05, userActivity.jitter());
-        assertEquals(ApplicabilityFilter.ALWAYS, userActivity.applicability());
-    }
-
-    @Test
-    void deserializesUserActivityScenarioFromKebabCaseYamlWithLegacyNames() throws JsonProcessingException
-    {
-        String json = """
-            {
-                "type": "user_activity",
-                "output-token-count": 300,
-                "baseline-request-per-year": 500.0,
-                "peak-request-per-year": 5000.0,
-                "opening-time": "08:30:00",
-                "closing-time": "17:30:00"
-            }
-            """;
-
-        Scenario scenario = this.yamlMapper.readValue(json, Scenario.class);
-        assertInstanceOf(UserActivityScenario.class, scenario);
-
-        UserActivityScenario userActivity = (UserActivityScenario) scenario;
-        assertEquals(300, userActivity.outputTokenPerRequest());
-        assertEquals(5000.0, userActivity.requestPerYear());
+        UserActivityScenario userActivity = assertInstanceOf(UserActivityScenario.class, this.yamlMapper.readValue(yaml, Scenario.class));
+        assertEquals(0.8, userActivity.level());
         assertEquals(LocalTime.of(8, 30), userActivity.openingTime());
         assertEquals(LocalTime.of(17, 30), userActivity.closingTime());
-        assertEquals(UserActivityScenario.DEFAULT_CURVE, userActivity.curve());
+        assertEquals(UserActivityScenario.CurveShape.SINUSOIDAL, userActivity.curve());
+        assertEquals(0.05, userActivity.jitter());
+        assertEquals(Set.of(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), userActivity.applicability().daysOfWeek());
     }
 
     @Test
-    void deserializesBatchActivityScenario() throws JsonProcessingException
+    void deserializesBatchActivityScenarioFromKebabCaseYaml() throws JsonProcessingException
     {
-        String json = """
-            {
-                "type": "batch_activity",
-                "outputTokenPerRequest": 1000,
-                "requestPerYear": 20000,
-                "triggerTime": "02:00:00",
-                "duration": "PT2H",
-                "jitter": 0.1,
-                "smoothing": "linear_ramp"
-            }
+        String yaml = """
+            type: batch_activity
+            level: 0.5
+            trigger-time: "01:00:00"
+            duration: PT3H
+            smoothing: linear_ramp
             """;
 
-        Scenario scenario = this.objectMapper.readValue(json, Scenario.class);
-        assertInstanceOf(BatchActivityScenario.class, scenario);
-
-        BatchActivityScenario batchActivity = (BatchActivityScenario) scenario;
-        assertEquals(1000, batchActivity.outputTokenPerRequest());
-        assertEquals(20000.0, batchActivity.requestPerYear());
-        assertEquals(LocalTime.of(2, 0), batchActivity.triggerTime());
-        assertEquals(Duration.ofHours(2), batchActivity.duration());
-        assertEquals(0.1, batchActivity.jitter());
-        assertEquals(BatchActivityScenario.SmoothingMode.LINEAR_RAMP, batchActivity.smoothing());
-        assertEquals(ApplicabilityFilter.ALWAYS, batchActivity.applicability());
-    }
-
-    @Test
-    void deserializesBatchActivityScenarioFromKebabCaseYamlWithLegacyNames() throws JsonProcessingException
-    {
-        String json = """
-            {
-                "type": "batch_activity",
-                "output-token-per-request": 1200,
-                "baseline-request-per-year": 0.0,
-                "peak-request-per-year": 15000.0,
-                "trigger-time": "01:00:00",
-                "duration": "PT3H"
-            }
-            """;
-
-        Scenario scenario = this.yamlMapper.readValue(json, Scenario.class);
-        assertInstanceOf(BatchActivityScenario.class, scenario);
-
-        BatchActivityScenario batchActivity = (BatchActivityScenario) scenario;
-        assertEquals(1200, batchActivity.outputTokenPerRequest());
-        assertEquals(15000.0, batchActivity.requestPerYear());
+        BatchActivityScenario batchActivity = assertInstanceOf(BatchActivityScenario.class, this.yamlMapper.readValue(yaml, Scenario.class));
+        assertEquals(0.5, batchActivity.level());
         assertEquals(LocalTime.of(1, 0), batchActivity.triggerTime());
         assertEquals(Duration.ofHours(3), batchActivity.duration());
-        assertEquals(BatchActivityScenario.DEFAULT_SMOOTHING, batchActivity.smoothing());
+        assertEquals(BatchActivityScenario.SmoothingMode.LINEAR_RAMP, batchActivity.smoothing());
     }
 
     @Test
     void roundTripSerializationForScenarios() throws JsonProcessingException
     {
-        ConstantScenario constant = new ConstantScenario(
-            200,
-            10000,
-            new ApplicabilityFilter(Set.of(DayOfWeek.WEDNESDAY), null)
-        );
-        String constantJson = this.objectMapper.writeValueAsString(constant);
-        Scenario deserializedConstant = this.objectMapper.readValue(constantJson, Scenario.class);
-        assertEquals(constant, deserializedConstant);
+        ConstantScenario constant = new ConstantScenario(0.1, new ApplicabilityFilter(Set.of(DayOfWeek.WEDNESDAY), null));
+        assertEquals(constant, this.objectMapper.readValue(this.objectMapper.writeValueAsString(constant), Scenario.class));
 
-        UserActivityScenario userActivity = new UserActivityScenario(
-            150,
-            4000,
-            LocalTime.of(8, 30),
-            LocalTime.of(19, 0),
-            UserActivityScenario.CurveShape.TRAPEZOIDAL,
-            0.0,
-            null
-        );
-        String userJson = this.objectMapper.writeValueAsString(userActivity);
-        Scenario deserializedUser = this.objectMapper.readValue(userJson, Scenario.class);
-        assertEquals(userActivity, deserializedUser);
+        UserActivityScenario userActivity = new UserActivityScenario(1.0, LocalTime.of(8, 30), LocalTime.of(19, 0), UserActivityScenario.CurveShape.TRAPEZOIDAL);
+        assertEquals(userActivity, this.objectMapper.readValue(this.objectMapper.writeValueAsString(userActivity), Scenario.class));
 
-        BatchActivityScenario batchActivity = new BatchActivityScenario(
-            800,
-            12000,
-            LocalTime.of(23, 0),
-            Duration.ofMinutes(90),
-            0.0,
-            BatchActivityScenario.SmoothingMode.SMOOTH_STEP,
-            null
-        );
-        String batchJson = this.objectMapper.writeValueAsString(batchActivity);
-        Scenario deserializedBatch = this.objectMapper.readValue(batchJson, Scenario.class);
-        assertEquals(batchActivity, deserializedBatch);
+        BatchActivityScenario batchActivity = new BatchActivityScenario(0.4, LocalTime.of(23, 0), Duration.ofMinutes(90), BatchActivityScenario.SmoothingMode.SMOOTH_STEP);
+        assertEquals(batchActivity, this.objectMapper.readValue(this.objectMapper.writeValueAsString(batchActivity), Scenario.class));
     }
 
     @Test
     void defaultValuesAreAssignedWhenPropertiesAreOmitted() throws JsonProcessingException
     {
-        String userJson = """
-            {
-                "type": "user_activity",
-                "outputTokenPerRequest": 100,
-                "baselineRequestPerYear": 0.0,
-                "peakRequestPerYear": 1000.0,
-                "openingTime": "09:00:00",
-                "closingTime": "17:00:00"
-            }
-            """;
-        UserActivityScenario userActivity = (UserActivityScenario) this.objectMapper.readValue(userJson, Scenario.class);
-        assertEquals(1000.0, userActivity.requestPerYear());
+        UserActivityScenario userActivity = (UserActivityScenario) this.objectMapper.readValue("""
+            {"type": "user_activity", "openingTime": "09:00:00", "closingTime": "17:00:00"}
+            """, Scenario.class);
+        assertEquals(Scenario.DEFAULT_LEVEL, userActivity.level());
         assertEquals(UserActivityScenario.DEFAULT_CURVE, userActivity.curve());
         assertEquals(ApplicabilityFilter.ALWAYS, userActivity.applicability());
 
-        String batchJson = """
-            {
-                "type": "batch_activity",
-                "outputTokenPerRequest": 500,
-                "baselineRequestPerYear": 0.0,
-                "peakRequestPerYear": 2000.0,
-                "triggerTime": "02:00:00",
-                "duration": "PT1H"
-            }
-            """;
-        BatchActivityScenario batchActivity = (BatchActivityScenario) this.objectMapper.readValue(batchJson, Scenario.class);
-        assertEquals(2000.0, batchActivity.requestPerYear());
+        BatchActivityScenario batchActivity = (BatchActivityScenario) this.objectMapper.readValue("""
+            {"type": "batch_activity", "triggerTime": "02:00:00", "duration": "PT1H"}
+            """, Scenario.class);
+        assertEquals(Scenario.DEFAULT_LEVEL, batchActivity.level());
         assertEquals(BatchActivityScenario.DEFAULT_SMOOTHING, batchActivity.smoothing());
-        assertEquals(ApplicabilityFilter.ALWAYS, batchActivity.applicability());
 
-        String constantJson = """
-            {
-                "type": "constant",
-                "outputTokenPerRequest": 250,
-                "requestPerYear": 1000
-            }
-            """;
-        ConstantScenario constant = (ConstantScenario) this.objectMapper.readValue(constantJson, Scenario.class);
+        ConstantScenario constant = (ConstantScenario) this.objectMapper.readValue("""
+            {"type": "constant"}
+            """, Scenario.class);
+        assertEquals(Scenario.DEFAULT_LEVEL, constant.level());
         assertEquals(ApplicabilityFilter.ALWAYS, constant.applicability());
     }
 }

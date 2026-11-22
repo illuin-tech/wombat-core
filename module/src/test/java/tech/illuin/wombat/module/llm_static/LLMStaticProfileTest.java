@@ -37,11 +37,12 @@ class LLMStaticProfileTest
                         "provider": "openai",
                         "model": "gpt-4o",
                         "location": "FRA",
+                        "requestPerYear": 10000,
+                        "outputTokenPerRequest": 250,
                         "scenarios": [
                             {
                                 "type": "constant",
-                                "outputTokenPerRequest": 250,
-                                "requestPerYear": 10000.0
+                                "level": 0.5
                             }
                         ]
                     }
@@ -61,10 +62,10 @@ class LLMStaticProfileTest
         assertSame(Country.FRANCE, model.location());
         assertEquals(1, model.scenarios().size());
 
+        assertEquals(10_000L, model.requestPerYear());
+        assertEquals(250, model.outputTokenPerRequest());
         Scenario scenario = model.scenarios().get(0);
-        assertInstanceOf(ConstantScenario.class, scenario);
-        assertEquals(250, scenario.outputTokenPerRequest());
-        assertEquals(10000.0, ((ConstantScenario) scenario).requestPerYear());
+        assertEquals(0.5, assertInstanceOf(ConstantScenario.class, scenario).level());
     }
 
     @Test
@@ -78,11 +79,11 @@ class LLMStaticProfileTest
                         "provider": "mistralai",
                         "model": "mistral-large-latest",
                         "location": "DEU",
+                        "request-per-year": 5000,
+                        "output-token-per-request": 100,
                         "scenarios": [
                             {
-                                "type": "constant",
-                                "output-token-per-request": 100,
-                                "request-per-year": 5000.0
+                                "type": "constant"
                             }
                         ]
                     }
@@ -100,6 +101,8 @@ class LLMStaticProfileTest
         assertEquals(LLMProvider.mistralai, model.provider());
         assertEquals("mistral-large-latest", model.model());
         assertSame(Country.GERMANY, model.location());
+        assertEquals(5_000L, model.requestPerYear());
+        assertEquals(100, model.outputTokenPerRequest());
     }
 
     @Test
@@ -113,26 +116,22 @@ class LLMStaticProfileTest
                         "provider": "openai",
                         "model": "gpt-4o",
                         "location": "USA",
+                        "requestPerYear": 1000000,
+                        "outputTokenPerRequest": 300,
                         "scenarios": [
                             {
                                 "type": "constant",
-                                "outputTokenPerRequest": 200,
-                                "requestPerYear": 1000.0
+                                "level": 0.1
                             },
                             {
                                 "type": "user_activity",
-                                "outputTokenPerRequest": 300,
-                                "baselineRequestPerYear": 100.0,
-                                "peakRequestPerYear": 5000.0,
                                 "openingTime": "09:00:00",
                                 "closingTime": "17:00:00",
                                 "curve": "sinusoidal"
                             },
                             {
                                 "type": "batch_activity",
-                                "outputTokenPerRequest": 1000,
-                                "baselineRequestPerYear": 0.0,
-                                "peakRequestPerYear": 10000.0,
+                                "level": 0.5,
                                 "triggerTime": "02:00:00",
                                 "duration": "PT2H",
                                 "smoothing": "smooth_step"
@@ -143,11 +142,11 @@ class LLMStaticProfileTest
                         "provider": "mistralai",
                         "model": "mistral-small",
                         "location": "FRA",
+                        "requestPerYear": 20000,
+                        "outputTokenPerRequest": 150,
                         "scenarios": [
                             {
-                                "type": "constant",
-                                "outputTokenPerRequest": 150,
-                                "requestPerYear": 20000.0
+                                "type": "constant"
                             }
                         ]
                     }
@@ -174,25 +173,9 @@ class LLMStaticProfileTest
     @Test
     void serializesToJsonAndBack() throws JsonProcessingException
     {
-        ConstantScenario constant = new ConstantScenario(200, 10000, null);
-        UserActivityScenario userActivity = new UserActivityScenario(
-            250,
-            5000,
-            LocalTime.of(8, 0),
-            LocalTime.of(18, 0),
-            UserActivityScenario.CurveShape.BELL,
-            0.0,
-            null
-        );
-        BatchActivityScenario batch = new BatchActivityScenario(
-            800,
-            12000,
-            LocalTime.of(1, 0),
-            Duration.ofHours(3),
-            0.0,
-            BatchActivityScenario.SmoothingMode.LINEAR_RAMP,
-            null
-        );
+        ConstantScenario constant = new ConstantScenario(0.1);
+        UserActivityScenario userActivity = new UserActivityScenario(1.0, LocalTime.of(8, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL);
+        BatchActivityScenario batch = new BatchActivityScenario(0.5, LocalTime.of(1, 0), Duration.ofHours(3), BatchActivityScenario.SmoothingMode.LINEAR_RAMP);
 
         LLMStaticProfile original = new LLMStaticProfile(
             ZoneId.of("Europe/Paris"),
@@ -200,6 +183,8 @@ class LLMStaticProfileTest
                 LLMProvider.openai,
                 "gpt-4o",
                 Country.FRANCE,
+                1_000_000L,
+                800,
                 List.of(constant, userActivity, batch)
             ))
         );
@@ -220,11 +205,11 @@ class LLMStaticProfileTest
                         "provider": "openai",
                         "model": "gpt-4o",
                         "location": "FRA",
+                        "requestPerYear": 1000,
+                        "outputTokenPerRequest": 200,
                         "scenarios": [
                             {
-                                "type": "constant",
-                                "outputTokenPerRequest": 200,
-                                "requestPerYear": 1000.0
+                                "type": "constant"
                             }
                         ]
                     }
@@ -253,11 +238,11 @@ class LLMStaticProfileTest
                             "rate": 100
                         },
                         "legacyModelField": 12345,
+                        "requestPerYear": 1000,
+                        "outputTokenPerRequest": 200,
                         "scenarios": [
                             {
-                                "type": "constant",
-                                "outputTokenPerRequest": 200,
-                                "requestPerYear": 1000.0
+                                "type": "constant"
                             }
                         ]
                     }
