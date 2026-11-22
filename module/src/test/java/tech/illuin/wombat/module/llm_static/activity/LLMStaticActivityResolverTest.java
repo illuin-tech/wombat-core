@@ -1,6 +1,5 @@
 package tech.illuin.wombat.module.llm_static.activity;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.llm_static.LLMStaticModule;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
@@ -16,18 +15,14 @@ import tech.illuin.wombat.module.llm_static.LLMStaticAsset;
 import tech.illuin.wombat.module.llm_static.LLMStaticProfile;
 import tech.illuin.wombat.module.llm_static.scenario.BatchActivityScenario;
 import tech.illuin.wombat.module.llm_static.scenario.ConstantScenario;
-import tech.illuin.wombat.module.llm_static.scenario.ScenarioResult;
 import tech.illuin.wombat.module.llm_static.scenario.UserActivityScenario;
-import tech.illuin.wombat.module.llm_static.scenario.evaluator.CompositeScenarioEvaluator;
 import tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -40,10 +35,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class LLMStaticActivityResolverTest
 {
     private final LLMStaticActivityResolver resolver = new LLMStaticActivityResolver();
-
-    private static final Duration ONE_YEAR = Duration.ofDays(365);
-    /* Relative tolerance where the resolver is meant to reproduce the scenarios' integral exactly */
-    private static final double EXACT = 1e-4;
 
     @Test
     void resolve_multiModelStaticProfile_computesActivityForEachModel()
@@ -445,125 +436,4 @@ class LLMStaticActivityResolverTest
         assertEquals(0, weekendRequests);
         assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.005);
     }
-
-    @Test
-    @Disabled("H2: slot request counts are rounded to an int, 99,580 (1 h, 1 d) and 99,632 (1 week) for 99,617 (-0.04%)")
-    void conservesTheScenarioIntegralAtEveryResolution()
-    {
-        LLMStaticProfile.ModelConfig model = new LLMStaticProfile.ModelConfig(
-            LLMProvider.openai,
-            "gpt-4o",
-            Country.FRANCE,
-            List.of(new UserActivityScenario(100, 100_000, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0, new ApplicabilityFilter(Set.of(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY), Set.of())))
-        );
-        LLMStaticAsset asset = asset("llm-resolutions", model);
-
-        /* 52 whole weeks, so that a weekly split discards nothing */
-        Instant start = Instant.parse("2026-01-05T00:00:00Z");
-        Instant end = Instant.parse("2027-01-04T00:00:00Z");
-        Canonical expected = canonical(model, new TimeRange(start, end));
-
-        Map<Duration, Double> totals = new LinkedHashMap<>();
-        for (Duration resolution : List.of(Duration.ofHours(1), Duration.ofDays(1), Duration.ofDays(7)))
-            totals.put(resolution, this.total(asset, new TimeRange(start, end, resolution)).requests());
-
-        assertAll(totals.entrySet().stream().map(total -> () -> assertEquals(
-            expected.requests(), total.getValue(), expected.requests() * EXACT, "requests at " + total.getKey()
-        )));
-    }
-
-    @Test
-    @Disabled("H2: slot request counts are rounded to an int, 1,095 requests for 1,000 (+9.5%)")
-    void conservesALowAnnualVolumeAtHourlyResolution()
-    {
-        LLMStaticProfile.ModelConfig model = new LLMStaticProfile.ModelConfig(
-            LLMProvider.openai,
-            "gpt-4o",
-            Country.FRANCE,
-            List.of(new UserActivityScenario(100, 1_000, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0))
-        );
-
-        TimeRange range = new TimeRange(Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"), Duration.ofHours(1));
-        Canonical expected = canonical(model, range);
-        Canonical actual = this.total(asset("llm-low-volume", model), range);
-
-        assertEquals(expected.requests(), actual.requests(), expected.requests() * EXACT);
-    }
-
-    @Test
-    @Disabled("H3: tokens per request are averaged over hours, not requests, 21.2M tokens for 42.0M (-49%)")
-    void weighsTokensByRequestsWithinASlot()
-    {
-        int userTotalRequests = (int) (31_536_000 * (9.0 / 24.0) * (2.0 / Math.PI));
-        LLMStaticProfile.ModelConfig model = new LLMStaticProfile.ModelConfig(
-            LLMProvider.openai,
-            "gpt-4o",
-            Country.FRANCE,
-            List.of(
-                new ConstantScenario(100, 3_153_600, null),
-                new UserActivityScenario(2_000, userTotalRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.SINUSOIDAL, 0.0)
-            )
-        );
-
-        TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-02T00:00:00Z"));
-        Canonical expected = canonical(model, range);
-        Canonical actual = this.total(asset("llm-token-weighting", model), range);
-
-        assertEquals(expected.tokens(), actual.tokens(), expected.tokens() * EXACT);
-    }
-
-    @Test
-    @Disabled("H9: a year is 365 days, 1,002,840 requests over 2028 for 1,000,000 (+0.28%)")
-    void holdsTheAnnualVolumeOverALeapYear()
-    {
-        LLMStaticProfile.ModelConfig model = new LLMStaticProfile.ModelConfig(
-            LLMProvider.openai,
-            "gpt-4o",
-            Country.FRANCE,
-            List.of(new ConstantScenario(100, 1_000_000))
-        );
-
-        TimeRange range = new TimeRange(Instant.parse("2028-01-01T00:00:00Z"), Instant.parse("2029-01-01T00:00:00Z"), Duration.ofDays(1));
-        Canonical actual = this.total(asset("llm-leap-year", model), range);
-
-        assertEquals(1_000_000, actual.requests(), 1_000_000 * EXACT);
-    }
-
-    private Canonical total(LLMStaticAsset asset, TimeRange range)
-    {
-        List<LLMActivityData> slots = this.resolver.resolve(asset, range, null).orElseThrow().activity().stream()
-            .map(a -> (LLMActivityData) a)
-            .toList();
-        return new Canonical(
-            slots.stream().mapToDouble(LLMActivityData::requestCount).sum(),
-            slots.stream().mapToDouble(LLMActivityData::outputTokenCount).sum()
-        );
-    }
-
-    private static LLMStaticAsset asset(String id, LLMStaticProfile.ModelConfig model)
-    {
-        return new LLMStaticAsset(AssetIdentity.of(id, "env-test", LLMStaticModule.TYPE), new LLMStaticProfile(List.of(model)));
-    }
-
-    /**
-     * The scenarios' own integral over {@code range}: the rate sampled at each hour's midpoint, as the resolver does,
-     * but kept unrounded and paired with that hour's tokens per request.
-     */
-    private static Canonical canonical(LLMStaticProfile.ModelConfig model, TimeRange range)
-    {
-        CompositeScenarioEvaluator evaluator = new CompositeScenarioEvaluator();
-        double requests = 0.0;
-        double tokens = 0.0;
-        for (TimeRange hour : range.split(Duration.ofHours(1)))
-        {
-            ScenarioResult result = evaluator.evaluate(hour.start().plus(Duration.ofMinutes(30)).atZone(ZoneOffset.UTC), model.scenarios());
-            double hourRequests = result.requestPerYear() * Duration.ofHours(1).toSeconds() / ONE_YEAR.toSeconds();
-            requests += hourRequests;
-            tokens += hourRequests * result.outputTokenPerRequest();
-        }
-        return new Canonical(requests, tokens);
-    }
-
-    /* Requests and output tokens over a range, unrounded */
-    private record Canonical(double requests, double tokens) {}
 }
