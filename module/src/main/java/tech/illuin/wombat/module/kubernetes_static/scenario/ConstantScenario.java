@@ -2,6 +2,7 @@ package tech.illuin.wombat.module.kubernetes_static.scenario;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.PositiveOrZero;
 import tech.illuin.wombat.module.kubernetes_static.scenario.tools.ApplicabilityFilter;
 
@@ -13,7 +14,7 @@ import java.time.ZonedDateTime;
  */
 @JsonClassDescription("Constant load")
 public record ConstantScenario(
-    @PositiveOrZero @JsonPropertyDescription("Fraction of the server capacity, e.g. 0.20 for 20%") double load,
+    @PositiveOrZero @DecimalMax("1.0") @JsonPropertyDescription("Fraction of the server capacity, from 0 to 1, e.g. 0.20 for 20%") double load,
     @JsonPropertyDescription("Days and months the scenario applies to, always when omitted") ApplicabilityFilter applicability
 ) implements Scenario
 {
@@ -35,6 +36,12 @@ public record ConstantScenario(
 
     @Override
     public double evaluateLoad(ZonedDateTime dateTime)
+    {
+        return this.load;
+    }
+
+    @Override
+    public double maxLoad()
     {
         return this.load;
     }

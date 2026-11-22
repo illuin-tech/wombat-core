@@ -16,6 +16,6 @@ public interface Asset
     @JsonIgnore
     AssetType type();
 
-    @NotNull @Valid
+    @NotNull
     AssetProfile profile();
 }

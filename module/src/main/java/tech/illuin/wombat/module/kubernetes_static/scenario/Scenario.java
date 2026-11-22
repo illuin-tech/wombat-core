@@ -2,6 +2,7 @@ package tech.illuin.wombat.module.kubernetes_static.scenario;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import tech.illuin.wombat.module.kubernetes_static.scenario.validation.WithinCapacity;
 
 import java.time.ZonedDateTime;
 
@@ -17,6 +18,7 @@ import java.time.ZonedDateTime;
     @JsonSubTypes.Type(value = UserActivityScenario.class, name = "user_activity"),
     @JsonSubTypes.Type(value = BatchActivityScenario.class, name = "batch_activity")
 })
+@WithinCapacity
 public interface Scenario
 {
     boolean isApplicable(ZonedDateTime dateTime);
@@ -28,4 +30,7 @@ public interface Scenario
      * @return load factor as a fraction of server capacity
      */
     double evaluateLoad(ZonedDateTime dateTime);
+
+    /** The highest load the scenario can reach, jitter included, as a fraction of server capacity. */
+    double maxLoad();
 }

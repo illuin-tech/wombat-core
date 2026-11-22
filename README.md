@@ -299,7 +299,7 @@ public class MySimulationModule implements WombatModule
 
 public record MySimulationAsset(
     AssetIdentity identity,
-    MySimulationProfile profile
+    @Valid MySimulationProfile profile
 ) implements Asset {
     @Override
     public AssetType type() { return MySimulationModule.TYPE; }

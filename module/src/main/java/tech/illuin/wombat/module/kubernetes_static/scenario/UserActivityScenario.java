@@ -3,6 +3,7 @@ package tech.illuin.wombat.module.kubernetes_static.scenario;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import tech.illuin.wombat.module.kubernetes_static.scenario.tools.ApplicabilityFilter;
@@ -19,8 +20,8 @@ import java.time.ZonedDateTime;
  */
 @JsonClassDescription("Load following user activity over a daily window")
 public record UserActivityScenario(
-    @PositiveOrZero @JsonPropertyDescription("Fraction of the server capacity during off-hours") double baselineLoad,
-    @PositiveOrZero @JsonPropertyDescription("Fraction of the server capacity at peak hours") double peakLoad,
+    @PositiveOrZero @DecimalMax("1.0") @JsonPropertyDescription("Fraction of the server capacity during off-hours, from 0 to 1") double baselineLoad,
+    @PositiveOrZero @DecimalMax("1.0") @JsonPropertyDescription("Fraction of the server capacity at peak hours, from 0 to 1, jitter included") double peakLoad,
     @NotNull @JsonPropertyDescription("Start of the daily activity window") LocalTime openingTime,
     @NotNull @JsonPropertyDescription("End of the daily activity window") LocalTime closingTime,
     @JsonProperty(defaultValue = "bell") @JsonPropertyDescription("Shape of the activity over the window") CurveShape curve,
@@ -45,6 +46,13 @@ public record UserActivityScenario(
     public boolean isApplicable(ZonedDateTime dateTime)
     {
         return this.applicability.isApplicable(dateTime);
+    }
+
+    /* The jitter moves the load by up to its ratio either way, from the baseline up to the peak */
+    @Override
+    public double maxLoad()
+    {
+        return Math.max(this.baselineLoad, this.peakLoad) * (1.0 + Math.max(0.0, this.jitter));
     }
 
     @Override

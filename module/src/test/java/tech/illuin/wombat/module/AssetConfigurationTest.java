@@ -11,6 +11,11 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import jakarta.validation.Valid;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.Asset;
@@ -90,6 +95,35 @@ class AssetConfigurationTest
             {
                 Asset asset = YAML.treeToValue(source, Asset.class);
                 assertKeysRead(source, YAML.valueToTree(asset), asset.identity().id());
+            }
+        }
+    }
+
+    @Test
+    void assets_cascadeValidationToTheirProfile() throws NoSuchFieldException
+    {
+        for (WombatModule module : MODULES)
+        {
+            Class<?> asset = module.assetClass();
+            assertTrue(asset.getDeclaredField("profile").isAnnotationPresent(Valid.class), asset.getSimpleName() + ".profile is not @Valid");
+        }
+    }
+
+    /** Every documented asset meets its constraints, profile included, as the app validates what its API receives. */
+    @Test
+    void docs_areValid() throws IOException
+    {
+        /* Messages without expressions: no Expression Language implementation needed */
+        try (ValidatorFactory factory = Validation.byDefaultProvider().configure().messageInterpolator(new ParameterMessageInterpolator()).buildValidatorFactory())
+        {
+            Validator validator = factory.getValidator();
+            for (List<JsonNode> sources : documentedAssets().values())
+            {
+                for (JsonNode source : sources)
+                {
+                    Asset asset = YAML.treeToValue(source, Asset.class);
+                    assertEquals(Set.of(), validator.validate(asset), asset.identity().id());
+                }
             }
         }
     }

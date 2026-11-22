@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
@@ -19,7 +20,7 @@ public record LLMAnthropicAsset(
     @JsonProperty(defaultValue = LLMAnthropicAsset.DEFAULT_API_URL) @JsonPropertyDescription("Base URL of the Anthropic API") String apiUrl,
     @JsonPropertyDescription("HTTP proxy URL, with a host and a port") String proxyUrl,
     @NotNull @JsonPropertyDescription("Secret holding an Anthropic Admin API key (sk-ant-admin...); a standard API key is rejected") SecretKey adminKey,
-    @NotNull @JsonPropertyDescription("Usage scope and request estimation") LLMAnthropicProfile profile
+    @NotNull @Valid @JsonPropertyDescription("Usage scope and request estimation") LLMAnthropicProfile profile
 ) implements Asset, SecretAware
 {
     public static final String DEFAULT_API_URL = "https://api.anthropic.com";
