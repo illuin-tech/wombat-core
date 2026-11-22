@@ -17,14 +17,19 @@ import tech.illuin.wombat.module.kubernetes_static.KubernetesStaticProfile;
 import tech.illuin.wombat.module.kubernetes_static.scenario.BatchActivityScenario;
 import tech.illuin.wombat.module.kubernetes_static.scenario.ConstantScenario;
 import tech.illuin.wombat.module.kubernetes_static.scenario.UserActivityScenario;
+import tech.illuin.wombat.module.kubernetes_static.scenario.tools.ApplicabilityFilter;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
+import static java.time.DayOfWeek.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class KubernetesStaticActivityResolverTest
@@ -179,5 +184,47 @@ public class KubernetesStaticActivityResolverTest
         // Mean load: (15 * 0.10 + 9 * 0.10 + 0.80 * (1 / sin(10 deg))) / 24 ≈ 0.291959
         assertInstanceOf(RelativeCPUUsage.class, slot.cpuUsage());
         assertEquals(0.291959, ((RelativeCPUUsage) slot.cpuUsage()).ratio(), 1e-4);
+    }
+
+    @Test
+    void averagesTheSameLoadAtEveryResolution()
+    {
+        KubernetesStaticAsset asset = new KubernetesStaticAsset(
+            AssetIdentity.of("k8s-resolutions", "env-test", KubernetesStaticModule.TYPE),
+            new KubernetesStaticProfile(
+                ServerProvider.aws,
+                "c5.2xlarge",
+                Country.FRANCE,
+                Lifetime.ofYears(4),
+                ZoneOffset.UTC,
+                List.of(
+                    new ConstantScenario(0.10, null),
+                    new UserActivityScenario(0.10, 0.75, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0, new ApplicabilityFilter(Set.of(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY), Set.of())),
+                    new BatchActivityScenario(0.0, 0.90, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.SMOOTH_STEP, null)
+                )
+            )
+        );
+
+        /* Four whole weeks, so that a weekly split discards nothing */
+        Instant start = Instant.parse("2026-11-02T00:00:00Z");
+        Instant end = Instant.parse("2026-11-30T00:00:00Z");
+
+        Map<Duration, Double> loadHours = new LinkedHashMap<>();
+        for (Duration resolution : List.of(Duration.ofHours(1), Duration.ofDays(1), Duration.ofDays(7)))
+            loadHours.put(resolution, this.loadHours(asset, new TimeRange(start, end, resolution)));
+
+        double hourly = loadHours.get(Duration.ofHours(1));
+        assertAll(loadHours.entrySet().stream().map(total -> () -> assertEquals(
+            hourly, total.getValue(), hourly * 1e-4, "load-hours at " + total.getKey()
+        )));
+    }
+
+    /* The load integrated over the range, in node-hours at full load */
+    private double loadHours(KubernetesStaticAsset asset, TimeRange range)
+    {
+        return this.resolver.resolve(asset, range, null).orElseThrow().activity().stream()
+            .map(a -> (KubernetesActivityData) a)
+            .mapToDouble(a -> ((RelativeCPUUsage) a.cpuUsage()).ratio() * a.range().resolution().toSeconds() / 3600.0)
+            .sum();
     }
 }

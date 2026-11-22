@@ -175,15 +175,24 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         return total;
     }
 
+    /*
+     * Boavizta allocates the embedded impacts as total × duration / hours_life_time: with both set to the lifespan, the
+     * response holds the whole lifespan's impacts, which convert() then prorates to the slot.
+     */
     private BoaviztaImpactResponse requestImpactFromPercentage(ServerProfile profile, double loadPercentage)
     {
+        long lifespanHours = profile.lifespan().asHours();
         return this.getInstanceImpact(
             new BoaviztaInstanceImpactRequest(
                 getProvider(profile.provider()),
                 profile.instanceType(),
-                new BoaviztaInstanceImpactRequest.Usage(getLocation(profile.location()), List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)))
+                new BoaviztaInstanceImpactRequest.Usage(
+                    getLocation(profile.location()),
+                    List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)),
+                    (double) lifespanHours
+                )
             ),
-            (int) profile.lifespan().asHours()
+            (int) lifespanHours
         );
     }
 
