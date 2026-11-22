@@ -6,7 +6,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.time.ZonedDateTime;
 
 /**
- * Represents a static LLM activity modeling scenario.
+ * One curve of a model's traffic shape. The model's scenarios draw its shape, the busiest one winning at each instant,
+ * and the model's annual volume sets the scale.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
@@ -16,20 +17,16 @@ import java.time.ZonedDateTime;
 })
 public interface Scenario
 {
+    /** The level a scenario has when none is given. */
+    double DEFAULT_LEVEL = 1.0;
+
     boolean isApplicable(ZonedDateTime dateTime);
 
     /**
-     * Evaluates the annual request count rate at the given date/time.
+     * The scenario's height at the given instant: from 0 to its level, 0 when it does not apply.
      *
      * @param dateTime evaluation instant
-     * @return annual request count rate
+     * @return relative traffic, only its ratio to the model's other scenarios matters
      */
-    double evaluateRequestPerYear(ZonedDateTime dateTime);
-
-    /**
-     * Returns the mean output token count per request for this scenario.
-     *
-     * @return mean output token count per request
-     */
-    int outputTokenPerRequest();
+    double shape(ZonedDateTime dateTime);
 }

@@ -15,425 +15,253 @@ import tech.illuin.wombat.module.llm_static.LLMStaticAsset;
 import tech.illuin.wombat.module.llm_static.LLMStaticProfile;
 import tech.illuin.wombat.module.llm_static.scenario.BatchActivityScenario;
 import tech.illuin.wombat.module.llm_static.scenario.ConstantScenario;
+import tech.illuin.wombat.module.llm_static.scenario.Scenario;
 import tech.illuin.wombat.module.llm_static.scenario.UserActivityScenario;
 import tech.illuin.wombat.module.llm_static.scenario.tools.ApplicabilityFilter;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import static java.time.DayOfWeek.*;
-import static java.time.DayOfWeek.FRIDAY;
-import static java.time.DayOfWeek.THURSDAY;
-import static java.time.Month.JANUARY;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LLMStaticActivityResolverTest
 {
     private final LLMStaticActivityResolver resolver = new LLMStaticActivityResolver();
 
+    /* Where the resolver is meant to be exact: only floating-point error */
+    private static final double EXACT = 1e-9;
+    private static final Instant YEAR_2026 = Instant.parse("2026-01-01T00:00:00Z");
+    private static final Instant YEAR_2027 = Instant.parse("2027-01-01T00:00:00Z");
+    private static final List<Duration> RESOLUTIONS = List.of(Duration.ofHours(1), Duration.ofDays(1), Duration.ofDays(5));
+    private static final Set<DayOfWeek> WEEKDAYS = Set.of(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY);
+
     @Test
     void resolve_multiModelStaticProfile_computesActivityForEachModel()
     {
-        LLMStaticProfile.ModelConfig m1 = new LLMStaticProfile.ModelConfig(
-            LLMProvider.mistralai,
-            "mistral-large-latest",
-            Country.FRANCE,
-            List.of(new ConstantScenario(500, 31_536_000, null)) // 1 req/sec -> 31536000 req/year
-        );
-        LLMStaticProfile.ModelConfig m2 = new LLMStaticProfile.ModelConfig(
-            LLMProvider.openai,
-            "gpt-4o",
-            Country.US,
-            List.of(new ConstantScenario(1000, 63_072_000, null)) // 2 req/sec
-        );
+        /* 1 and 2 requests a second */
+        LLMStaticProfile.ModelConfig m1 = model(LLMProvider.mistralai, "mistral-large-latest", 31_536_000, 500, new ConstantScenario());
+        LLMStaticProfile.ModelConfig m2 = model(LLMProvider.openai, "gpt-4o", 63_072_000, 1000, new ConstantScenario());
 
-        LLMStaticProfile profile = new LLMStaticProfile(List.of(m1, m2));
-        LLMStaticAsset asset = new LLMStaticAsset(AssetIdentity.of("llm-asset", "test-env", LLMStaticModule.TYPE), profile);
-
-        // 100 seconds range
-        TimeRange range = new TimeRange(Instant.ofEpochSecond(0), Instant.ofEpochSecond(100));
-
-        Optional<AssetActivity> activityOpt = this.resolver.resolve(asset, range, null);
+        Optional<AssetActivity> activityOpt = this.resolver.resolve(asset("llm-asset", m1, m2), new TimeRange(Instant.ofEpochSecond(0), Instant.ofEpochSecond(100)), null);
         assertTrue(activityOpt.isPresent());
-        assertInstanceOf(LLMActivityData.class, activityOpt.get().activity().getFirst());
-
-        AssetActivity activity = activityOpt.get();
-        LLMActivityData llmActivity = (LLMActivityData) activity.activity().getFirst();
+        LLMActivityData llmActivity = assertInstanceOf(LLMActivityData.class, activityOpt.get().activity().getFirst());
         assertEquals(2, llmActivity.services().size());
 
-        // 100 seconds out of 365 days (31536000s in year)
         LLMServiceActivity a1 = llmActivity.services().get("mistral-large-latest");
-        assertNotNull(a1);
         assertEquals(LLMProvider.mistralai, a1.provider());
         assertEquals("mistral-large-latest", a1.model());
-        assertEquals(100, (int) a1.requestCount());
-        assertEquals(50_000L, a1.outputTokenCount()); // 500 * 100
+        assertEquals(100.0, a1.requestCount(), 100.0 * EXACT);
+        assertEquals(50_000L, a1.outputTokenCount());
 
         LLMServiceActivity a2 = llmActivity.services().get("gpt-4o");
-        assertNotNull(a2);
         assertEquals(LLMProvider.openai, a2.provider());
         assertEquals("gpt-4o", a2.model());
-        assertEquals(200, (int) a2.requestCount());
-        assertEquals(200_000L, a2.outputTokenCount()); // 1000 * 200
-
-        assertEquals(250_000L, llmActivity.outputTokenCount());
-        assertEquals(300, llmActivity.requestCount());
-    }
-
-    @Test
-    void resolvesConstantScenarioAcrossTimeSlots()
-    {
-        LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-static-1", "env-test", LLMStaticModule.TYPE),
-            new LLMStaticProfile(
-                LLMProvider.openai,
-                "gpt-4o",
-                Country.FRANCE,
-                List.of(new ConstantScenario(200, 31_536_000, null)) // ~1 req/sec -> 3600 req/hour
-            )
-        );
-
-        Instant start = Instant.parse("2026-11-01T00:00:00Z");
-        Instant end = Instant.parse("2026-11-01T02:00:00Z");
-        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
-
-        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
-        assertTrue(result.isPresent());
-
-        AssetActivity activity = result.get();
-        assertEquals(asset.identity(), activity.assetIdentity());
-        assertEquals(2, activity.activity().size());
-
-        for (var actData : activity.activity())
-        {
-            assertInstanceOf(LLMActivityData.class, actData);
-            LLMActivityData llmData = (LLMActivityData) actData;
-            assertEquals(ActivityRegime.MODELED, llmData.regime());
-            assertEquals(3600, llmData.requestCount());
-            assertEquals(720_000L, llmData.outputTokenCount()); // 200 * 3600
-        }
-    }
-
-    @Test
-    void resolvesSuperposedScenariosAcrossTimeSlots()
-    {
-        // 1 req/sec = 31536000 req/year -> 3600 req/hour
-        // Baseline: 3153600 req/year -> 360 req/hour
-        // User Activity: peak 31536000 req/year -> 3600 req/hour (09:00 - 18:00, sinusoidal)
-        // Batch Activity: peak 63072000 req/year -> 7200 req/hour (02:00 - 04:00, duration 2h)
-        int userTotalRequests = (int) (31_536_000 * (9.0 / 24.0) * (2.0 / Math.PI));
-        int batchTotalRequests = (int) (63_072_000 * (2.0 / 24.0) * 1.0);
-
-        LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-static-2", "env-test", LLMStaticModule.TYPE),
-            new LLMStaticProfile(
-                LLMProvider.openai,
-                "gpt-4o",
-                Country.FRANCE,
-                List.of(
-                    new ConstantScenario(100, 3_153_600, null),
-                    new UserActivityScenario(200, userTotalRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.SINUSOIDAL, 0.0, null),
-                    new BatchActivityScenario(500, batchTotalRequests, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.NONE, null)
-                )
-            )
-        );
-
-        Instant start = Instant.parse("2026-11-01T00:00:00Z");
-        Instant end = Instant.parse("2026-11-02T00:00:00Z");
-        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
-
-        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
-        assertTrue(result.isPresent());
-
-        List<LLMActivityData> slots = result.get().activity().stream()
-            .map(a -> (LLMActivityData) a)
-            .toList();
-
-        assertEquals(24, slots.size());
-
-        // Slot 2: 02:00-03:00 -> batch active (7200 req, 500 tokens/req = 3600000 tokens)
-        LLMActivityData slot2 = slots.get(2);
-        assertEquals(7200.0, slot2.requestCount());
-        assertEquals(3_600_000L, slot2.outputTokenCount());
-
-        // Slot 13: 13:00-14:00 (midpoint 13:30) -> peak user activity (3600 req, 200 tokens/req = 720000 tokens)
-        LLMActivityData slot13 = slots.get(13);
-        assertEquals(3600.0, slot13.requestCount());
-        assertEquals(720_000L, slot13.outputTokenCount());
-
-        // Slot 22: 22:00-23:00 -> constant baseline (360 req, 100 tokens/req = 36000 tokens)
-        LLMActivityData slot22 = slots.get(22);
-        assertEquals(360.0, slot22.requestCount());
-        assertEquals(36_000L, slot22.outputTokenCount());
+        assertEquals(200.0, a2.requestCount(), 200.0 * EXACT);
+        assertEquals(200_000L, a2.outputTokenCount());
     }
 
     @Test
     void resolvesFilteredModelsWithAssetFilter()
     {
-        LLMStaticProfile.ModelConfig m1 = new LLMStaticProfile.ModelConfig(
-            LLMProvider.mistralai,
-            "mistral-large-latest",
-            Country.FRANCE,
-            List.of(new ConstantScenario(500, 31_536_000, null))
-        );
-        LLMStaticProfile.ModelConfig m2 = new LLMStaticProfile.ModelConfig(
-            LLMProvider.openai,
-            "gpt-4o",
-            Country.US,
-            List.of(new ConstantScenario(1000, 63_072_000, null))
-        );
+        LLMStaticProfile.ModelConfig m1 = model(LLMProvider.mistralai, "mistral-large-latest", 31_536_000, 500, new ConstantScenario());
+        LLMStaticProfile.ModelConfig m2 = model(LLMProvider.openai, "gpt-4o", 63_072_000, 1000, new ConstantScenario());
+        AssetFilter filter = new AssetFilter(new AssetFilter.Environment("env-test", Set.of(new AssetFilter.Asset("llm-asset", Set.of("mistral-large-latest")))));
 
-        LLMStaticProfile profile = new LLMStaticProfile(List.of(m1, m2));
-        LLMStaticAsset asset = new LLMStaticAsset(AssetIdentity.of("llm-asset", "test-env", LLMStaticModule.TYPE), profile);
+        LLMActivityData llmActivity = (LLMActivityData) this.resolver.resolve(asset("llm-asset", m1, m2), new TimeRange(Instant.ofEpochSecond(0), Instant.ofEpochSecond(100)), filter)
+            .orElseThrow().activity().getFirst();
 
-        TimeRange range = new TimeRange(Instant.ofEpochSecond(0), Instant.ofEpochSecond(100));
-        AssetFilter filter = new AssetFilter(new AssetFilter.Environment("test-env", Set.of(new AssetFilter.Asset("llm-asset", Set.of("mistral-large-latest")))));
-
-        Optional<AssetActivity> activityOpt = this.resolver.resolve(asset, range, filter);
-        assertTrue(activityOpt.isPresent());
-
-        LLMActivityData llmActivity = (LLMActivityData) activityOpt.get().activity().getFirst();
-        assertEquals(1, llmActivity.services().size());
-        assertTrue(llmActivity.services().containsKey("mistral-large-latest"));
-        assertFalse(llmActivity.services().containsKey("gpt-4o"));
-        assertEquals(100, (int) llmActivity.requestCount());
-        assertEquals(50000L, llmActivity.outputTokenCount());
+        assertEquals(Set.of("mistral-large-latest"), llmActivity.services().keySet());
+        assertEquals(100.0, llmActivity.requestCount(), 100.0 * EXACT);
+        assertEquals(50_000L, llmActivity.outputTokenCount());
     }
 
     @Test
-    void resolvesDailyResolutionWithHourlySampling()
+    void resolvesConstantTrafficAcrossTimeSlots()
     {
-        int userTotalRequests = (int) (31_536_000 * (9.0 / 24.0) * (2.0 / Math.PI));
-
-        LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-static-daily", "env-test", LLMStaticModule.TYPE),
-            new LLMStaticProfile(
-                LLMProvider.openai,
-                "gpt-4o",
-                Country.FRANCE,
-                List.of(
-                    new ConstantScenario(100, 3_153_600, null),
-                    new UserActivityScenario(
-                        200,
-                        userTotalRequests,
-                        LocalTime.of(9, 0),
-                        LocalTime.of(18, 0),
-                        UserActivityScenario.CurveShape.SINUSOIDAL,
-                        0.0
-                    )
-                )
-            )
-        );
-
+        LLMStaticAsset asset = asset("llm-constant", model(31_536_000, 200, new ConstantScenario()));
         Instant start = Instant.parse("2026-11-01T00:00:00Z");
-        Instant end = Instant.parse("2026-11-02T00:00:00Z");
-        TimeRange range = new TimeRange(start, end);
 
-        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
-        assertTrue(result.isPresent());
+        List<LLMActivityData> slots = this.slots(asset, new TimeRange(start, start.plus(Duration.ofHours(2)), Duration.ofHours(1)));
 
-        AssetActivity activity = result.get();
-        assertEquals(1, activity.activity().size());
-
-        LLMActivityData slot = (LLMActivityData) activity.activity().getFirst();
-        assertEquals(ActivityRegime.MODELED, slot.regime());
-        assertEquals(range, slot.range());
-
-        // 24 sub-slots evaluated at hourly resolution:
-        // 15 constant slots (100 tokens/req), 9 user sinusoidal slots (200 tokens/req)
-        // Daily requestCount = 26,132
-        // Mean tokens/req = (100*15 + 200*9) / 24 = 137.5 tokens/req
-        // Daily outputTokenCount = (long)(137.5 * 26,132) = 3,593,150
-        assertEquals(26_132, slot.requestCount());
-        assertEquals(3_593_150L, slot.outputTokenCount());
-
-        LLMServiceActivity gpt4o = slot.services().get("gpt-4o");
-        assertNotNull(gpt4o);
-        assertEquals(26_132, gpt4o.requestCount());
-        assertEquals(3_593_150L, gpt4o.outputTokenCount());
-    }
-
-    @Test
-    void resolvesSevenDayAggregateBatchActivityScenario()
-    {
-        LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-batch-7d", "env-test", LLMStaticModule.TYPE),
-            new LLMStaticProfile(
-                LLMProvider.openai,
-                "gpt-4o",
-                Country.FRANCE,
-                List.of(
-                    new BatchActivityScenario(1000, 100_000, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, BatchActivityScenario.SmoothingMode.NONE)
-                )
-            )
-        );
-
-        Instant start = Instant.parse("2026-11-01T00:00:00Z");
-        Instant end = Instant.parse("2026-11-08T00:00:00Z");
-        TimeRange range = new TimeRange(start, end, Duration.ofDays(7));
-
-        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
-        assertTrue(result.isPresent());
-
-        AssetActivity activity = result.get();
-        assertEquals(1, activity.activity().size());
-
-        LLMActivityData slot = (LLMActivityData) activity.activity().getFirst();
-        assertEquals(ActivityRegime.MODELED, slot.regime());
-        assertEquals(1918, slot.requestCount());
-        assertEquals(1_918_000L, slot.outputTokenCount());
-    }
-
-    @Test
-    void resolvesFullYearSummationForUserActivityScenario()
-    {
-        int targetAnnualRequests = 100_000;
-        LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-user-year", "env-test", LLMStaticModule.TYPE),
-            new LLMStaticProfile(
-                LLMProvider.openai,
-                "gpt-4o",
-                Country.FRANCE,
-                List.of(
-                    new UserActivityScenario(100, targetAnnualRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0)
-                )
-            )
-        );
-
-        Instant start = Instant.parse("2026-01-01T00:00:00Z");
-        Instant end = Instant.parse("2027-01-01T00:00:00Z");
-        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
-
-        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
-        assertTrue(result.isPresent());
-
-        long totalRequests = result.get().activity().stream()
-            .mapToLong(a -> (long) ((LLMActivityData) a).requestCount())
-            .sum();
-
-        // 8,760 1-hour slots integrated over standard year should be within 0.5% of target annual volume
-        assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.005);
-    }
-
-    @Test
-    void resolvesFullYearSummationForBatchActivityScenario()
-    {
-        int targetAnnualRequests = 50_000;
-        LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-batch-year", "env-test", LLMStaticModule.TYPE),
-            new LLMStaticProfile(
-                LLMProvider.openai,
-                "gpt-4o",
-                Country.FRANCE,
-                List.of(
-                    new BatchActivityScenario(200, targetAnnualRequests, LocalTime.of(2, 0), Duration.ofHours(10), 0.0, BatchActivityScenario.SmoothingMode.SMOOTH_STEP)
-                )
-            )
-        );
-
-        Instant start = Instant.parse("2026-01-01T00:00:00Z");
-        Instant end = Instant.parse("2027-01-01T00:00:00Z");
-        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
-
-        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
-        assertTrue(result.isPresent());
-
-        long totalRequests = result.get().activity().stream()
-            .mapToLong(a -> (long) ((LLMActivityData) a).requestCount())
-            .sum();
-
-        assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.01);
-    }
-
-    @Test
-    void resolvesFullYearSummationWithMonthApplicabilityFilter()
-    {
-        int targetAnnualRequests = 100_000;
-        ApplicabilityFilter janFilter = new ApplicabilityFilter(Set.of(), Set.of(JANUARY));
-
-        LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-jan-asset", "env-test", LLMStaticModule.TYPE),
-            new LLMStaticProfile(
-                LLMProvider.openai,
-                "gpt-4o",
-                Country.FRANCE,
-                List.of(
-                    new UserActivityScenario(100, targetAnnualRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0, janFilter)
-                )
-            )
-        );
-
-        Instant start = Instant.parse("2026-01-01T00:00:00Z");
-        Instant end = Instant.parse("2027-01-01T00:00:00Z");
-        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
-
-        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
-        assertTrue(result.isPresent());
-
-        List<tech.illuin.wombat.core.activity.commons.ActivityData> activities = result.get().activity();
-        long totalRequests = 0;
-        long nonJanuaryRequests = 0;
-
-        Instant feb1 = Instant.parse("2026-02-01T00:00:00Z");
-        for (var act : activities)
+        assertEquals(2, slots.size());
+        for (LLMActivityData slot : slots)
         {
-            LLMActivityData llmAct = (LLMActivityData) act;
-            totalRequests += (long) llmAct.requestCount();
-            if (!act.range().start().isBefore(feb1))
-                nonJanuaryRequests += (long) llmAct.requestCount();
+            assertEquals(ActivityRegime.MODELED, slot.regime());
+            assertEquals(3600.0, slot.requestCount(), 3600.0 * EXACT);
+            assertEquals(720_000L, slot.outputTokenCount());
         }
-
-        assertEquals(0, nonJanuaryRequests);
-        assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.005);
     }
 
     @Test
-    void resolvesFullYearSummationWithWeekdayApplicabilityFilter()
+    void holdsTheAnnualVolumeOverA365DayYear()
     {
-        int targetAnnualRequests = 100_000;
-        ApplicabilityFilter weekdayFilter = new ApplicabilityFilter(
-            Set.of(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY),
-            Set.of()
-        );
+        LLMStaticAsset asset = asset("llm-volume", model(1_000_000, 800, new ConstantScenario()));
 
-        LLMStaticAsset asset = new LLMStaticAsset(
-            AssetIdentity.of("llm-weekday-asset", "env-test", LLMStaticModule.TYPE),
-            new LLMStaticProfile(
-                LLMProvider.openai,
-                "gpt-4o",
-                Country.FRANCE,
-                List.of(
-                    new UserActivityScenario(100, targetAnnualRequests, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0, weekdayFilter)
-                )
-            )
-        );
-
-        Instant start = Instant.parse("2026-01-01T00:00:00Z");
-        Instant end = Instant.parse("2027-01-01T00:00:00Z");
-        TimeRange range = new TimeRange(start, end, Duration.ofHours(1));
-
-        Optional<AssetActivity> result = this.resolver.resolve(asset, range, null);
-        assertTrue(result.isPresent());
-
-        List<tech.illuin.wombat.core.activity.commons.ActivityData> activities = result.get().activity();
-        long totalRequests = 0;
-        long weekendRequests = 0;
-
-        for (var act : activities)
-        {
-            LLMActivityData llmAct = (LLMActivityData) act;
-            totalRequests += (long) llmAct.requestCount();
-            java.time.DayOfWeek dow = act.range().start().atZone(ZoneOffset.UTC).getDayOfWeek();
-            if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY)
-                weekendRequests += (long) llmAct.requestCount();
-        }
-
-        assertEquals(0, weekendRequests);
-        assertEquals(targetAnnualRequests, (double) totalRequests, targetAnnualRequests * 0.005);
+        for (Duration resolution : RESOLUTIONS)
+            assertTotals(1_000_000, 800, this.totals(asset, new TimeRange(YEAR_2026, YEAR_2027, resolution)), "at " + resolution);
+        assertTotals(1_000_000, 800, this.totals(asset, new TimeRange(YEAR_2026, YEAR_2027)), "as one slot");
     }
+
+    /** Requests stay fractional: a volume of under one request an hour adds up to its year. */
+    @Test
+    void holdsALowAnnualVolumeAtHourlyResolution()
+    {
+        LLMStaticAsset asset = asset("llm-low-volume", model(1_000, 500, new UserActivityScenario(1.0, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL)));
+
+        assertTotals(1_000, 500, this.totals(asset, new TimeRange(YEAR_2026, YEAR_2027, Duration.ofHours(1))), "at PT1H");
+    }
+
+    /** A year holds 365 days of volume: a leap year one day more, as the volume is a rate. */
+    @Test
+    void holdsOneMoreDayOverALeapYear()
+    {
+        LLMStaticAsset asset = asset("llm-leap-year", model(1_000_000, 800, new ConstantScenario()));
+        Totals totals = this.totals(asset, new TimeRange(Instant.parse("2028-01-01T00:00:00Z"), Instant.parse("2029-01-01T00:00:00Z"), Duration.ofDays(1)));
+
+        assertEquals(1_000_000 * 366.0 / 365.0, totals.requests(), 1_000_000 * EXACT);
+    }
+
+    /** The scale is the average year's: a given year holds its own count of applicable days. */
+    @Test
+    void spreadsTheVolumeOverTheApplicableDays()
+    {
+        ConstantScenario weekdays = new ConstantScenario(1.0, new ApplicabilityFilter(WEEKDAYS, Set.of()));
+        LLMStaticAsset asset = asset("llm-weekdays", model(1_000_000, 800, weekdays));
+        Totals year = this.totals(asset, new TimeRange(YEAR_2026, YEAR_2027, Duration.ofDays(1)));
+
+        /* 2026 holds 261 weekdays, an average 365-day year 365 × 5 / 7 */
+        assertEquals(1_000_000 * 261 / (365.0 * 5 / 7), year.requests(), 1_000_000 * EXACT);
+        Totals weekend = this.totals(asset, new TimeRange(Instant.parse("2026-11-07T00:00:00Z"), Instant.parse("2026-11-09T00:00:00Z"), Duration.ofDays(1)));
+        assertEquals(0.0, weekend.requests());
+    }
+
+    @Test
+    void holdsTheWholeVolumeInTheApplicableMonths()
+    {
+        ConstantScenario january = new ConstantScenario(1.0, new ApplicabilityFilter(Set.of(), Set.of(Month.JANUARY)));
+        LLMStaticAsset asset = asset("llm-january", model(1_000_000, 800, january));
+
+        assertTotals(1_000_000, 800, this.totals(asset, new TimeRange(YEAR_2026, Instant.parse("2026-02-01T00:00:00Z"), Duration.ofDays(1))), "over January");
+    }
+
+    @Test
+    void holdsTheSameTotalsAtEveryResolution()
+    {
+        LLMStaticAsset asset = asset("llm-resolutions", officeWeek());
+        /* 20 days, which 1 h, 1 d and 5 d all split whole */
+        TimeRange range = new TimeRange(Instant.parse("2026-11-02T00:00:00Z"), Instant.parse("2026-11-22T00:00:00Z"));
+
+        Totals hourly = this.totals(asset, new TimeRange(range.start(), range.end(), Duration.ofHours(1)));
+        for (Duration resolution : RESOLUTIONS)
+        {
+            Totals totals = this.totals(asset, new TimeRange(range.start(), range.end(), resolution));
+            assertEquals(hourly.requests(), totals.requests(), hourly.requests() * EXACT, "requests at " + resolution);
+            /* Tokens are rounded per slot: half a token per hourly slot at most */
+            assertEquals(hourly.tokens(), totals.tokens(), 0.5 * hourly.slots(), "tokens at " + resolution);
+        }
+    }
+
+    /** The busiest scenario draws the shape, and the level sets its height: a constant at 0.1 under a bell at 1.0. */
+    @Test
+    void followsTheScenariosLevels()
+    {
+        LLMStaticAsset asset = asset("llm-levels", officeWeek());
+        List<LLMActivityData> monday = this.slots(asset, new TimeRange(Instant.parse("2026-11-02T00:00:00Z"), Instant.parse("2026-11-03T00:00:00Z"), Duration.ofHours(1)));
+
+        double night = monday.get(3).requestCount();
+        /* 13:00 to 14:00, whose midpoint is the bell's peak */
+        double peak = monday.get(13).requestCount();
+        assertEquals(0.1, night / peak, EXACT);
+        /* 09:00 to 10:00, where the bell is still under the constant */
+        assertEquals(night, monday.get(9).requestCount(), night * EXACT);
+    }
+
+    @Test
+    void defaultsTheLevelToOne()
+    {
+        assertEquals(Scenario.DEFAULT_LEVEL, new ConstantScenario().level());
+        assertEquals(1.0, new ConstantScenario(null, null).level());
+        assertEquals(1.0, new UserActivityScenario(null, LocalTime.of(9, 0), LocalTime.of(18, 0), null, 0.0, null).level());
+        assertEquals(1.0, new BatchActivityScenario(null, LocalTime.of(2, 0), Duration.ofHours(2), 0.0, null, null).level());
+    }
+
+    @Test
+    void holdsTheAnnualVolumeOfABatch()
+    {
+        BatchActivityScenario batch = new BatchActivityScenario(1.0, LocalTime.of(2, 0), Duration.ofHours(3), BatchActivityScenario.SmoothingMode.SMOOTH_STEP);
+        LLMStaticAsset asset = asset("llm-batch", model(50_000, 1_200, batch));
+
+        assertTotals(50_000, 1_200, this.totals(asset, new TimeRange(YEAR_2026, YEAR_2027, Duration.ofDays(1))), "at P1D");
+        List<LLMActivityData> day = this.slots(asset, new TimeRange(Instant.parse("2026-11-02T00:00:00Z"), Instant.parse("2026-11-03T00:00:00Z"), Duration.ofHours(1)));
+        assertEquals(0.0, day.get(12).requestCount());
+    }
+
+    /** No scenario ever applies: no request, rather than a division by zero. */
+    @Test
+    void resolvesNoRequestForAFlatShape()
+    {
+        LLMStaticAsset asset = asset("llm-flat", model(1_000_000, 800, new ConstantScenario(0.0)));
+
+        assertEquals(0.0, this.totals(asset, new TimeRange(YEAR_2026, YEAR_2027, Duration.ofDays(1))).requests());
+    }
+
+    private Totals totals(LLMStaticAsset asset, TimeRange range)
+    {
+        List<LLMActivityData> slots = this.slots(asset, range);
+        return new Totals(
+            slots.stream().mapToDouble(LLMActivityData::requestCount).sum(),
+            slots.stream().mapToDouble(LLMActivityData::outputTokenCount).sum(),
+            slots.size()
+        );
+    }
+
+    private List<LLMActivityData> slots(LLMStaticAsset asset, TimeRange range)
+    {
+        return this.resolver.resolve(asset, range, null).orElseThrow().activity().stream()
+            .map(a -> (LLMActivityData) a)
+            .toList();
+    }
+
+    /** Requests exactly, tokens within half a token per slot, as each slot rounds its own. */
+    private static void assertTotals(long requestPerYear, int outputTokenPerRequest, Totals totals, String context)
+    {
+        assertEquals(requestPerYear, totals.requests(), requestPerYear * EXACT, "requests " + context);
+        assertEquals((double) requestPerYear * outputTokenPerRequest, totals.tokens(), 0.5 * totals.slots() + 1.0, "tokens " + context);
+    }
+
+    private static LLMStaticAsset asset(String id, LLMStaticProfile.ModelConfig... models)
+    {
+        return new LLMStaticAsset(AssetIdentity.of(id, "env-test", LLMStaticModule.TYPE), new LLMStaticProfile(ZoneOffset.UTC, List.of(models)));
+    }
+
+    private static LLMStaticProfile.ModelConfig model(long requestPerYear, int outputTokenPerRequest, Scenario... scenarios)
+    {
+        return model(LLMProvider.openai, "gpt-4o", requestPerYear, outputTokenPerRequest, scenarios);
+    }
+
+    private static LLMStaticProfile.ModelConfig model(LLMProvider provider, String name, long requestPerYear, int outputTokenPerRequest, Scenario... scenarios)
+    {
+        return new LLMStaticProfile.ModelConfig(provider, name, Country.FRANCE, requestPerYear, outputTokenPerRequest, List.of(scenarios));
+    }
+
+    /* A constant at a tenth of an office-hours bell on weekdays: the shape the samples ship */
+    private static LLMStaticProfile.ModelConfig officeWeek()
+    {
+        return model(
+            1_000_000,
+            800,
+            new ConstantScenario(0.1),
+            new UserActivityScenario(1.0, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0, new ApplicabilityFilter(WEEKDAYS, Set.of()))
+        );
+    }
+
+    private record Totals(double requests, double tokens, int slots) {}
 }

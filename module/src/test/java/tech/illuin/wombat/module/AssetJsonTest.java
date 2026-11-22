@@ -30,7 +30,7 @@ class AssetJsonTest
     private static final LLMStaticAsset ASSET = new LLMStaticAsset(
         AssetIdentity.of("llm", "env", LLMStaticModule.TYPE),
         new LLMStaticProfile(List.of(new LLMStaticProfile.ModelConfig(
-            LLMProvider.mistralai, "mistral-large-latest", Country.FRANCE, List.of(new ConstantScenario(500, 1000, null))
+            LLMProvider.mistralai, "mistral-large-latest", Country.FRANCE, 1000L, 500, List.of(new ConstantScenario())
         )))
     );
 
@@ -49,7 +49,9 @@ class AssetJsonTest
                   "provider": "mistralai",
                   "model": "mistral-large-latest",
                   "location": "FRA",
-                  "scenarios": [{"type": "constant", "outputTokenPerRequest": 500, "requestPerYear": 1000}]
+                  "requestPerYear": 1000,
+                  "outputTokenPerRequest": 500,
+                  "scenarios": [{"type": "constant"}]
                 }]
               }
             }

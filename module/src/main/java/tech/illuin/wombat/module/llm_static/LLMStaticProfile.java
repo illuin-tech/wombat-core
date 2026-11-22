@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.profile.LLMProfile;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
@@ -35,18 +36,20 @@ public record LLMStaticProfile(
         this(ZoneOffset.UTC, models);
     }
 
-    public LLMStaticProfile(LLMProvider provider, String model, Country location, List<Scenario> scenarios)
+    public LLMStaticProfile(LLMProvider provider, String model, Country location, long requestPerYear, int outputTokenPerRequest, List<Scenario> scenarios)
     {
-        this(ZoneOffset.UTC, List.of(new ModelConfig(provider, model, location, scenarios)));
+        this(ZoneOffset.UTC, List.of(new ModelConfig(provider, model, location, requestPerYear, outputTokenPerRequest, scenarios)));
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    @JsonClassDescription("Model and its superposed traffic scenarios")
+    @JsonClassDescription("Model, its traffic volume and the scenarios that shape it")
     public record ModelConfig(
         @NotNull @JsonPropertyDescription("Foundation model provider") LLMProvider provider,
         @NotBlank @JsonPropertyDescription("Model identifier, as listed by Ecologits") String model,
         @NotNull @JsonPropertyDescription("Country where inference is assumed to occur") Country location,
-        @NotNull @NotEmpty @JsonPropertyDescription("Superposed traffic scenarios") List<@Valid Scenario> scenarios
+        @NotNull @PositiveOrZero @JsonPropertyDescription("Requests in a 365-day year, spread along the scenarios' shape") Long requestPerYear,
+        @NotNull @PositiveOrZero @JsonPropertyDescription("Mean output tokens of a request") Integer outputTokenPerRequest,
+        @NotNull @NotEmpty @JsonPropertyDescription("Traffic scenarios, the busiest applicable one drawing the shape at each instant") List<@Valid Scenario> scenarios
     ) {
         public ModelConfig
         {

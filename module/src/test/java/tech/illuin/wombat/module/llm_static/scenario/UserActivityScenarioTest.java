@@ -14,98 +14,43 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class UserActivityScenarioTest
 {
     @Test
-    void evaluatesRatesFromAnnualTotalAndCurve()
+    void peaksAtItsLevel()
     {
-        // 9h window (09:00 - 18:00) -> 9/24 = 0.375
-        // BELL curve -> integralFactor = 0.5
-        // Active fraction = 0.375 * 0.5 = 0.1875
-        // requestPerYear = 100_000 -> peakRate = 100_000 / 0.1875 = 533_333.3333333334
-        UserActivityScenario scenario = new UserActivityScenario(
-            200,
-            100_000,
-            LocalTime.of(9, 0),
-            LocalTime.of(18, 0),
-            UserActivityScenario.CurveShape.BELL,
-            0.0
-        );
-
-        double expectedPeakRate = 100_000 / 0.1875;
+        UserActivityScenario scenario = new UserActivityScenario(0.6, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL);
 
         // Outside window -> 0.0
-        ZonedDateTime night = ZonedDateTime.of(2026, 11, 4, 3, 0, 0, 0, ZoneOffset.UTC);
-        assertEquals(0.0, scenario.evaluateRequestPerYear(night));
-
-        // Midday (13:30) -> peakRate
-        ZonedDateTime midday = ZonedDateTime.of(2026, 11, 4, 13, 30, 0, 0, ZoneOffset.UTC);
-        assertEquals(expectedPeakRate, scenario.evaluateRequestPerYear(midday), 1e-4);
+        assertEquals(0.0, scenario.shape(ZonedDateTime.of(2026, 11, 4, 3, 0, 0, 0, ZoneOffset.UTC)));
+        // Midday (13:30, the window's midpoint) -> the level
+        assertEquals(0.6, scenario.shape(ZonedDateTime.of(2026, 11, 4, 13, 30, 0, 0, ZoneOffset.UTC)), 1e-12);
+        // A quarter into the window: the bell is halfway up
+        assertEquals(0.3, scenario.shape(ZonedDateTime.of(2026, 11, 4, 11, 15, 0, 0, ZoneOffset.UTC)), 1e-12);
     }
 
     @Test
-    void evaluatesRatesWithApplicabilityFilter()
+    void appliesOnlyWhereItsFilterDoes()
     {
-        // January only: 31 / 365
         ApplicabilityFilter filter = new ApplicabilityFilter(Set.of(), Set.of(Month.JANUARY));
-        UserActivityScenario scenario = new UserActivityScenario(
-            200,
-            100_000,
-            LocalTime.of(9, 0),
-            LocalTime.of(18, 0),
-            UserActivityScenario.CurveShape.BELL,
-            0.0,
-            filter
-        );
+        UserActivityScenario scenario = new UserActivityScenario(1.0, LocalTime.of(9, 0), LocalTime.of(18, 0), UserActivityScenario.CurveShape.BELL, 0.0, filter);
 
-        double expectedPeakRate = 100_000.0 / ((31.0 / 365.0) * (9.0 / 24.0) * 0.5);
-
-        // In January at midpoint -> peakRate
-        ZonedDateTime janMidday = ZonedDateTime.of(2026, 1, 15, 13, 30, 0, 0, ZoneOffset.UTC);
-        assertEquals(expectedPeakRate, scenario.evaluateRequestPerYear(janMidday), 1e-4);
-
-        // In February at midpoint -> 0.0 (not applicable)
-        ZonedDateTime febMidday = ZonedDateTime.of(2026, 2, 15, 13, 30, 0, 0, ZoneOffset.UTC);
-        assertEquals(0.0, scenario.evaluateRequestPerYear(febMidday));
+        assertEquals(1.0, scenario.shape(ZonedDateTime.of(2026, 1, 15, 13, 30, 0, 0, ZoneOffset.UTC)), 1e-12);
+        assertEquals(0.0, scenario.shape(ZonedDateTime.of(2026, 2, 15, 13, 30, 0, 0, ZoneOffset.UTC)));
     }
 
     @Test
     void defaultValuesAreAssignedWhenNullProvided()
     {
-        UserActivityScenario scenario = new UserActivityScenario(
-            100,
-            10_000,
-            LocalTime.of(9, 0),
-            LocalTime.of(18, 0),
-            null,
-            0.0,
-            null
-        );
+        UserActivityScenario scenario = new UserActivityScenario(null, LocalTime.of(9, 0), LocalTime.of(18, 0), null, 0.0, null);
 
+        assertEquals(Scenario.DEFAULT_LEVEL, scenario.level());
         assertEquals(UserActivityScenario.DEFAULT_CURVE, scenario.curve());
         assertEquals(ApplicabilityFilter.ALWAYS, scenario.applicability());
     }
 
     @Test
-    void edgeCasesHandleZeroActiveFractionGracefully()
+    void anEmptyWindowIsFlat()
     {
-        // Equal opening and closing time -> evaluates to 0
-        UserActivityScenario zeroWindow = new UserActivityScenario(
-            100,
-            50_000,
-            LocalTime.of(9, 0),
-            LocalTime.of(9, 0),
-            UserActivityScenario.CurveShape.BELL,
-            0.0
-        );
-        assertEquals(0.0, zeroWindow.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 4, 9, 0, 0, 0, ZoneOffset.UTC)));
+        UserActivityScenario zeroWindow = new UserActivityScenario(1.0, LocalTime.of(9, 0), LocalTime.of(9, 0), UserActivityScenario.CurveShape.BELL);
 
-        // Zero request per year -> evaluates to 0
-        UserActivityScenario zeroRequests = new UserActivityScenario(
-            100,
-            0,
-            LocalTime.of(9, 0),
-            LocalTime.of(18, 0),
-            UserActivityScenario.CurveShape.BELL,
-            0.0
-        );
-        assertEquals(0.0, zeroRequests.evaluateRequestPerYear(ZonedDateTime.of(2026, 11, 4, 13, 30, 0, 0, ZoneOffset.UTC)));
+        assertEquals(0.0, zeroWindow.shape(ZonedDateTime.of(2026, 11, 4, 9, 0, 0, 0, ZoneOffset.UTC)));
     }
 }
