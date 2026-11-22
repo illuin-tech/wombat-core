@@ -99,7 +99,6 @@ class AssetConfigurationTest
         }
     }
 
-    /** The validator does not cascade through {@code Asset#profile()}, a record accessor: each asset marks its own profile. */
     @Test
     void assets_cascadeValidationToTheirProfile() throws NoSuchFieldException
     {
