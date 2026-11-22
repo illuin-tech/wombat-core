@@ -16,6 +16,10 @@ public interface Asset
     @JsonIgnore
     AssetType type();
 
-    @NotNull @Valid
+    /**
+     * The asset's profile. An implementation marks it {@code @Valid} where it declares it, e.g. on its record component:
+     * the validator does not cascade through this accessor, which is not a JavaBean getter.
+     */
+    @NotNull
     AssetProfile profile();
 }

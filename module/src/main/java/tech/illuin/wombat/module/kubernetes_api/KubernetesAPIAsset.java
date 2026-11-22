@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
@@ -29,7 +30,7 @@ public record KubernetesAPIAsset(
     // The kebab-case @JsonAlias read assets persisted before 0.15, when properties were named that way
     @JsonPropertyDescription("Read timeout of the Kubernetes API requests (ISO-8601), the client's default when omitted") @JsonAlias("read-timeout") Optional<Duration> readTimeout,
     @JsonPropertyDescription("Polling interval, the monitor's default when omitted") Period period,
-    @NotNull @JsonPropertyDescription("Server hardware profile") KubernetesAPIServerProfile profile
+    @NotNull @Valid @JsonPropertyDescription("Server hardware profile") KubernetesAPIServerProfile profile
 ) implements Asset, SecretAware, Monitorable
 {
     @Override

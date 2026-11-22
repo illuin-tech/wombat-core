@@ -299,7 +299,8 @@ public class MySimulationModule implements WombatModule
 
 public record MySimulationAsset(
     AssetIdentity identity,
-    MySimulationProfile profile
+    /* The validator only checks the profile's constraints through this @Valid, not through Asset#profile() */
+    @Valid MySimulationProfile profile
 ) implements Asset {
     @Override
     public AssetType type() { return MySimulationModule.TYPE; }

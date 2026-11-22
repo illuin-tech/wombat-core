@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
@@ -25,7 +26,7 @@ public record LLMPrometheusAsset(
     @JsonPropertyDescription("Basic authentication username") String username,
     @JsonPropertyDescription("Secret holding the basic authentication password, required with a username") @JsonAlias("password-key") SecretKey passwordKey,
     @JsonPropertyDescription("Polling interval, the monitor's default when omitted") Period period,
-    @NotNull @JsonPropertyDescription("LLM profile and PromQL query") LLMPrometheusProfile profile
+    @NotNull @Valid @JsonPropertyDescription("LLM profile and PromQL query") LLMPrometheusProfile profile
 ) implements Asset, SecretAware, Monitorable
 {
     @Override
