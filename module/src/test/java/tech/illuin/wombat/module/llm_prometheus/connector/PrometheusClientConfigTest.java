@@ -31,7 +31,7 @@ public class PrometheusClientConfigTest
     @Test
     void readsTheBasicAuthPasswordFromTheDeclaredVariable()
     {
-        PrometheusClient client = PrometheusClientConfig.create(asset("p", "user", "PROM_PASSWORD"), secrets(Map.of("PROM_PASSWORD", "s3cret")));
+        PrometheusClient client = PrometheusClientConfig.create(asset("p", "user", "PROM_PASSWORD"), secrets(Map.of(EnvironmentSecretResolver.PREFIX + "PROM_PASSWORD", "s3cret")));
         assertNotNull(client);
     }
 

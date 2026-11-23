@@ -81,4 +81,10 @@ class DirectorySecretResolverTest
         DirectorySecretResolver.Builder builder = DirectorySecretResolver.builder();
         assertThrows(IllegalStateException.class, builder::build);
     }
+
+    @Test
+    void rejectsANullDirectory()
+    {
+        assertThrows(NullPointerException.class, () -> new DirectorySecretResolver(null));
+    }
 }

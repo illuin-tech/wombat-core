@@ -13,14 +13,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static tech.illuin.wombat.core.secret.EnvironmentSecretResolver.PREFIX;
 
 public class CompositeSecretResolverTest
 {
     @Test
     void resolvesFromFirstResolverWhenPresent()
     {
-        SecretResolver first = new EnvironmentSecretResolver(Map.of("API_KEY", "first-secret")::get);
-        SecretResolver second = new EnvironmentSecretResolver(Map.of("API_KEY", "second-secret")::get);
+        SecretResolver first = new EnvironmentSecretResolver(Map.of(PREFIX + "API_KEY", "first-secret")::get);
+        SecretResolver second = new EnvironmentSecretResolver(Map.of(PREFIX + "API_KEY", "second-secret")::get);
 
         SecretResolver composite = SecretResolver.composite(first, second);
 
@@ -31,8 +32,8 @@ public class CompositeSecretResolverTest
     @Test
     void fallsBackToNextResolverWhenAbsentFromFirst()
     {
-        SecretResolver first = new EnvironmentSecretResolver(Map.of("KEY_A", "val-a")::get);
-        SecretResolver second = new EnvironmentSecretResolver(Map.of("KEY_B", "val-b")::get);
+        SecretResolver first = new EnvironmentSecretResolver(Map.of(PREFIX + "KEY_A", "val-a")::get);
+        SecretResolver second = new EnvironmentSecretResolver(Map.of(PREFIX + "KEY_B", "val-b")::get);
 
         SecretResolver composite = SecretResolver.composite(first, second);
 
@@ -43,8 +44,8 @@ public class CompositeSecretResolverTest
     @Test
     void throwsMissingSecretWhenAbsentFromAllResolvers()
     {
-        SecretResolver first = new EnvironmentSecretResolver(Map.of("KEY_A", "val-a")::get);
-        SecretResolver second = new EnvironmentSecretResolver(Map.of("KEY_B", "val-b")::get);
+        SecretResolver first = new EnvironmentSecretResolver(Map.of(PREFIX + "KEY_A", "val-a")::get);
+        SecretResolver second = new EnvironmentSecretResolver(Map.of(PREFIX + "KEY_B", "val-b")::get);
 
         SecretResolver composite = new CompositeSecretResolver(List.of(first, second));
 
@@ -56,7 +57,7 @@ public class CompositeSecretResolverTest
     @Test
     void rejectsNullAndBlankKeys()
     {
-        SecretResolver first = new EnvironmentSecretResolver(Map.of("KEY", "val")::get);
+        SecretResolver first = new EnvironmentSecretResolver(Map.of(PREFIX + "KEY", "val")::get);
         SecretResolver composite = SecretResolver.composite(first);
 
         assertThrows(IllegalArgumentException.class, () -> composite.find(null));
@@ -79,7 +80,7 @@ public class CompositeSecretResolverTest
             .defaultKeyPassword("pass")
             .build();
 
-        EnvironmentSecretResolver envResolver = new EnvironmentSecretResolver(Map.of("ENV_SECRET", "env-val")::get);
+        EnvironmentSecretResolver envResolver = new EnvironmentSecretResolver(Map.of(PREFIX + "ENV_SECRET", "env-val")::get);
 
         CompositeSecretResolver composite = new CompositeSecretResolver(keyStoreResolver, envResolver);
 

@@ -75,7 +75,7 @@ public class KubernetesClientConfigTest
 
     private static SecretResolver secrets()
     {
-        return new EnvironmentSecretResolver(Map.of("KUBECONFIG_TEST", KUBECONFIG)::get);
+        return new EnvironmentSecretResolver(Map.of(EnvironmentSecretResolver.PREFIX + "KUBECONFIG_TEST", KUBECONFIG)::get);
     }
 
     private static KubernetesAPIAsset asset(Optional<String> context)

@@ -8,6 +8,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -201,5 +202,13 @@ class KeyStoreSecretResolverTest
     {
         KeyStoreSecretResolver.Builder builder = KeyStoreSecretResolver.builder();
         assertThrows(IllegalArgumentException.class, () -> builder.loadResource("non-existent-file.p12", "pass"));
+    }
+
+    @Test
+    void builderRejectsANullSource()
+    {
+        KeyStoreSecretResolver.Builder builder = KeyStoreSecretResolver.builder();
+        assertThrows(NullPointerException.class, () -> builder.load((InputStream) null, "pass"));
+        assertThrows(NullPointerException.class, () -> builder.load((Path) null, "pass"));
     }
 }

@@ -52,7 +52,7 @@ public class KubernetesAPIModuleTest
         Optional<ProcessorFactory<WombatSource>> factory = this.module.source();
         assertTrue(factory.isPresent());
 
-        WombatSource source = factory.get().create(services(Map.of("KUBECONFIG_TEST", KUBECONFIG)), asset());
+        WombatSource source = factory.get().create(services(Map.of(EnvironmentSecretResolver.PREFIX + "KUBECONFIG_TEST", KUBECONFIG)), asset());
         assertInstanceOf(KubernetesAPISource.class, source);
         ((KubernetesAPISource) source).close();
     }

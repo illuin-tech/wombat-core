@@ -10,13 +10,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static tech.illuin.wombat.core.secret.EnvironmentSecretResolver.PREFIX;
 
 class SecretTest
 {
     @Test
     void requireAsyncReturnsAHandleForABoundKey()
     {
-        SecretResolver resolver = new EnvironmentSecretResolver(Map.of("API_KEY", "s3cret")::get);
+        SecretResolver resolver = new EnvironmentSecretResolver(Map.of(PREFIX + "API_KEY", "s3cret")::get);
 
         Secret secret = resolver.requireAsync("API_KEY");
 
@@ -37,7 +38,7 @@ class SecretTest
     @Test
     void findAsyncIsEmptyWhenTheKeyIsUnbound()
     {
-        SecretResolver resolver = new EnvironmentSecretResolver(Map.of("API_KEY", "s3cret")::get);
+        SecretResolver resolver = new EnvironmentSecretResolver(Map.of(PREFIX + "API_KEY", "s3cret")::get);
 
         assertTrue(resolver.findAsync("API_KEY").isPresent());
         assertTrue(resolver.findAsync("OTHER").isEmpty());
@@ -46,7 +47,7 @@ class SecretTest
     @Test
     void asyncReturnsAHandleForABoundKey()
     {
-        SecretResolver resolver = new EnvironmentSecretResolver(Map.of("API_KEY", "s3cret")::get);
+        SecretResolver resolver = new EnvironmentSecretResolver(Map.of(PREFIX + "API_KEY", "s3cret")::get);
 
         Secret secret = resolver.async("API_KEY");
 
@@ -75,7 +76,7 @@ class SecretTest
         SecretResolver resolver = new EnvironmentSecretResolver(env::get);
         Secret secret = resolver.async("API_KEY");
 
-        env.put("API_KEY", "late");
+        env.put(PREFIX + "API_KEY", "late");
 
         assertEquals("late", secret.fetch());
     }
@@ -83,7 +84,7 @@ class SecretTest
     @Test
     void asyncHandleEqualsTheOneFromRequireAsync()
     {
-        SecretResolver resolver = new EnvironmentSecretResolver(Map.of("API_KEY", "s3cret")::get);
+        SecretResolver resolver = new EnvironmentSecretResolver(Map.of(PREFIX + "API_KEY", "s3cret")::get);
 
         assertEquals(resolver.requireAsync("API_KEY"), resolver.async("API_KEY"));
     }
@@ -101,14 +102,14 @@ class SecretTest
     void fetchResolvesTheCurrentValueOnEachCall()
     {
         // The handle carries no value: a rotation or removal after it was obtained shows on the next fetch.
-        Map<String, String> env = new HashMap<>(Map.of("API_KEY", "v1"));
+        Map<String, String> env = new HashMap<>(Map.of(PREFIX + "API_KEY", "v1"));
         SecretResolver resolver = new EnvironmentSecretResolver(env::get);
         Secret secret = resolver.requireAsync("API_KEY");
 
-        env.put("API_KEY", "v2");
+        env.put(PREFIX + "API_KEY", "v2");
         assertEquals("v2", secret.fetch());
 
-        env.remove("API_KEY");
+        env.remove(PREFIX + "API_KEY");
         assertEquals(Optional.empty(), secret.tryFetch());
         assertThrows(MissingSecretException.class, secret::fetch);
     }
@@ -116,7 +117,7 @@ class SecretTest
     @Test
     void toStringDoesNotLeakTheValue()
     {
-        SecretResolver resolver = new EnvironmentSecretResolver(Map.of("API_KEY", "s3cret")::get);
+        SecretResolver resolver = new EnvironmentSecretResolver(Map.of(PREFIX + "API_KEY", "s3cret")::get);
 
         Secret secret = resolver.requireAsync("API_KEY");
 
@@ -126,8 +127,8 @@ class SecretTest
     @Test
     void handlesAreEqualForTheSameKeyAndResolver()
     {
-        SecretResolver resolver = new EnvironmentSecretResolver(Map.of("A", "a", "B", "b")::get);
-        SecretResolver other = new EnvironmentSecretResolver(Map.of("A", "a")::get);
+        SecretResolver resolver = new EnvironmentSecretResolver(Map.of(PREFIX + "A", "a", PREFIX + "B", "b")::get);
+        SecretResolver other = new EnvironmentSecretResolver(Map.of(PREFIX + "A", "a")::get);
 
         assertEquals(resolver.requireAsync("A"), resolver.requireAsync("A"));
         assertEquals(resolver.requireAsync("A").hashCode(), resolver.requireAsync("A").hashCode());
