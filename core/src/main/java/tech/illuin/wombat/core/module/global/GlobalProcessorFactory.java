@@ -1,9 +1,11 @@
-package tech.illuin.wombat.core.module;
+package tech.illuin.wombat.core.module.global;
 
-import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.module.WombatModule;
+import tech.illuin.wombat.core.module.WombatServices;
+import tech.illuin.wombat.core.module.asset.AssetProcessor;
 
 @FunctionalInterface
-public interface ProcessorFactory<P extends AssetProcessor>
+public interface GlobalProcessorFactory<P extends AssetProcessor>
 {
     /**
      * Builds the processor serving the asset identified by {@code asset.identity()}.
@@ -15,5 +17,5 @@ public interface ProcessorFactory<P extends AssetProcessor>
      * refreshed, or when its owner is closed. A processor shared across assets must therefore not implement
      * {@link AutoCloseable}; release its resources from {@link WombatModule#close()} instead.
      */
-    P create(WombatServices services, Asset asset);
+    P create(WombatServices services);
 }

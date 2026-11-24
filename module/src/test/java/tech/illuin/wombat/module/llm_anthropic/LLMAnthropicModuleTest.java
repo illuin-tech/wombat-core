@@ -3,7 +3,7 @@ package tech.illuin.wombat.module.llm_anthropic;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
@@ -32,7 +32,7 @@ public class LLMAnthropicModuleTest
     void providesAnActivityResolverAndNoSource()
     {
         // Building the client does not dial Anthropic.
-        Optional<ProcessorFactory<WombatActivityResolver>> factory = this.module.activityResolver();
+        Optional<AssetProcessorFactory<WombatActivityResolver>> factory = this.module.activityResolver();
         assertTrue(factory.isPresent());
         assertInstanceOf(LLMAnthropicActivityResolver.class, factory.get().create(services(Map.of("ANTHROPIC_ADMIN_KEY", "k")), asset()));
         assertTrue(this.module.source().isEmpty());
@@ -41,7 +41,7 @@ public class LLMAnthropicModuleTest
     @Test
     void creatingTheResolverFailsWhenTheAdminKeyIsUnset()
     {
-        ProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
+        AssetProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
         MissingSecretException e = assertThrows(MissingSecretException.class, () -> factory.create(services(Map.of()), asset()));
 
         assertEquals("ANTHROPIC_ADMIN_KEY", e.key());

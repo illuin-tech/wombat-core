@@ -3,7 +3,7 @@ package tech.illuin.wombat.module.llm_prometheus;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
@@ -36,7 +36,7 @@ public class LLMPrometheusModuleTest
     void providesAPrometheusSource()
     {
         // Building the client does not dial Prometheus.
-        Optional<ProcessorFactory<WombatSource>> factory = this.module.source();
+        Optional<AssetProcessorFactory<WombatSource>> factory = this.module.source();
         assertTrue(factory.isPresent());
         assertInstanceOf(LLMPrometheusSource.class, factory.get().create(services(Map.of()), asset(null, null)));
     }
@@ -46,7 +46,7 @@ public class LLMPrometheusModuleTest
     {
         // Proves the module builds its clients from the services' resolver: the credential is read from the
         // environment at source creation, never from the asset the reconciler persisted.
-        ProcessorFactory<WombatSource> factory = this.module.source().orElseThrow();
+        AssetProcessorFactory<WombatSource> factory = this.module.source().orElseThrow();
         MissingSecretException e = assertThrows(MissingSecretException.class, () -> factory.create(services(Map.of()), asset("user", "PROM_PASSWORD")));
 
         assertEquals("PROM_PASSWORD", e.key());

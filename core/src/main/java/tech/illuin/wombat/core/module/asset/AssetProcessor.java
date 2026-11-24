@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.module;
+package tech.illuin.wombat.core.module.asset;
 
 import tech.illuin.wombat.core.asset.Asset;
 

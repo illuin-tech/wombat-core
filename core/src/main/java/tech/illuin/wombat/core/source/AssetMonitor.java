@@ -8,7 +8,7 @@ import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.ProcessorPool;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.source.data.MetricData;
@@ -49,7 +49,7 @@ public class AssetMonitor implements AutoCloseable
         this.lastActivation = new ConcurrentHashMap<>();
     }
 
-    public AssetMonitor register(AssetType type, ProcessorFactory<WombatSource> factory)
+    public AssetMonitor register(AssetType type, AssetProcessorFactory<WombatSource> factory)
     {
         if (this.sources.supports(type))
         {

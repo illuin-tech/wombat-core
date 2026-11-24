@@ -13,7 +13,7 @@ import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.ProcessorPool;
 import tech.illuin.wombat.core.module.WombatServices;
 
@@ -46,19 +46,19 @@ public class AssetEvaluator implements AutoCloseable
         this.executorService = executorService;
     }
 
-    public AssetEvaluator registerActivityResolver(AssetType type, ProcessorFactory<WombatActivityResolver> factory)
+    public AssetEvaluator registerActivityResolver(AssetType type, AssetProcessorFactory<WombatActivityResolver> factory)
     {
         this.activityResolvers.register(type, factory);
         return this;
     }
 
-    public AssetEvaluator registerCostResolver(AssetType type, ProcessorFactory<WombatEvaluationResolver> factory)
+    public AssetEvaluator registerCostResolver(AssetType type, AssetProcessorFactory<WombatEvaluationResolver> factory)
     {
         this.costResolvers.register(type, factory);
         return this;
     }
 
-    public AssetEvaluator registerImpactResolver(AssetType type, ProcessorFactory<WombatEvaluationResolver> factory)
+    public AssetEvaluator registerImpactResolver(AssetType type, AssetProcessorFactory<WombatEvaluationResolver> factory)
     {
         this.impactResolvers.register(type, factory);
         return this;

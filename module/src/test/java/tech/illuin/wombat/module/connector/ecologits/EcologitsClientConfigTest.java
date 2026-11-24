@@ -5,9 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.Request;
 import feign.Response;
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.connector.ecologits.connector.EcologitsClient;
-import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationRequest;
-import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationResponse;
+import tech.illuin.wombat.module.ecologits.connector.EcologitsClient;
+import tech.illuin.wombat.module.ecologits.connector.EcologitsClientConfig;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationRequest;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationResponse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

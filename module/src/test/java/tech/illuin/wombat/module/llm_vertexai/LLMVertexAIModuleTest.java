@@ -3,7 +3,7 @@ package tech.illuin.wombat.module.llm_vertexai;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
@@ -33,7 +33,7 @@ public class LLMVertexAIModuleTest
     @Test
     void providesAGoogleActivityResolverAndNoSource()
     {
-        Optional<ProcessorFactory<WombatActivityResolver>> factory = this.module.activityResolver();
+        Optional<AssetProcessorFactory<WombatActivityResolver>> factory = this.module.activityResolver();
         assertTrue(factory.isPresent());
         assertTrue(this.module.source().isEmpty());
     }
@@ -43,7 +43,7 @@ public class LLMVertexAIModuleTest
     {
         // Application Default Credentials are resolved lazily on the first request, so building the resolver must
         // succeed even on a machine (CI, a laptop) that has none.
-        ProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
+        AssetProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
 
         assertInstanceOf(LLMVertexAIActivityResolver.class, factory.create(services(Map.of()), asset(null)));
     }
@@ -53,7 +53,7 @@ public class LLMVertexAIModuleTest
     {
         // Proves the module builds its clients from the services' resolver: the credential is read from the
         // environment at resolver creation, never from the asset the reconciler persisted.
-        ProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
+        AssetProcessorFactory<WombatActivityResolver> factory = this.module.activityResolver().orElseThrow();
 
         MissingSecretException e = assertThrows(MissingSecretException.class, () -> factory.create(services(Map.of()), asset("GOOGLE_SA_KEY")));
 

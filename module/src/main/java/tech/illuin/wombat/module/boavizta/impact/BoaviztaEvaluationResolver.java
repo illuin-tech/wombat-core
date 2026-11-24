@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.connector.boavizta.impact;
+package tech.illuin.wombat.module.boavizta.impact;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,11 +7,11 @@ import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
-import tech.illuin.wombat.core.connector.boavizta.connector.BoaviztaClient;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceConfigResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceImpactRequest;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerProvider;
+import tech.illuin.wombat.module.boavizta.connector.BoaviztaClient;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaImpactResponse;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaInstanceConfigResponse;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaServerProvider;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;

@@ -7,7 +7,7 @@ import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.AssetEvaluator;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.SecretResolver;
@@ -122,9 +122,9 @@ public final class WombatCore implements AutoCloseable
 
     public static final class CoreDefaults
     {
-        private final Map<ServiceFamily, ProcessorFactory<WombatActivityResolver>> defaultActivityResolvers;
-        private final Map<ServiceFamily, ProcessorFactory<WombatEvaluationResolver>> defaultImpactResolvers;
-        private final Map<ServiceFamily, ProcessorFactory<WombatEvaluationResolver>> defaultCostResolvers;
+        private final Map<ServiceFamily, AssetProcessorFactory<WombatActivityResolver>> defaultActivityResolvers;
+        private final Map<ServiceFamily, AssetProcessorFactory<WombatEvaluationResolver>> defaultImpactResolvers;
+        private final Map<ServiceFamily, AssetProcessorFactory<WombatEvaluationResolver>> defaultCostResolvers;
 
         private CoreDefaults()
         {
@@ -135,9 +135,9 @@ public final class WombatCore implements AutoCloseable
 
         public CoreDefaults register(
             ServiceFamily family,
-            ProcessorFactory<WombatActivityResolver> activityResolver,
-            ProcessorFactory<WombatEvaluationResolver> impactResolver,
-            ProcessorFactory<WombatEvaluationResolver> costResolver
+            AssetProcessorFactory<WombatActivityResolver> activityResolver,
+            AssetProcessorFactory<WombatEvaluationResolver> impactResolver,
+            AssetProcessorFactory<WombatEvaluationResolver> costResolver
         ) {
             this.defaultActivityResolvers.put(family, activityResolver);
             this.defaultImpactResolvers.put(family, impactResolver);
@@ -145,17 +145,17 @@ public final class WombatCore implements AutoCloseable
             return this;
         }
 
-        public Optional<ProcessorFactory<WombatActivityResolver>> getActivityResolver(ServiceFamily family)
+        public Optional<AssetProcessorFactory<WombatActivityResolver>> getActivityResolver(ServiceFamily family)
         {
             return Optional.ofNullable(this.defaultActivityResolvers.get(family));
         }
 
-        public Optional<ProcessorFactory<WombatEvaluationResolver>> getImpactResolver(ServiceFamily family)
+        public Optional<AssetProcessorFactory<WombatEvaluationResolver>> getImpactResolver(ServiceFamily family)
         {
             return Optional.ofNullable(this.defaultImpactResolvers.get(family));
         }
 
-        public Optional<ProcessorFactory<WombatEvaluationResolver>> getCostResolver(ServiceFamily family)
+        public Optional<AssetProcessorFactory<WombatEvaluationResolver>> getCostResolver(ServiceFamily family)
         {
             return Optional.ofNullable(this.defaultCostResolvers.get(family));
         }

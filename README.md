@@ -367,7 +367,7 @@ Once defined, you can register this module in your `WombatCore` as seen [above](
 
 #### Component lifecycle
 
-A module never builds its components upfront: each method of `WombatModule` returns a `ProcessorFactory`, which the `AssetMonitor` and `AssetEvaluator` invoke the first time they need a component for it.
+A module never builds its components upfront: each method of `WombatModule` returns a `AssetProcessorFactory`, which the `AssetMonitor` and `AssetEvaluator` invoke the first time they need a component for it.
 
 * a component is built once per asset identity (`AssetIdentity`) and then kept
 * the component is handed the asset as it currently is on every call, so its settings should be read from there rather than captured by the factory ; anything built by the factory remains as it was built until the asset is refreshed with `refresh(asset.identity())`, or leaves the context

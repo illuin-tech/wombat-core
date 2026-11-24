@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.connector.ecologits.impact;
+package tech.illuin.wombat.module.ecologits.impact;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,9 +9,9 @@ import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.profile.LLMProfile;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
-import tech.illuin.wombat.core.connector.ecologits.connector.EcologitsClient;
-import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationRequest;
-import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationResponse;
+import tech.illuin.wombat.module.ecologits.connector.EcologitsClient;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationRequest;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationResponse;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;

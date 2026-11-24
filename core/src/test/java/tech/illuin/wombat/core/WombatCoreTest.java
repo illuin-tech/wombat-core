@@ -20,7 +20,7 @@ import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.AssetEvaluator;
 import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.source.Monitorable;
 import tech.illuin.wombat.core.source.Period;
@@ -280,7 +280,7 @@ class WombatCoreTest
         }
 
         @Override
-        public Optional<ProcessorFactory<WombatSource>> source()
+        public Optional<AssetProcessorFactory<WombatSource>> source()
         {
             return Optional.of((services, asset) -> this.source);
         }
@@ -309,7 +309,7 @@ class WombatCoreTest
         }
 
         @Override
-        public Optional<ProcessorFactory<WombatEvaluationResolver>> impactResolver()
+        public Optional<AssetProcessorFactory<WombatEvaluationResolver>> impactResolver()
         {
             return Optional.of((services, asset) -> (resolved, data) -> new AssetImpact(
                 resolved.identity(),

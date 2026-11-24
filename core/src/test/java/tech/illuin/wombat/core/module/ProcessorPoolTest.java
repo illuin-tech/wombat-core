@@ -7,6 +7,8 @@ import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
+import tech.illuin.wombat.core.module.asset.AssetProcessor;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.secret.SecretResolver;
 
 import java.util.Set;
@@ -179,7 +181,7 @@ class ProcessorPoolTest
         assertEquals(1, a2.closed.get());
     }
 
-    private static ProcessorPool<TestProcessor> pool(ProcessorFactory<TestProcessor> factory)
+    private static ProcessorPool<TestProcessor> pool(AssetProcessorFactory<TestProcessor> factory)
     {
         return new ProcessorPool<TestProcessor>("test-processor", SERVICES).register(TYPE, factory);
     }
@@ -207,7 +209,7 @@ class ProcessorPoolTest
 
     private static final AssetProfile PROFILE = new AssetProfile() {};
 
-    private static final class CountingFactory implements ProcessorFactory<TestProcessor>
+    private static final class CountingFactory implements AssetProcessorFactory<TestProcessor>
     {
         private final boolean closeable;
         private final AtomicInteger created = new AtomicInteger();

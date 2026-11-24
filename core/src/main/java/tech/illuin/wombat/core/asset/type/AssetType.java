@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import tech.illuin.wombat.core.module.WombatType;
 
 import java.util.Objects;
 
@@ -13,7 +14,7 @@ public record AssetType(
     @NotBlank String localName,
     @NotNull ActivityRegime regime,
     @NotNull ServiceFamily family
-) {
+) implements WombatType {
     public AssetType
     {
         Objects.requireNonNull(namespace, "namespace must not be null");
@@ -26,10 +27,11 @@ public record AssetType(
             throw new IllegalArgumentException("localName must not be blank");
     }
 
+    @Override
     @JsonProperty("name")
     public String name()
     {
-        return this.namespace + "." + this.localName;
+        return super.name();
     }
 
     public static AssetType of(String namespace, String localName, ActivityRegime regime, ServiceFamily family)

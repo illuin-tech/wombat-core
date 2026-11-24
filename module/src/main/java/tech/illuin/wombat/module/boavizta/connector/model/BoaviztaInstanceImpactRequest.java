@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.connector.boavizta.connector.model;
+package tech.illuin.wombat.module.boavizta.connector.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

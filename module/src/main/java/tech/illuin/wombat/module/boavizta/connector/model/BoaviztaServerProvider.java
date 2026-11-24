@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.connector.boavizta.connector.model;
+package tech.illuin.wombat.module.boavizta.connector.model;
 
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 

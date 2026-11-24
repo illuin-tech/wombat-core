@@ -1,7 +1,7 @@
 package tech.illuin.wombat.core.source;
 
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.module.AssetProcessor;
+import tech.illuin.wombat.core.module.asset.AssetProcessor;
 import tech.illuin.wombat.core.source.data.MetricData;
 
 import java.time.Instant;

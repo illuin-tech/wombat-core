@@ -5,7 +5,7 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.module.kubernetes_static.activity.KubernetesStaticActivityResolver;
 
@@ -28,7 +28,7 @@ public class KubernetesStaticModule implements WombatModule
     }
 
     @Override
-    public Optional<ProcessorFactory<WombatActivityResolver>> activityResolver()
+    public Optional<AssetProcessorFactory<WombatActivityResolver>> activityResolver()
     {
         return Optional.of((services, asset) -> new KubernetesStaticActivityResolver());
     }

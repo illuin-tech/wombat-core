@@ -5,10 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.Request;
 import feign.Response;
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.connector.boavizta.connector.BoaviztaClient;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceImpactRequest;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerProvider;
+import tech.illuin.wombat.module.boavizta.connector.BoaviztaClient;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaImpactResponse;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaServerProvider;
+import tech.illuin.wombat.module.boavizta.connector.BoaviztaClientConfig;
 
 import java.io.IOException;
 import java.net.URLDecoder;

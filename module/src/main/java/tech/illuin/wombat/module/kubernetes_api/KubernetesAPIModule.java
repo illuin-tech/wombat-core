@@ -4,7 +4,7 @@ import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.source.WombatSource;
 import tech.illuin.wombat.module.kubernetes_api.connector.KubernetesClientConfig;
@@ -29,7 +29,7 @@ public class KubernetesAPIModule implements WombatModule
     }
 
     @Override
-    public Optional<ProcessorFactory<WombatSource>> source()
+    public Optional<AssetProcessorFactory<WombatSource>> source()
     {
         return Optional.of((services, asset) -> new KubernetesAPISource(
             KubernetesClientConfig.create((KubernetesAPIAsset) asset, services.secrets())

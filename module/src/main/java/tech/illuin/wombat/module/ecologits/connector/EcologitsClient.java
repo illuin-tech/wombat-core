@@ -1,9 +1,9 @@
-package tech.illuin.wombat.core.connector.ecologits.connector;
+package tech.illuin.wombat.module.ecologits.connector;
 
 import feign.Headers;
 import feign.RequestLine;
-import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationRequest;
-import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationResponse;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationRequest;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationResponse;
 
 public interface EcologitsClient
 {

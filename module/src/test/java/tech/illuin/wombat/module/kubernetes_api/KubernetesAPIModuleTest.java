@@ -3,7 +3,7 @@ package tech.illuin.wombat.module.kubernetes_api;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
@@ -49,7 +49,7 @@ public class KubernetesAPIModuleTest
     void providesASource()
     {
         // Building the client parses the kubeconfig, but does not connect to the cluster.
-        Optional<ProcessorFactory<WombatSource>> factory = this.module.source();
+        Optional<AssetProcessorFactory<WombatSource>> factory = this.module.source();
         assertTrue(factory.isPresent());
 
         WombatSource source = factory.get().create(services(Map.of("KUBECONFIG_TEST", KUBECONFIG)), asset());

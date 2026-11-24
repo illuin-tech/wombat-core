@@ -12,9 +12,9 @@ import tech.illuin.wombat.core.activity.kubernetes.RelativeCPUUsage;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
-import tech.illuin.wombat.core.connector.boavizta.impact.BoaviztaEvaluationResolver;
+import tech.illuin.wombat.module.boavizta.impact.BoaviztaEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
-import tech.illuin.wombat.module.connector.boavizta.BoaviztaClientConfig;
+import tech.illuin.wombat.module.boavizta.connector.BoaviztaClientConfig;
 
 import java.io.IOException;
 import java.math.BigDecimal;

@@ -4,7 +4,7 @@ import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.module.AssetProcessor;
+import tech.illuin.wombat.core.module.asset.AssetProcessor;
 
 import java.util.Optional;
 

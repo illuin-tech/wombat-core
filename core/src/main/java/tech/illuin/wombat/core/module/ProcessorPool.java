@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.module.asset.AssetProcessor;
+import tech.illuin.wombat.core.module.asset.AssetProcessorFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -20,7 +22,7 @@ public final class ProcessorPool<P extends AssetProcessor> implements AutoClosea
 {
     private final String kind;
     private final WombatServices services;
-    private final Map<String, ProcessorFactory<P>> factories;
+    private final Map<String, AssetProcessorFactory<P>> factories;
     private final Map<AssetIdentity, P> processors;
 
     private static final Logger logger = LoggerFactory.getLogger(ProcessorPool.class);
@@ -36,7 +38,7 @@ public final class ProcessorPool<P extends AssetProcessor> implements AutoClosea
         this.processors = new ConcurrentHashMap<>();
     }
 
-    public ProcessorPool<P> register(AssetType type, ProcessorFactory<P> factory)
+    public ProcessorPool<P> register(AssetType type, AssetProcessorFactory<P> factory)
     {
         this.factories.put(type.name(), factory);
         logger.debug("Registered wombat {} factory for asset-type {}", this.kind, type.name());
@@ -57,7 +59,7 @@ public final class ProcessorPool<P extends AssetProcessor> implements AutoClosea
      */
     public Optional<P> get(Asset asset)
     {
-        ProcessorFactory<P> factory = this.factories.get(asset.type().name());
+        AssetProcessorFactory<P> factory = this.factories.get(asset.type().name());
         if (factory == null)
             return Optional.empty();
 
@@ -95,7 +97,7 @@ public final class ProcessorPool<P extends AssetProcessor> implements AutoClosea
             this.invalidate(identity);
     }
 
-    private P create(ProcessorFactory<P> factory, Asset asset)
+    private P create(AssetProcessorFactory<P> factory, Asset asset)
     {
         P processor = Objects.requireNonNull(factory.create(this.services, asset), "factory returned a null " + this.kind);
         logger.debug("Created wombat {} {} for asset {}", this.kind, processor.getClass().getSimpleName(), asset.identity().id());

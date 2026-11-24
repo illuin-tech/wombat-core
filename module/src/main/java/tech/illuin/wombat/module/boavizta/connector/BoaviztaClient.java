@@ -1,12 +1,12 @@
-package tech.illuin.wombat.core.connector.boavizta.connector;
+package tech.illuin.wombat.module.boavizta.connector;
 
 import feign.Headers;
 import feign.Param;
 import feign.RequestLine;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceConfigResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceImpactRequest;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerProvider;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaInstanceConfigResponse;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaImpactResponse;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaServerProvider;
 
 import java.util.Set;
 

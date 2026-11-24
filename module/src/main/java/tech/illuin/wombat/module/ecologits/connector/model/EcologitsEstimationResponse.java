@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.connector.ecologits.connector.model;
+package tech.illuin.wombat.module.ecologits.connector.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import tech.illuin.wombat.core.evaluation.impact.commons.AmountUnit;
