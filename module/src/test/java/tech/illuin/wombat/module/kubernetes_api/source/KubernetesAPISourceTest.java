@@ -6,11 +6,13 @@ import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.PodMetricOperation;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.core.source.Period;
+import tech.illuin.wombat.core.source.WombatSourceException;
 import tech.illuin.wombat.core.source.data.KubernetesData;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
@@ -24,6 +26,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -37,7 +42,7 @@ public class KubernetesAPISourceTest
     private final PodMetricOperation pods = this.client.top().pods();
 
     @Test
-    void withoutNamespacesEveryNamespaceIsPolled()
+    void withoutNamespacesEveryNamespaceIsPolled() throws WombatSourceException
     {
         when(this.pods.metrics()).thenReturn(list(pod("payments", "api"), pod("analytics", "batch")));
 
@@ -48,7 +53,7 @@ public class KubernetesAPISourceTest
     }
 
     @Test
-    void withNamespacesOnlyThoseArePolled()
+    void withNamespacesOnlyThoseArePolled() throws WombatSourceException
     {
         when(this.pods.metrics("payments")).thenReturn(list(pod("payments", "api")));
         when(this.pods.metrics("analytics")).thenReturn(list(pod("analytics", "batch")));
@@ -59,7 +64,29 @@ public class KubernetesAPISourceTest
         verify(this.pods, never()).metrics();
     }
 
-    private List<MetricData> source(Set<String> namespaces)
+    @Test
+    void aForbiddenClusterWidePollPointsAtTheWhitelist()
+    {
+        when(this.pods.metrics()).thenThrow(new KubernetesClientException("pods.metrics.k8s.io is forbidden", 403, null));
+
+        WombatSourceException e = assertThrows(WombatSourceException.class, () -> this.source(Set.of()));
+
+        assertTrue(e.getMessage().contains("restrict namespaces"), e.getMessage());
+        assertInstanceOf(KubernetesClientException.class, e.getCause());
+    }
+
+    @Test
+    void aForbiddenNamespaceFailsTheSource()
+    {
+        when(this.pods.metrics("payments")).thenThrow(new KubernetesClientException("pods.metrics.k8s.io is forbidden", 403, null));
+
+        WombatSourceException e = assertThrows(WombatSourceException.class, () -> this.source(Set.of("payments")));
+
+        assertTrue(e.getMessage().contains("is forbidden"), e.getMessage());
+        assertInstanceOf(KubernetesClientException.class, e.getCause());
+    }
+
+    private List<MetricData> source(Set<String> namespaces) throws WombatSourceException
     {
         return new KubernetesAPISource(this.client).source(Instant.EPOCH, Instant.EPOCH, asset(namespaces));
     }

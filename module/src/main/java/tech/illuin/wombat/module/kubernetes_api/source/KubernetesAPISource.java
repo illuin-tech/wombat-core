@@ -4,14 +4,17 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.source.WombatSource;
+import tech.illuin.wombat.core.source.WombatSourceException;
 import tech.illuin.wombat.core.source.data.KubernetesData;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
 
+import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,13 +39,20 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
     }
 
     @Override
-    public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset)
+    public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset) throws WombatSourceException
     {
         KubernetesAPIAsset kubernetesAsset = (KubernetesAPIAsset) asset;
 
         logger.trace("Persisting pods usages for kubernetes config {}", asset.identity().id());
 
-        return this.outputToTarget(this.fetchPodMetrics(kubernetesAsset.namespaces()), kubernetesAsset);
+        try {
+            return this.outputToTarget(this.fetchPodMetrics(kubernetesAsset.namespaces()), kubernetesAsset);
+        }
+        catch (KubernetesClientException e) {
+            if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN && kubernetesAsset.namespaces().isEmpty())
+                throw new WombatSourceException("Cannot list pod metrics cluster-wide for asset " + asset.identity().id() + ": restrict namespaces to the ones its kubeconfig can read", e);
+            throw new WombatSourceException("Cannot list pod metrics for asset " + asset.identity().id() + ": " + e.getMessage(), e);
+        }
     }
 
     @Override
