@@ -76,14 +76,14 @@ public class KubernetesAPISourceTest
     }
 
     @Test
-    void aForbiddenNamespaceFailsTheSource()
+    void aFailingNamespaceIsSkipped() throws WombatSourceException
     {
         when(this.pods.metrics("payments")).thenThrow(new KubernetesClientException("pods.metrics.k8s.io is forbidden", 403, null));
+        when(this.pods.metrics("analytics")).thenReturn(list(pod("analytics", "batch")));
 
-        WombatSourceException e = assertThrows(WombatSourceException.class, () -> this.source(Set.of("payments")));
+        List<MetricData> data = this.source(Set.of("payments", "analytics"));
 
-        assertTrue(e.getMessage().contains("is forbidden"), e.getMessage());
-        assertInstanceOf(KubernetesClientException.class, e.getCause());
+        assertEquals(Set.of("analytics/batch"), locations(data));
     }
 
     private List<MetricData> source(Set<String> namespaces) throws WombatSourceException

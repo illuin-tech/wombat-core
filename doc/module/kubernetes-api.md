@@ -24,7 +24,7 @@ For cross-cutting data formats such as `Period`, `Duration`, `Lifetime`, `Countr
 
 The secret referenced by `kubeconfig-key` must resolve to the full YAML content of a kubeconfig. It is parsed in memory, with no file behind it: certificates and keys must be inlined (`certificate-authority-data`, `client-certificate-data`, `client-key-data`), since relative file references have nothing to resolve against.
 
-With an empty `namespaces` whitelist, pod metrics are listed cluster-wide: the kubeconfig needs cluster-scoped read access to `pods.metrics.k8s.io`, and the namespace of its context is not used. For a kubeconfig restricted to some namespaces, list them in `namespaces`.
+With an empty `namespaces` whitelist, pod metrics are listed cluster-wide: the kubeconfig needs cluster-scoped read access to `pods.metrics.k8s.io`, and the namespace of its context is not used. For a kubeconfig restricted to some namespaces, list them in `namespaces`. A whitelisted namespace whose metrics cannot be listed, e.g. one the kubeconfig cannot read, is skipped with a warning while the others are still polled.
 
 ```yaml
 id: "k8s-prod-cluster-01" # required - Unique identifier for the monitored asset.

@@ -19,7 +19,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class KubernetesAPISource implements WombatSource, AutoCloseable
 {
@@ -46,10 +45,10 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
         logger.trace("Persisting pods usages for kubernetes config {}", asset.identity().id());
 
         try {
-            return this.outputToTarget(this.fetchPodMetrics(kubernetesAsset.namespaces()), kubernetesAsset);
+            return this.outputToTarget(this.fetchPodMetrics(kubernetesAsset), kubernetesAsset);
         }
         catch (KubernetesClientException e) {
-            if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN && kubernetesAsset.namespaces().isEmpty())
+            if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN)
                 throw new WombatSourceException("Cannot list pod metrics cluster-wide for asset " + asset.identity().id() + ": restrict namespaces to the ones its kubeconfig can read", e);
             throw new WombatSourceException("Cannot list pod metrics for asset " + asset.identity().id() + ": " + e.getMessage(), e);
         }
@@ -61,14 +60,21 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
         this.client.close();
     }
 
-    private List<PodMetrics> fetchPodMetrics(Set<String> namespaces)
+    private List<PodMetrics> fetchPodMetrics(KubernetesAPIAsset asset)
     {
-        if (namespaces.isEmpty())
+        if (asset.namespaces().isEmpty())
             return this.client.top().pods().metrics().getItems();
 
         List<PodMetrics> podMetricsList = new ArrayList<>();
-        for (String namespace : namespaces)
-            podMetricsList.addAll(this.client.top().pods().metrics(namespace).getItems());
+        for (String namespace : asset.namespaces())
+        {
+            try {
+                podMetricsList.addAll(this.client.top().pods().metrics(namespace).getItems());
+            }
+            catch (KubernetesClientException e) {
+                logger.warn("Cannot list pod metrics in namespace {} for asset {}, skipping it: {}", namespace, asset.identity().id(), e.getMessage());
+            }
+        }
         return podMetricsList;
     }
 
