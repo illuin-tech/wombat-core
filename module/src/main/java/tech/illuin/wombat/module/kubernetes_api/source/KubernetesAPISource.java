@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class KubernetesAPISource implements WombatSource, AutoCloseable
 {
@@ -41,14 +42,7 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
 
         logger.trace("Persisting pods usages for kubernetes config {}", asset.identity().id());
 
-        List<PodMetrics> podMetricsList = this.client
-            .top()
-            .pods()
-            .inNamespace(kubernetesAsset.namespace())
-            .metrics()
-            .getItems();
-
-        return this.outputToTarget(podMetricsList, kubernetesAsset);
+        return this.outputToTarget(this.fetchPodMetrics(kubernetesAsset.namespaces()), kubernetesAsset);
     }
 
     @Override
@@ -57,15 +51,26 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
         this.client.close();
     }
 
+    private List<PodMetrics> fetchPodMetrics(Set<String> namespaces)
+    {
+        if (namespaces.isEmpty())
+            return this.client.top().pods().metrics().getItems();
+
+        List<PodMetrics> podMetricsList = new ArrayList<>();
+        for (String namespace : namespaces)
+            podMetricsList.addAll(this.client.top().pods().metrics(namespace).getItems());
+        return podMetricsList;
+    }
+
     private List<MetricData> outputToTarget(List<PodMetrics> podMetricsList, KubernetesAPIAsset properties)
     {
         String clusterId = properties.identity().id();
-        String namespace = properties.namespace();
 
-        logger.trace("Recording metrics for {} pods in {}/{}", podMetricsList.size(), clusterId, namespace);
+        logger.trace("Recording metrics for {} pods in {} {}", podMetricsList.size(), clusterId, properties.namespaces());
         List<MetricData> metricData = new ArrayList<>();
         for (PodMetrics podMetrics : podMetricsList)
         {
+            String namespace = podMetrics.getMetadata().getNamespace();
             String podName = podMetrics.getMetadata().getName();
             for (ContainerMetrics cm : podMetrics.getContainers())
             {

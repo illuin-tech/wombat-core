@@ -30,6 +30,12 @@ public class KubernetesAPIAssetTest
         assertTrue(e.getMessage().contains("kubeconfig-key"), e.getMessage());
     }
 
+    @Test
+    void omittedNamespacesMeanEveryNamespace()
+    {
+        assertEquals(Set.of(), asset("KUBECONFIG_PROD").namespaces());
+    }
+
     private static KubernetesAPIAsset asset(String kubeconfigKey)
     {
         return new KubernetesAPIAsset(

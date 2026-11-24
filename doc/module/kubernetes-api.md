@@ -14,7 +14,7 @@ The **Kubernetes API Module** connects directly to Kubernetes cluster APIs via s
 Use this module when:
 - You have live Kubernetes clusters (on-premises or managed cloud providers like AWS EKS, Google GKE, Azure AKS, OVHcloud, or Scaleway).
 - You want automated, scheduled telemetry ingestion into Wombat's metric store without needing intermediary metric scrapers.
-- You need fine-grained namespace scoping or multi-cluster telemetry aggregation.
+- You need fine-grained namespace scoping (a whitelist of namespaces per cluster) or multi-cluster telemetry aggregation.
 
 ## Configuration Specification
 
@@ -28,7 +28,9 @@ The secret referenced by `kubeconfig-key` must resolve to the full YAML content 
 id: "k8s-prod-cluster-01" # required - Unique identifier for the monitored asset.
 environment-id: "production" # required - Identifier of the target environment (e.g. `production`, `staging`).
 kubeconfig-key: "secrets.kubernetes.prod" # required - Secret holding the kubeconfig contents, resolved by the configured secret resolver.
-namespace: "payments-api" # optional (default: null) - Kubernetes namespace to restrict metric polling (polls all namespaces if omitted).
+namespaces: # optional (default: empty) - Whitelist of Kubernetes namespaces to poll (polls all namespaces if empty or omitted).
+  - "payments-api"
+  - "payments-worker"
 context: "prod-cluster-ctx" # optional (default: active context) - Kubeconfig context name to target.
 read-timeout: "PT10S" # optional (default: client default) - HTTP read timeout for Kubernetes API requests.
 period: "5m" # optional (default: monitor default) - Polling interval for metric sampling (e.g. `30s`, `1m`, `5m`, `1h`).
@@ -62,7 +64,7 @@ profile:
 In complex enterprise architectures, services often run across multiple distinct Kubernetes clusters spanning different cloud providers, environments, and geographical regions. A single shared `kubeconfig` bundle can contain contexts for different clusters.
 
 The scenario below demonstrates:
-1. **Frontend / API Cluster on AWS EKS** (`FRA`): Scoped strictly to the `payments-api` namespace with 1-minute polling and custom timeout.
+1. **Frontend / API Cluster on AWS EKS** (`FRA`): Scoped strictly to the `payments-api` namespace (`namespaces` whitelist) with 1-minute polling and custom timeout.
 2. **Data Processing Cluster on GCP GKE** (`DEU`): Monitored across all namespaces with a 15-second read timeout and 2-minute polling.
 
 ```yaml
@@ -72,7 +74,8 @@ id: "k8s-aws-fra-payments"
 environment-id: "production-eu"
 kubeconfig-key: "secrets.kubernetes.enterprise"
 context: "arn:aws:eks:eu-west-3:123456789012:cluster/prod-fra-payments"
-namespace: "payments-api"
+namespaces:
+  - "payments-api"
 read-timeout: "PT10S"
 period: "1m"
 profile:

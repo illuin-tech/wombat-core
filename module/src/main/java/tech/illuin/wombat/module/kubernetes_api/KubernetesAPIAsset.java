@@ -25,7 +25,7 @@ import java.util.Set;
 public record KubernetesAPIAsset(
     @JsonUnwrapped AssetIdentity identity,
     @NotNull @JsonPropertyDescription("Secret holding the kubeconfig contents") SecretKey kubeconfigKey,
-    @JsonPropertyDescription("Namespace to poll, all namespaces when omitted") String namespace,
+    @JsonPropertyDescription("Namespaces to poll, all namespaces when empty or omitted") Set<String> namespaces,
     @JsonPropertyDescription("Kubeconfig context to target, the active one when omitted") Optional<String> context,
     // The kebab-case @JsonAlias read assets persisted before 0.15, when properties were named that way
     @JsonPropertyDescription("Read timeout of the Kubernetes API requests (ISO-8601), the client's default when omitted") @JsonAlias("read-timeout") Optional<Duration> readTimeout,
@@ -33,6 +33,11 @@ public record KubernetesAPIAsset(
     @NotNull @Valid @JsonPropertyDescription("Server hardware profile") KubernetesAPIServerProfile profile
 ) implements Asset, SecretAware, Monitorable
 {
+    public KubernetesAPIAsset
+    {
+        namespaces = namespaces != null ? Set.copyOf(namespaces) : Set.of();
+    }
+
     @Override
     public AssetType type()
     {
