@@ -55,8 +55,9 @@ class EcologitsModuleTest
     @Test
     void settings_fallBackToThePublicApi()
     {
-        assertEquals(EcologitsSettings.DEFAULT_URI, EcologitsSettings.DEFAULT.uri());
-        assertEquals(EcologitsSettings.DEFAULT_URI, new EcologitsSettings(" ", null).uri());
+        // The literal, as documented: the client appends its own versioned path.
+        assertEquals("https://api.ecologits.ai/", EcologitsSettings.DEFAULT.uri());
+        assertEquals("https://api.ecologits.ai/", new EcologitsSettings(" ", null).uri());
         assertEquals(EcologitsModule.TYPE, EcologitsSettings.DEFAULT.type());
     }
 

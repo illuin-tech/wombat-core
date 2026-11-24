@@ -184,7 +184,7 @@ class WombatCoreTest
     @Test
     void createCalculator_skipsAssetTypesWithoutAnyResolver() throws Exception
     {
-        // No defaults are registered, and the module provides no activity-resolver: there is nothing to evaluate with.
+        // No module provides an activity-resolver, the family modules included: there is nothing to evaluate with.
         try (WombatCore core = core(context(modeled("static-1")), new ResolvingModule()) ; AssetEvaluator evaluator = assertDoesNotThrow(() -> core.createEvaluator()))
         {
             assertEquals(List.of(), evaluator.evaluate(RANGE, AssetFilter.none()));

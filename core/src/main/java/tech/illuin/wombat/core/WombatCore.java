@@ -40,6 +40,7 @@ public final class WombatCore implements AutoCloseable
         this.modules = new LinkedHashMap<>();
         for (WombatModule module : modules)
             this.register(module);
+        this.reportMissingFeatures();
     }
 
     private void register(WombatModule module)
@@ -93,6 +94,19 @@ public final class WombatCore implements AutoCloseable
             module.costResolver().ifPresent(factory -> calculator.registerCostResolver(module.type(), factory));
         }
 
+        return calculator;
+    }
+
+    @Override
+    public void close()
+    {
+        for (WombatModule module : this.modules.values())
+            module.close();
+    }
+
+    /* Once per core rather than per evaluator: the modules are fixed from here on, while a host may create many evaluators */
+    private void reportMissingFeatures()
+    {
         for (WombatModule module : this.modules.values())
         {
             if (!(module.type() instanceof AssetType type))
@@ -102,18 +116,10 @@ public final class WombatCore implements AutoCloseable
                 logger.error("No activity-resolver available for asset-type {}, its assets will not be evaluated", type.name());
             if (!this.provides(type, WombatModule::impactResolver))
                 logger.error("No impact-resolver available for asset-type {}, impacts of its assets will not be evaluated", type.name());
+            /* Cost is optional, and no built-in module prices anything yet */
             if (!this.provides(type, WombatModule::costResolver))
-                logger.warn("No cost-resolver available for asset-type {}, costs of its assets will not be evaluated", type.name());
+                logger.info("No cost-resolver available for asset-type {}, costs of its assets will not be evaluated", type.name());
         }
-
-        return calculator;
-    }
-
-    @Override
-    public void close()
-    {
-        for (WombatModule module : this.modules.values())
-            module.close();
     }
 
     /**

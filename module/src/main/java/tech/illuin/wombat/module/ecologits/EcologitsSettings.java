@@ -12,7 +12,7 @@ public record EcologitsSettings(
     @JsonPropertyDescription("HTTP proxy URL, with a host and a port") String proxyUrl
 ) implements ModuleSettings
 {
-    public static final String DEFAULT_URI = "https://api.ecologits.org/v1/";
+    public static final String DEFAULT_URI = "https://api.ecologits.ai/";
     /** The public API, reached directly: what applies when the host gives the module no settings. */
     public static final EcologitsSettings DEFAULT = new EcologitsSettings(null, null);
 

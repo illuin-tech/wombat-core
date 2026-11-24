@@ -55,8 +55,9 @@ class BoaviztaModuleTest
     @Test
     void settings_fallBackToThePublicApi()
     {
-        assertEquals(BoaviztaSettings.DEFAULT_URI, BoaviztaSettings.DEFAULT.uri());
-        assertEquals(BoaviztaSettings.DEFAULT_URI, new BoaviztaSettings(" ", null).uri());
+        // The literal, as documented: the version is part of the URI.
+        assertEquals("https://api.boavizta.org/v1/", BoaviztaSettings.DEFAULT.uri());
+        assertEquals("https://api.boavizta.org/v1/", new BoaviztaSettings(" ", null).uri());
         assertEquals(BoaviztaModule.TYPE, BoaviztaSettings.DEFAULT.type());
     }
 

@@ -49,6 +49,19 @@ public class WombatModuleSPITest
     }
 
     @Test
+    void coreModules_listTheServiceLoaderModulesInTheSameOrder()
+    {
+        List<Class<? extends WombatModule>> discovered = ServiceLoader.load(WombatModule.class).stream()
+            .map(ServiceLoader.Provider::type)
+            .toList();
+        List<Class<? extends WombatModule>> listed = CoreModules.all().stream()
+            .<Class<? extends WombatModule>>map(WombatModule::getClass)
+            .toList();
+
+        assertEquals(discovered, listed);
+    }
+
+    @Test
     void moduleTypes_useCorrectNamespaceAndNames()
     {
         assertEquals("tech.illuin.wombat-module.kubernetes-api", KubernetesAPIModule.TYPE.name());

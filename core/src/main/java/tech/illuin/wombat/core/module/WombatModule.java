@@ -12,8 +12,8 @@ import java.util.Optional;
  * Declares how the assets a module serves are sourced and evaluated.
  * <p>
  * A module serves the assets of the {@code AssetType} it defines, or every asset of a family when its type is a
- * {@code FamilyType}, e.g. an impact methodology (see {@link ModuleType}). Each feature is provided as a {@link ProcessorFactory}, invoked once
- * per asset; an empty factory means the module does not provide that feature.
+ * {@code FamilyType}, e.g. an impact methodology (see {@link ModuleType}). Each feature is provided as a
+ * {@link ProcessorFactory}, invoked once per asset; an empty factory means the module does not provide that feature.
  * <p>
  * For a given asset and feature, the module of the asset's type is asked first, then the family modules of its family
  * in the order they were registered: the first component to {@link AssetProcessor#accept(Asset) accept} the asset serves

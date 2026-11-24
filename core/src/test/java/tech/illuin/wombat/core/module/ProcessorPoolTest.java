@@ -14,6 +14,7 @@ import tech.illuin.wombat.core.secret.SecretResolver;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -146,6 +147,42 @@ class ProcessorPoolTest
             pool.invalidate(asset.identity());
             assertTrue(pool.get(asset).isEmpty());
             assertEquals(2, created.get());
+        }
+    }
+
+    @Test
+    void get_keepsTheChoiceUntilTheAssetIsRefreshed()
+    {
+        try (ProcessorPool<TestProcessor> pool = new ProcessorPool<TestProcessor>("test-processor", SERVICES)
+            .register(TYPE, (services, asset) -> new PickyProcessor("v1"))
+            .register(FAMILY_FIRST, (services, asset) -> new LabeledProcessor("first", true)))
+        {
+            PickyProcessor own = (PickyProcessor) pool.get(asset("a1", "v1")).orElseThrow();
+
+            // Edited in a way the kept processor would reject: it is not asked again until a refresh.
+            assertSame(own, pool.get(asset("a1", "v2")).orElseThrow());
+
+            pool.invalidate(asset("a1", "v2").identity());
+            assertEquals("first", ((LabeledProcessor) pool.get(asset("a1", "v2")).orElseThrow()).label);
+        }
+    }
+
+    @Test
+    void get_releasesACandidateFailingToTellWhetherItAcceptsTheAsset()
+    {
+        List<FailingAcceptProcessor> built = new CopyOnWriteArrayList<>();
+        try (ProcessorPool<TestProcessor> pool = pool((services, asset) -> {
+            FailingAcceptProcessor processor = new FailingAcceptProcessor();
+            built.add(processor);
+            return processor;
+        }))
+        {
+            assertThrows(IllegalStateException.class, () -> pool.get(asset("a1", "v1")));
+            assertEquals(1, built.getFirst().closed.get());
+
+            // Nothing was kept: the next call builds again.
+            assertThrows(IllegalStateException.class, () -> pool.get(asset("a1", "v1")));
+            assertEquals(2, built.size());
         }
     }
 
@@ -345,6 +382,32 @@ class ProcessorPoolTest
         public boolean accept(Asset asset)
         {
             return this.accepts;
+        }
+    }
+
+    /** Accepts only the assets with the given setting: stands for a component an edit of the asset can turn away. */
+    private static final class PickyProcessor extends ClosingProcessor
+    {
+        private final String setting;
+
+        PickyProcessor(String setting)
+        {
+            this.setting = setting;
+        }
+
+        @Override
+        public boolean accept(Asset asset)
+        {
+            return ((TestAsset) asset).setting().equals(this.setting);
+        }
+    }
+
+    private static final class FailingAcceptProcessor extends ClosingProcessor
+    {
+        @Override
+        public boolean accept(Asset asset)
+        {
+            throw new IllegalStateException("broken accept");
         }
     }
 

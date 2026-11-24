@@ -83,6 +83,9 @@ public final class ProcessorPool<P extends AssetProcessor> implements AutoClosea
     /**
      * Returns the processor serving {@code asset}, chosen and built on first use.
      * <p>
+     * The choice is kept, like the processor itself, until the asset is refreshed or leaves the context: the processor
+     * is not asked again on each call, and an asset no candidate accepts stays unserved.
+     * <p>
      * A failing factory propagates its exception and nothing is kept, so building is attempted again on the next call.
      *
      * @return the processor serving {@code asset}, empty when no candidate accepts it
@@ -138,11 +141,19 @@ public final class ProcessorPool<P extends AssetProcessor> implements AutoClosea
         for (Registration<P> candidate : this.candidates(asset))
         {
             P processor = this.create(candidate, asset);
-            if (processor.accept(asset))
-                return Optional.of(processor);
+            boolean accepted = false;
+            try {
+                accepted = processor.accept(asset);
+                if (accepted)
+                    return Optional.of(processor);
 
-            logger.debug("Wombat {} {} of module {} rejects asset {}", this.kind, processor.getClass().getSimpleName(), candidate.type().name(), asset.identity().id());
-            this.release(asset.identity(), processor);
+                logger.debug("Wombat {} {} of module {} rejects asset {}", this.kind, processor.getClass().getSimpleName(), candidate.type().name(), asset.identity().id());
+            }
+            finally {
+                // Rejecting the asset, or failing to tell whether it accepts it: nothing else holds it.
+                if (!accepted)
+                    this.release(asset.identity(), processor);
+            }
         }
         return Optional.empty();
     }

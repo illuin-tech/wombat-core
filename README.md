@@ -155,6 +155,8 @@ Family modules define no asset, and serve every asset of their family (see [Fami
 | [`tech.illuin.wombat-module.boavizta`](doc/module/boavizta.md)                         | `KUBERNETES_CONTAINER` | Estimates multi-criteria impacts (GHG emissions, primary energy, abiotic depletion) of server workloads with Boavizta. |
 | [`tech.illuin.wombat-module.ecologits`](doc/module/ecologits.md)                       | `LLM`                  | Estimates multi-criteria footprints of LLM inferences with EcoLogits.                                                |
 
+`CoreModules.all()` builds them all, asset-type modules first, then the family modules in the order above, which is the order they are tried in.
+
 #### Family Modules
 
 While `WombatModules` are allowed to declare specific [asset types](doc/concept-definition.md#technical-concepts) and introduce a complete pipeline for resolving activity and making impact estimates, most of the time you will only want an override for a single part of the pipeline, like a `WombatSource`, or a `WombatActivityResolver`.
@@ -235,7 +237,7 @@ The `WombatCore` is handed `WombatServices`, the system components made availabl
 * the `MetricResolvers`, the read side of the metric store the `WombatMetricPersister` writes to, from which the `kubernetes-metrics` and `llm-metrics` modules resolve the activity of sourced assets
 * the `ModuleSettings` of the modules that have some, e.g. the endpoint of a self-hosted BoaviztAPI ; a module given none applies its defaults
 
-Every part of the pipeline comes from a module, the [family modules](#family-modules) included. Assets whose type has no module component, and no family module component, for a given part are not evaluated for that part, and an error is logged when the evaluator is created.
+Every part of the pipeline comes from a module, the [family modules](#family-modules) included. Assets whose type has no module component, and no family module component, for a given part are not evaluated for that part, and an error is logged once, when the `WombatCore` is built.
 
 ```java
 WombatServices services = new WombatServices(
@@ -245,20 +247,8 @@ WombatServices services = new WombatServices(
     List.of(new BoaviztaSettings("http://boaviztapi:5000/v1/", null))
 );
 
-try (WombatCore core = new WombatCore(
-    contextProvider,
-    services,
-    metricPersister,
-    List.of(
-        new KubernetesAPIModule(),
-        new KubernetesStaticModule(),
-        new LLMStaticModule(),
-        new KubernetesMetricsModule(),
-        new LLMMetricsModule(),
-        new BoaviztaModule(),
-        new EcologitsModule()
-    )
-)) {
+/* Every core module; or a selection of them, e.g. List.of(new KubernetesAPIModule(), new KubernetesMetricsModule(), new BoaviztaModule()) */
+try (WombatCore core = new WombatCore(contextProvider, services, metricPersister, CoreModules.all())) {
     /* The evaluator keeps the resolvers it built for each asset, you should reuse it throughout your app ; e.g. make it injectable if applicable */
     AssetEvaluator evaluator = core.createEvaluator();
     
@@ -375,6 +365,7 @@ A module never builds its components upfront: each method of `WombatModule` retu
 * if the component implements `AutoCloseable`, it is closed when its asset is refreshed or leaves the context, and when the `AssetMonitor` or `AssetEvaluator` is closed
 * a family module's components follow the same rules: they are built once per asset identity they serve, and handed that asset on every call
 * when the first candidate built for an asset rejects it (`accept`), it is discarded at once, closed if it implements `AutoCloseable`, and the next candidate is built
+* which candidate serves an asset is decided once, like the rest of what the factories built: the chosen component is not asked again on each call, and an asset no candidate accepts stays unserved, until the asset is refreshed or leaves the context ; `accept` should therefore depend on the kind of asset (its class, the kind of its profile) rather than on settings an edit may change
 * a factory may return the same instance for every asset, such an instance must then not implement `AutoCloseable` since it would be closed along with the first asset to go ; release its resources from `WombatModule.close()` instead
 * a factory failing leaves nothing behind: its exception propagates to the call that needed the component, and building it is attempted again the next time it is needed
 
