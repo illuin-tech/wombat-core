@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
+import tech.illuin.wombat.core.module.MetricResolvers;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
@@ -18,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class LLMVertexAIModuleTest
 {
@@ -27,7 +31,7 @@ public class LLMVertexAIModuleTest
     void declaresTheGoogleLLMAssetType()
     {
         assertEquals(LLMVertexAIModule.TYPE, this.module.type());
-        assertEquals(LLMVertexAIAsset.class, this.module.assetClass());
+        assertEquals(Optional.of(LLMVertexAIAsset.class), this.module.assetClass());
     }
 
     @Test
@@ -62,7 +66,11 @@ public class LLMVertexAIModuleTest
 
     private static WombatServices services(Map<String, String> environment)
     {
-        return new WombatServices(new EnvironmentSecretResolver(environment::get));
+        return new WombatServices(
+            new EnvironmentSecretResolver(environment::get),
+            new MetricResolvers(mock(KubernetesMetricResolver.class), mock(LLMMetricResolver.class)),
+            List.of()
+        );
     }
 
     private static LLMVertexAIAsset asset(String credentialsKey)

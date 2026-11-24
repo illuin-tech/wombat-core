@@ -6,19 +6,31 @@ import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.FamilyType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
 import tech.illuin.wombat.core.secret.SecretResolver;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class ProcessorPoolTest
 {
     private static final AssetType TYPE = AssetType.of("tech.illuin", "wombat-module", "test", ActivityRegime.MEASURED, ServiceFamily.LLM);
     private static final AssetType TYPE_UNSUPPORTED = AssetType.of("tech.illuin", "wombat-module", "unsupported", ActivityRegime.MODELED, ServiceFamily.LLM);
-    private static final WombatServices SERVICES = new WombatServices(SecretResolver.standard());
+    private static final FamilyType FAMILY_FIRST = FamilyType.of("tech.illuin", "wombat-module", "first", ServiceFamily.LLM);
+    private static final FamilyType FAMILY_SECOND = FamilyType.of("tech.illuin", "wombat-module", "second", ServiceFamily.LLM);
+    private static final FamilyType FAMILY_OTHER = FamilyType.of("tech.illuin", "wombat-module", "other", ServiceFamily.KUBERNETES_CONTAINER);
+    private static final WombatServices SERVICES = new WombatServices(
+        SecretResolver.standard(),
+        new MetricResolvers(mock(KubernetesMetricResolver.class), mock(LLMMetricResolver.class)),
+        List.of()
+    );
 
     @Test
     void get_buildsOnFirstUseAndReusesForTheSameIdentity()
@@ -68,9 +80,83 @@ class ProcessorPoolTest
     {
         try (ProcessorPool<TestProcessor> pool = pool(new CountingFactory()))
         {
-            assertTrue(pool.supports(TYPE));
-            assertFalse(pool.supports(TYPE_UNSUPPORTED));
+            assertTrue(pool.registered(TYPE));
+            assertFalse(pool.registered(TYPE_UNSUPPORTED));
+            assertFalse(pool.supports(new TestAsset("a1", TYPE_UNSUPPORTED, "v1")));
             assertTrue(pool.get(new TestAsset("a1", TYPE_UNSUPPORTED, "v1")).isEmpty());
+        }
+    }
+
+    @Test
+    void get_triesTheAssetTypeBeforeItsFamilyInRegistrationOrder()
+    {
+        try (ProcessorPool<TestProcessor> pool = new ProcessorPool<TestProcessor>("test-processor", SERVICES)
+            .register(FAMILY_FIRST, (services, asset) -> new LabeledProcessor("first", true))
+            .register(TYPE, (services, asset) -> new LabeledProcessor("own", true))
+            .register(FAMILY_SECOND, (services, asset) -> new LabeledProcessor("second", true)))
+        {
+            assertEquals("own", ((LabeledProcessor) pool.get(asset("a1", "v1")).orElseThrow()).label);
+            // An asset-type without a module of its own is served by its family, the first registered winning.
+            assertEquals("first", ((LabeledProcessor) pool.get(new TestAsset("a2", TYPE_UNSUPPORTED, "v1")).orElseThrow()).label);
+        }
+    }
+
+    @Test
+    void get_fallsThroughToTheFamilyWhenACandidateRejectsTheAsset()
+    {
+        LabeledProcessor rejecting = new LabeledProcessor("own", false);
+        try (ProcessorPool<TestProcessor> pool = new ProcessorPool<TestProcessor>("test-processor", SERVICES)
+            .register(TYPE, (services, asset) -> rejecting)
+            .register(FAMILY_FIRST, (services, asset) -> new LabeledProcessor("first", false))
+            .register(FAMILY_SECOND, (services, asset) -> new LabeledProcessor("second", true)))
+        {
+            assertEquals("second", ((LabeledProcessor) pool.get(asset("a1", "v1")).orElseThrow()).label);
+            assertEquals(1, rejecting.closed.get());
+        }
+    }
+
+    @Test
+    void get_ignoresTheModulesOfOtherFamilies()
+    {
+        try (ProcessorPool<TestProcessor> pool = new ProcessorPool<TestProcessor>("test-processor", SERVICES)
+            .register(FAMILY_OTHER, (services, asset) -> new LabeledProcessor("other", true)))
+        {
+            assertFalse(pool.supports(asset("a1", "v1")));
+            assertTrue(pool.get(asset("a1", "v1")).isEmpty());
+        }
+    }
+
+    @Test
+    void get_keepsTheOutcomeWhenNoCandidateAcceptsTheAsset()
+    {
+        AtomicInteger created = new AtomicInteger();
+        try (ProcessorPool<TestProcessor> pool = new ProcessorPool<TestProcessor>("test-processor", SERVICES)
+            .register(FAMILY_FIRST, (services, asset) -> {
+                created.incrementAndGet();
+                return new LabeledProcessor("first", false);
+            }))
+        {
+            Asset asset = asset("a1", "v1");
+            assertTrue(pool.supports(asset));
+            assertTrue(pool.get(asset).isEmpty());
+            assertTrue(pool.get(asset).isEmpty());
+            assertEquals(1, created.get());
+
+            // The asset may have changed: a refresh chooses again.
+            pool.invalidate(asset.identity());
+            assertTrue(pool.get(asset).isEmpty());
+            assertEquals(2, created.get());
+        }
+    }
+
+    @Test
+    void registered_tellsFamilyModulesApart()
+    {
+        try (ProcessorPool<TestProcessor> pool = new ProcessorPool<TestProcessor>("test-processor", SERVICES)
+            .register(FAMILY_FIRST, new CountingFactory()))
+        {
+            assertTrue(pool.registered(FAMILY_FIRST));
+            assertFalse(pool.registered(FAMILY_SECOND));
         }
     }
 
@@ -234,12 +320,31 @@ class ProcessorPoolTest
 
     private static class ClosingProcessor extends TestProcessor implements AutoCloseable
     {
-        private final AtomicInteger closed = new AtomicInteger();
+        protected final AtomicInteger closed = new AtomicInteger();
 
         @Override
         public void close()
         {
             this.closed.incrementAndGet();
+        }
+    }
+
+    /** Tells which module built it, and whether it accepts the assets it is offered. */
+    private static final class LabeledProcessor extends ClosingProcessor
+    {
+        private final String label;
+        private final boolean accepts;
+
+        LabeledProcessor(String label, boolean accepts)
+        {
+            this.label = label;
+            this.accepts = accepts;
+        }
+
+        @Override
+        public boolean accept(Asset asset)
+        {
+            return this.accepts;
         }
     }
 

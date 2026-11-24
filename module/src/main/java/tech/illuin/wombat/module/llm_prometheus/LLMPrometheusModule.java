@@ -23,9 +23,9 @@ public class LLMPrometheusModule implements WombatModule
     }
 
     @Override
-    public Class<? extends Asset> assetClass()
+    public Optional<Class<? extends Asset>> assetClass()
     {
-        return LLMPrometheusAsset.class;
+        return Optional.of(LLMPrometheusAsset.class);
     }
 
     @Override

@@ -16,7 +16,7 @@ public class KubernetesStaticModuleTest
     void declaresTheStaticKubernetesAssetType()
     {
         assertEquals(KubernetesStaticModule.TYPE, this.module.type());
-        assertEquals(KubernetesStaticAsset.class, this.module.assetClass());
+        assertEquals(Optional.of(KubernetesStaticAsset.class), this.module.assetClass());
     }
 
     @Test

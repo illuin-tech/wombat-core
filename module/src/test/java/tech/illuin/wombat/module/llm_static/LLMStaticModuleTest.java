@@ -16,7 +16,7 @@ public class LLMStaticModuleTest
     void declaresTheStaticLLMAssetType()
     {
         assertEquals(LLMStaticModule.TYPE, this.module.type());
-        assertEquals(LLMStaticAsset.class, this.module.assetClass());
+        assertEquals(Optional.of(LLMStaticAsset.class), this.module.assetClass());
     }
 
     @Test

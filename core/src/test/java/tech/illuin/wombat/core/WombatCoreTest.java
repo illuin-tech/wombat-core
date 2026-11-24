@@ -8,6 +8,7 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.Environment;
+import tech.illuin.wombat.core.asset.type.FamilyType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.context.ResolvedContext;
@@ -18,10 +19,15 @@ import tech.illuin.wombat.core.activity.llm.LLMActivityData;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.AssetEvaluator;
-import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
+import tech.illuin.wombat.core.activity.WombatActivityResolver;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
+import tech.illuin.wombat.core.module.MetricResolvers;
 import tech.illuin.wombat.core.module.ProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
+import tech.illuin.wombat.core.module.WombatServices;
+import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.core.source.Monitorable;
 import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.core.source.WombatSource;
@@ -35,19 +41,22 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
 
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 
 class WombatCoreTest
 {
     private static final AssetType TYPE_PROMETHEUS = AssetType.of("tech.illuin", "wombat-module", "llm-prometheus", ActivityRegime.MEASURED, ServiceFamily.LLM);
     private static final AssetType TYPE_STATIC = AssetType.of("tech.illuin", "wombat-module", "llm-static", ActivityRegime.MODELED, ServiceFamily.LLM);
+    private static final FamilyType TYPE_FAMILY = FamilyType.of("tech.illuin", "wombat-module", "llm-family", ServiceFamily.LLM);
+    private static final FamilyType TYPE_FAMILY_SECOND = FamilyType.of("tech.illuin", "wombat-module", "llm-family-second", ServiceFamily.LLM);
+    private static final FamilyType TYPE_FAMILY_OTHER = FamilyType.of("tech.illuin", "wombat-module", "kubernetes-family", ServiceFamily.KUBERNETES_CONTAINER);
 
     @Test
     void createMonitor_registersASourceForEverySourceableAsset()
@@ -100,37 +109,76 @@ class WombatCoreTest
     @Test
     void createCalculator_resolvesOnlyAssetsServedByAnImpactResolver() throws Exception
     {
-        ResolvingModule resolving = new ResolvingModule();
-        // Both assets share the LLM family, so these defaults serve the two of them: the activity-resolver every
-        // asset needs to be evaluated at all, and impact/cost defaults that accept none — which leaves the modeled
+        // Both assets share the LLM family, so this family module serves the two of them: the activity-resolver every
+        // asset needs to be evaluated at all, and impact/cost resolvers that accept none, which leaves the modeled
         // asset's own module as the only thing able to resolve an impact.
-        Consumer<WombatCore.CoreDefaults> defaults = registry -> registry.register(
-            ServiceFamily.LLM,
-            (services, resolved) -> (asset, range, filter) -> Optional.of(new AssetActivity(
-                asset.identity(),
-                List.of(new LLMActivityData(
-                    ActivityRegime.MODELED,
-                    asset.identity().id(),
-                    range,
-                    LLMProvider.mistralai,
-                    "test",
-                    FRANCE,
-                    0L,
-                    0
-                ))
-            )),
-            (services, asset) -> SERVES_NOTHING,
-            (services, asset) -> SERVES_NOTHING
-        );
+        FamilyModule family = new FamilyModule(TYPE_FAMILY, ACTIVITY, SERVES_NOTHING);
 
         // The sourceable asset's module provides no impact-resolver, so only the modeled one is calculated.
-        try (WombatCore core = core(context(sourceable("a1"), modeled("static-1")), defaults, new SourcingModule(), resolving) ; AssetEvaluator evaluator = core.createEvaluator())
+        try (WombatCore core = core(context(sourceable("a1"), modeled("static-1")), new SourcingModule(), new ResolvingModule(), family) ; AssetEvaluator evaluator = core.createEvaluator())
         {
             List<AssetEvaluation> impacts = evaluator.evaluate(RANGE, AssetFilter.none());
 
             assertEquals(1, impacts.size());
             assertEquals("static-1", impacts.getFirst().assetIdentity().id());
         }
+    }
+
+    @Test
+    void createCalculator_servesAnAssetTypeFromTheModulesOfItsFamily() throws Exception
+    {
+        FamilyModule family = new FamilyModule(TYPE_FAMILY, ACTIVITY, impactResolver("family"));
+
+        try (WombatCore core = core(context(sourceable("a1")), new SourcingModule(), family) ; AssetEvaluator evaluator = core.createEvaluator())
+        {
+            assertEquals(List.of("family"), providers(evaluator.evaluate(RANGE, AssetFilter.none())));
+        }
+    }
+
+    @Test
+    void createCalculator_prefersTheComponentOfTheAssetTypesOwnModule() throws Exception
+    {
+        FamilyModule family = new FamilyModule(TYPE_FAMILY, ACTIVITY, impactResolver("family"));
+
+        try (WombatCore core = core(context(modeled("static-1")), family, new ResolvingModule()) ; AssetEvaluator evaluator = core.createEvaluator())
+        {
+            assertEquals(List.of("own"), providers(evaluator.evaluate(RANGE, AssetFilter.none())));
+        }
+    }
+
+    @Test
+    void createCalculator_triesTheModulesOfAFamilyInRegistrationOrder() throws Exception
+    {
+        // The first family module rejects the asset: the second one, then the one of another family, are next in line.
+        FamilyModule other = new FamilyModule(TYPE_FAMILY_OTHER, ACTIVITY, impactResolver("other"));
+        FamilyModule first = new FamilyModule(TYPE_FAMILY, ACTIVITY, SERVES_NOTHING);
+        FamilyModule second = new FamilyModule(TYPE_FAMILY_SECOND, ACTIVITY, impactResolver("second"));
+
+        try (WombatCore core = core(context(sourceable("a1")), new SourcingModule(), other, first, second) ; AssetEvaluator evaluator = core.createEvaluator())
+        {
+            assertEquals(List.of("second"), providers(evaluator.evaluate(RANGE, AssetFilter.none())));
+        }
+    }
+
+    @Test
+    void createMonitor_sourcesAssetsFromTheModulesOfTheirFamily()
+    {
+        RecordingSource source = new RecordingSource();
+        FamilyModule family = new FamilyModule(TYPE_FAMILY, ACTIVITY, SERVES_NOTHING)
+        {
+            @Override
+            public Optional<ProcessorFactory<WombatSource>> source()
+            {
+                return Optional.of((services, asset) -> source);
+            }
+        };
+
+        // The asset-type's module sources nothing: the family module does.
+        try (WombatCore core = core(context(sourceable("a1")), new ResolvingModule(TYPE_PROMETHEUS, SourceableAsset.class), family) ; AssetMonitor monitor = core.createMonitor()) {
+            monitor.trigger();
+        }
+
+        assertEquals(List.of("a1"), source.sampled);
     }
 
     @Test
@@ -155,6 +203,40 @@ class WombatCoreTest
     }
 
     @Test
+    void register_rejectsAFamilyModuleNamedAfterAnAssetType()
+    {
+        FamilyType clash = FamilyType.of(TYPE_PROMETHEUS.namespace(), TYPE_PROMETHEUS.localName(), ServiceFamily.LLM);
+
+        IllegalArgumentException error = assertThrows(
+            IllegalArgumentException.class,
+            () -> core(context(sourceable("a1")), new SourcingModule(), new FamilyModule(clash, ACTIVITY, SERVES_NOTHING))
+        );
+
+        assertTrue(error.getMessage().contains(TYPE_PROMETHEUS.name()), error.getMessage());
+    }
+
+    @Test
+    void register_rejectsAnAssetTypeWithoutAssetClass()
+    {
+        assertThrows(IllegalArgumentException.class, () -> core(context(), new ResolvingModule(TYPE_STATIC, null)));
+    }
+
+    @Test
+    void register_rejectsAFamilyModuleWithAnAssetClass()
+    {
+        FamilyModule family = new FamilyModule(TYPE_FAMILY, ACTIVITY, SERVES_NOTHING)
+        {
+            @Override
+            public Optional<Class<? extends Asset>> assetClass()
+            {
+                return Optional.of(ModeledAsset.class);
+            }
+        };
+
+        assertThrows(IllegalArgumentException.class, () -> core(context(), family));
+    }
+
+    @Test
     void close_closesEveryRegisteredModule()
     {
         SourcingModule sourcing = new SourcingModule();
@@ -168,15 +250,47 @@ class WombatCoreTest
 
     private static final TimeRange RANGE = new TimeRange(Instant.ofEpochMilli(0), Instant.ofEpochMilli(1_000));
 
+    private static final WombatServices SERVICES = new WombatServices(
+        SecretResolver.standard(),
+        new MetricResolvers(mock(KubernetesMetricResolver.class), mock(LLMMetricResolver.class)),
+        List.of()
+    );
+
     private static WombatCore core(WombatContextProvider context, WombatModule... modules)
     {
-        return core(context, defaults -> {}, modules);
+        return new WombatCore(context, SERVICES, (asset, type, metrics) -> {}, List.of(modules));
     }
 
-    private static WombatCore core(WombatContextProvider context, Consumer<WombatCore.CoreDefaults> defaults, WombatModule... modules)
+    /** Names the module whose impact-resolver produced each evaluation. */
+    private static List<String> providers(List<AssetEvaluation> evaluations)
     {
-        return new WombatCore(context, (asset, type, metrics) -> {}, List.of(modules), defaults);
+        return evaluations.stream()
+            .map(LabeledImpact.class::cast)
+            .map(LabeledImpact::module)
+            .toList();
     }
+
+    private static WombatEvaluationResolver impactResolver(String module)
+    {
+        return (asset, data) -> new LabeledImpact(module, asset.identity(), data.range());
+    }
+
+    /**
+     * Stands in for the activity a family module resolves for every asset of its family, e.g. out of the metric store.
+     */
+    private static final WombatActivityResolver ACTIVITY = (asset, range, filter) -> Optional.of(new AssetActivity(
+        asset.identity(),
+        List.of(new LLMActivityData(
+            ActivityRegime.MODELED,
+            asset.identity().id(),
+            range,
+            LLMProvider.mistralai,
+            "test",
+            FRANCE,
+            0L,
+            0
+        ))
+    ));
 
     /**
      * Stands in for a default that serves nothing at this level: the evaluator skips every asset it is offered.
@@ -274,9 +388,9 @@ class WombatCoreTest
         }
 
         @Override
-        public Class<? extends Asset> assetClass()
+        public Optional<Class<? extends Asset>> assetClass()
         {
-            return SourceableAsset.class;
+            return Optional.of(SourceableAsset.class);
         }
 
         @Override
@@ -294,36 +408,91 @@ class WombatCoreTest
 
     private static final class ResolvingModule implements WombatModule
     {
+        private final AssetType type;
+        private final Class<? extends Asset> assetClass;
         private boolean closed;
+
+        ResolvingModule()
+        {
+            this(TYPE_STATIC, ModeledAsset.class);
+        }
+
+        ResolvingModule(AssetType type, Class<? extends Asset> assetClass)
+        {
+            this.type = type;
+            this.assetClass = assetClass;
+        }
 
         @Override
         public AssetType type()
         {
-            return TYPE_STATIC;
+            return this.type;
         }
 
         @Override
-        public Class<? extends Asset> assetClass()
+        public Optional<Class<? extends Asset>> assetClass()
         {
-            return ModeledAsset.class;
+            return Optional.ofNullable(this.assetClass);
         }
 
         @Override
         public Optional<ProcessorFactory<WombatEvaluationResolver>> impactResolver()
         {
-            return Optional.of((services, asset) -> (resolved, data) -> new AssetImpact(
-                resolved.identity(),
-                null,
-                emptyList(),
-                null,
-                data.range()
-            ));
+            return Optional.of((services, asset) -> WombatCoreTest.impactResolver("own"));
         }
 
         @Override
         public void close()
         {
             this.closed = true;
+        }
+    }
+
+    /** Serves every asset of its family, as an impact methodology or the metric store's activity would. */
+    private static class FamilyModule implements WombatModule
+    {
+        private final FamilyType type;
+        private final WombatActivityResolver activity;
+        private final WombatEvaluationResolver impact;
+
+        FamilyModule(FamilyType type, WombatActivityResolver activity, WombatEvaluationResolver impact)
+        {
+            this.type = type;
+            this.activity = activity;
+            this.impact = impact;
+        }
+
+        @Override
+        public FamilyType type()
+        {
+            return this.type;
+        }
+
+        @Override
+        public Optional<ProcessorFactory<WombatActivityResolver>> activityResolver()
+        {
+            return Optional.of((services, asset) -> this.activity);
+        }
+
+        @Override
+        public Optional<ProcessorFactory<WombatEvaluationResolver>> impactResolver()
+        {
+            return Optional.of((services, asset) -> this.impact);
+        }
+
+        @Override
+        public Optional<ProcessorFactory<WombatEvaluationResolver>> costResolver()
+        {
+            return Optional.of((services, asset) -> SERVES_NOTHING);
+        }
+    }
+
+    private record LabeledImpact(String module, AssetIdentity assetIdentity, TimeRange range) implements AssetEvaluation
+    {
+        @Override
+        public EvaluationType type()
+        {
+            return EvaluationType.IMPACT;
         }
     }
 

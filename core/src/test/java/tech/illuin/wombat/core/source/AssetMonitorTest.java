@@ -10,6 +10,9 @@ import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
+import tech.illuin.wombat.core.module.MetricResolvers;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.core.source.data.MetricData;
@@ -31,12 +34,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class AssetMonitorTest
 {
     private static final AssetType TYPE_LLM = AssetType.of("tech.illuin", "wombat-module", "llm-prometheus", ActivityRegime.MEASURED, ServiceFamily.LLM);
     private static final AssetType TYPE_K8S = AssetType.of("tech.illuin", "wombat-module", "kubernetes-api", ActivityRegime.MEASURED, ServiceFamily.KUBERNETES_CONTAINER);
-    private static final WombatServices SERVICES = new WombatServices(SecretResolver.standard());
+    private static final WombatServices SERVICES = new WombatServices(
+        SecretResolver.standard(),
+        new MetricResolvers(mock(KubernetesMetricResolver.class), mock(LLMMetricResolver.class)),
+        List.of()
+    );
 
     public static void main(String[] args) throws Exception
     {

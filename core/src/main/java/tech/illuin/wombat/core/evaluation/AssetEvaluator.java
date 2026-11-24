@@ -9,7 +9,7 @@ import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.ModuleType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
@@ -46,19 +46,19 @@ public class AssetEvaluator implements AutoCloseable
         this.executorService = executorService;
     }
 
-    public AssetEvaluator registerActivityResolver(AssetType type, ProcessorFactory<WombatActivityResolver> factory)
+    public AssetEvaluator registerActivityResolver(ModuleType type, ProcessorFactory<WombatActivityResolver> factory)
     {
         this.activityResolvers.register(type, factory);
         return this;
     }
 
-    public AssetEvaluator registerCostResolver(AssetType type, ProcessorFactory<WombatEvaluationResolver> factory)
+    public AssetEvaluator registerCostResolver(ModuleType type, ProcessorFactory<WombatEvaluationResolver> factory)
     {
         this.costResolvers.register(type, factory);
         return this;
     }
 
-    public AssetEvaluator registerImpactResolver(AssetType type, ProcessorFactory<WombatEvaluationResolver> factory)
+    public AssetEvaluator registerImpactResolver(ModuleType type, ProcessorFactory<WombatEvaluationResolver> factory)
     {
         this.impactResolvers.register(type, factory);
         return this;
@@ -138,7 +138,7 @@ public class AssetEvaluator implements AutoCloseable
     {
         Optional<WombatActivityResolver> resolver = this.activityResolvers.get(asset);
 
-        if (resolver.isEmpty() || !resolver.get().accept(asset))
+        if (resolver.isEmpty())
         {
             logger.debug("Skipping asset {}: no activity resolver accepts asset-type {}", asset.identity(), asset.type());
             return Optional.empty();
@@ -150,17 +150,16 @@ public class AssetEvaluator implements AutoCloseable
     {
         Optional<WombatEvaluationResolver> resolver = this.impactResolvers.get(asset);
 
-        if (resolver.isEmpty())
+        if (resolver.isEmpty() && !this.impactResolvers.supports(asset))
         {
             logger.debug("Skipping impact of asset {}: no impact resolver registered for asset-type {}", asset.identity().id(), asset.type());
             return Optional.empty();
         }
-        if (!resolver.get().accept(asset))
+        if (resolver.isEmpty())
         {
             logger.warn(
-                "Skipping impact of asset {}: impact resolver {} rejects asset-type {} with profile {}",
+                "Skipping impact of asset {}: no impact resolver accepts asset-type {} with profile {}",
                 asset.identity().id(),
-                resolver.get().getClass().getSimpleName(),
                 asset.type().name(),
                 asset.profile().getClass().getName()
             );
@@ -186,7 +185,7 @@ public class AssetEvaluator implements AutoCloseable
     {
         Optional<WombatEvaluationResolver> resolver = this.costResolvers.get(asset);
 
-        if (resolver.isEmpty() || !resolver.get().accept(asset))
+        if (resolver.isEmpty())
         {
             logger.debug("Skipping cost of asset {}: no cost resolver accepts asset-type {}", asset.identity().id(), asset.type());
             return Optional.empty();

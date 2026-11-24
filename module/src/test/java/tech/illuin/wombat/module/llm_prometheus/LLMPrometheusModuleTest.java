@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
+import tech.illuin.wombat.core.module.MetricResolvers;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
@@ -12,6 +15,7 @@ import tech.illuin.wombat.core.source.WombatSource;
 import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.module.llm_prometheus.source.LLMPrometheusSource;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
+import static org.mockito.Mockito.mock;
 
 public class LLMPrometheusModuleTest
 {
@@ -29,7 +34,7 @@ public class LLMPrometheusModuleTest
     void declaresThePrometheusLLMAssetType()
     {
         assertEquals(LLMPrometheusModule.TYPE, this.module.type());
-        assertEquals(LLMPrometheusAsset.class, this.module.assetClass());
+        assertEquals(Optional.of(LLMPrometheusAsset.class), this.module.assetClass());
     }
 
     @Test
@@ -54,7 +59,11 @@ public class LLMPrometheusModuleTest
 
     private static WombatServices services(Map<String, String> environment)
     {
-        return new WombatServices(new EnvironmentSecretResolver(environment::get));
+        return new WombatServices(
+            new EnvironmentSecretResolver(environment::get),
+            new MetricResolvers(mock(KubernetesMetricResolver.class), mock(LLMMetricResolver.class)),
+            List.of()
+        );
     }
 
     private static LLMPrometheusAsset asset(String username, String passwordEnv)

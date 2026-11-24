@@ -23,9 +23,9 @@ public class LLMAnthropicModule implements WombatModule
     }
 
     @Override
-    public Class<? extends Asset> assetClass()
+    public Optional<Class<? extends Asset>> assetClass()
     {
-        return LLMAnthropicAsset.class;
+        return Optional.of(LLMAnthropicAsset.class);
     }
 
     @Override

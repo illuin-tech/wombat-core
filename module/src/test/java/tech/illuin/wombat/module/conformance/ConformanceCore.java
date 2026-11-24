@@ -7,21 +7,32 @@ import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.Environment;
+import tech.illuin.wombat.core.asset.type.FamilyType;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.evaluation.AssetEvaluator;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
+import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
+import tech.illuin.wombat.core.module.MetricResolvers;
+import tech.illuin.wombat.core.module.ProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
+import tech.illuin.wombat.core.module.WombatServices;
+import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.module.conformance.canonical.CanonicalEngine;
 import tech.illuin.wombat.module.conformance.canonical.CanonicalImpacts;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+
+import static org.mockito.Mockito.mock;
 
 /**
- * A {@link WombatCore} with the module under test, and the engine under test as its family's default impact component,
- * as the README's custom core registers them.
+ * A {@link WombatCore} with the module under test, and the engine under test as a module of its family, as the Boavizta
+ * and Ecologits modules are.
  */
 public final class ConformanceCore
 {
@@ -79,10 +90,26 @@ public final class ConformanceCore
         Context context = new Context(List.of(new Environment(ENVIRONMENT, List.of(asset))));
         return new WombatCore(
             () -> context,
+            new WombatServices(SecretResolver.standard(), new MetricResolvers(mock(KubernetesMetricResolver.class), mock(LLMMetricResolver.class)), List.of()),
             (identity, type, metrics) -> {},
-            List.of(this.module),
-            defaults -> defaults.register(this.engine.family(), null, (services, a) -> this.engine.resolver(), null)
+            List.of(this.module, new EngineModule(this.engine))
         );
+    }
+
+    /** Stands for the methodology the engine reproduces, built on recorded responses rather than on a live API. */
+    private record EngineModule(CanonicalEngine engine) implements WombatModule
+    {
+        @Override
+        public FamilyType type()
+        {
+            return FamilyType.of("tech.illuin", "wombat-conformance", "engine", this.engine.family());
+        }
+
+        @Override
+        public Optional<ProcessorFactory<WombatEvaluationResolver>> impactResolver()
+        {
+            return Optional.of((services, asset) -> this.engine.resolver());
+        }
     }
 
     private record Context(List<Environment> environments) implements WombatContext

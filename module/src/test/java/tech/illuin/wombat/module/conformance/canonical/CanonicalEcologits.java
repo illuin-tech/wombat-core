@@ -9,9 +9,9 @@ import tech.illuin.wombat.core.activity.llm.LLMActivityData;
 import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
-import tech.illuin.wombat.core.connector.ecologits.impact.EcologitsEvaluationResolver;
+import tech.illuin.wombat.module.ecologits.impact.EcologitsEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
-import tech.illuin.wombat.module.connector.ecologits.EcologitsClientConfig;
+import tech.illuin.wombat.module.ecologits.connector.EcologitsClientConfig;
 
 import java.io.IOException;
 import java.net.URI;

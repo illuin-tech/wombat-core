@@ -1,0 +1,346 @@
+package tech.illuin.wombat.module.boavizta.impact;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.illuin.wombat.core.activity.commons.ActivityData;
+import tech.illuin.wombat.core.activity.commons.Country;
+import tech.illuin.wombat.core.activity.commons.TimeRange;
+import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.asset.profile.ServerProvider;
+import tech.illuin.wombat.module.boavizta.connector.BoaviztaClient;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaImpactResponse;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaInstanceConfigResponse;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaCloudInstanceImpactRequest;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaUsage;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaServerImpactRequest;
+import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaServerProvider;
+import tech.illuin.wombat.core.evaluation.AssetEvaluation;
+import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
+import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
+import tech.illuin.wombat.core.evaluation.impact.commons.*;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesImpact;
+import tech.illuin.wombat.core.activity.kubernetes.KubernetesActivityData;
+import tech.illuin.wombat.core.activity.kubernetes.NanocoresCPUUsage;
+import tech.illuin.wombat.core.activity.kubernetes.RelativeCPUUsage;
+import tech.illuin.wombat.core.asset.profile.BareServerProfile;
+import tech.illuin.wombat.core.asset.profile.CloudServerProfile;
+import tech.illuin.wombat.core.asset.profile.ServerProfile;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.ServerSpecification;
+
+import java.time.Duration;
+import java.util.*;
+
+public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
+{
+    private final BoaviztaClient client;
+
+    private static final double NANOCORES_PER_CORE = 1_000_000_000.0;
+    private static final double FULL_LOAD = 100.0;
+    private static final Set<String> CRITERIA = Set.of("gwp", "adp", "pe");
+    /** Boavizta's world average, ISO 3166 having no code for the world. */
+    private static final String WORLD_LOCATION = "WOR";
+    private static final String rebalanceWarning = "This usage has been rebalanced by the Wombat service, it does not come from the Boavizta API";
+    private static final String timeProrationWarning = "This impact has been prorated to the requested time range by the Wombat service";
+
+    private static final Logger logger = LoggerFactory.getLogger(BoaviztaEvaluationResolver.class);
+
+    public BoaviztaEvaluationResolver(BoaviztaClient client)
+    {
+        this.client = client;
+    }
+
+    @Override
+    public boolean accept(Asset asset)
+    {
+        return asset.profile() instanceof ServerProfile;
+    }
+
+    @Override
+    public AssetEvaluation resolve(Asset asset, ActivityData activity) throws WombatEvaluationException
+    {
+        ServerProfile profile = (ServerProfile) asset.profile();
+        KubernetesActivityData kubernetesActivityData = (KubernetesActivityData) activity;
+
+        BoaviztaImpactResponse impactResponse;
+        ServerSpecification specification = this.computeSpecification(profile);
+        int vcpu = specification.vcpu() != null ? specification.vcpu() : 0;
+        double loadPercent;
+        int nodeCount;
+
+        if (kubernetesActivityData.cpuUsage() instanceof RelativeCPUUsage relativeUsage)
+        {
+            double ratio = relativeUsage.ratio();
+            loadPercent = ratio * FULL_LOAD;
+            nodeCount = profile.nodeCount();
+            logger.info("Relative CPU load {}% over {} node(s)", loadPercent, nodeCount);
+
+            BoaviztaImpactResponse singleNodeImpact = this.requestImpactFromPercentage(profile, loadPercent);
+            impactResponse = scale(singleNodeImpact, nodeCount);
+        }
+        else if (kubernetesActivityData.cpuUsage() instanceof NanocoresCPUUsage nanocoresUsage)
+        {
+            double nanocores = nanocoresUsage.nanocores();
+            double cpuUsageCore = nanocores / NANOCORES_PER_CORE;
+            loadPercent = vcpu > 0 ? cpuUsageCore / vcpu * 100.0 : 0.0;
+            nodeCount = specification.nodesRequired(cpuUsageCore);
+            logger.info("Used CPU load {} ({} node(s) required)", cpuUsageCore, nodeCount);
+
+            impactResponse = this.computeImpact(profile, specification, nanocores);
+        }
+        else
+            throw new WombatEvaluationException("Unsupported CPUUsage type: " + (kubernetesActivityData.cpuUsage() != null ? kubernetesActivityData.cpuUsage().getClass() : "null"));
+
+        List<Share> includedShares = includedShares(kubernetesActivityData.containerShares(), kubernetesActivityData.serviceIds());
+
+        Comparator<KubernetesImpact> comparator = Comparator.comparingDouble(
+            ki -> ki.footprint().gwp().totalValue()
+        );
+        List<ServiceImpact> serviceImpacts = includedShares.stream()
+            .map(share -> new KubernetesImpact(
+                share.serviceId(),
+                asset.type(),
+                profile,
+                share.share(),
+                this.convert(impactResponse, share.share(), kubernetesActivityData.range(), profile.lifespan().asHours()),
+                kubernetesActivityData.containerLocations().get(share.serviceId()),
+                specification,
+                loadPercent,
+                nodeCount
+            ))
+            .sorted(comparator.reversed())
+            .map(ki -> (ServiceImpact) ki)
+            .toList()
+        ;
+
+        Footprint globalFootprint = this.resolveGlobalFootprint(impactResponse, includedShares, kubernetesActivityData.range(), profile.lifespan().asHours());
+
+        return new AssetImpact(
+            asset.identity(),
+            globalFootprint,
+            serviceImpacts,
+            ImpactProvider.BOAVIZTA,
+            activity.range()
+        );
+    }
+
+    private Footprint resolveGlobalFootprint(
+        BoaviztaImpactResponse providerResponse,
+        List<Share> shares,
+        TimeRange timeRange,
+        long lifespanHours
+    ) {
+        double globalShare = shares.stream().mapToDouble(Share::share).sum();
+        return this.convert(providerResponse, globalShare, timeRange, lifespanHours);
+    }
+
+    private static List<Share> includedShares(Map<String, Double> containerShares, Collection<String> serviceIds)
+    {
+        Set<String> serviceFilter = (serviceIds == null || serviceIds.isEmpty())
+            ? containerShares.keySet()
+            : new HashSet<>(serviceIds);
+
+        return containerShares.entrySet().stream()
+            .filter(share -> serviceFilter.contains(share.getKey()))
+            .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+            .map(share -> new Share(share.getKey(), share.getValue()))
+            .toList();
+    }
+
+    private BoaviztaImpactResponse computeImpact(ServerProfile profile, ServerSpecification specs, double load)
+    {
+        int vcpu = specs.vcpu() != null  ? specs.vcpu() : 0;
+        double cores = load / NANOCORES_PER_CORE;
+        int nodeCount = specs.nodesRequired(cores);
+
+        logger.info("Server has {} vCPU; {} cores used spread over {} node(s)", vcpu, cores, nodeCount);
+
+        BoaviztaImpactResponse impact = vcpu > 0
+            ? this.computeImpactFromRatio(profile, cores / vcpu)
+            : this.requestImpactFromPercentage(profile, 0.0);
+
+        return new BoaviztaImpactResponse(impact.impacts(), nodeCount);
+    }
+
+    private BoaviztaImpactResponse computeImpactFromRatio(ServerProfile profile, double loadRatio)
+    {
+        if (loadRatio <= 1.0)
+            return this.requestImpactFromPercentage(profile, loadRatio * FULL_LOAD);
+
+        int fullNodes = (int) Math.floor(loadRatio);
+        double remainder = loadRatio - fullNodes;
+
+        logger.info("Load ratio {} exceeds one node: {} node(s) at 100% + remainder {}", loadRatio, fullNodes, remainder);
+
+        BoaviztaImpactResponse total = scale(this.requestImpactFromPercentage(profile, FULL_LOAD), fullNodes);
+        if (remainder > 0)
+            total = add(total, this.requestImpactFromPercentage(profile, remainder * FULL_LOAD));
+        return total;
+    }
+
+    /*
+     * Boavizta allocates the embedded impacts as total × duration / hours_life_time: with both set to the lifespan, the
+     * response holds the whole lifespan's impacts, which convert() then prorates to the slot.
+     */
+    private BoaviztaImpactResponse requestImpactFromPercentage(ServerProfile profile, double loadPercentage)
+    {
+        long lifespanHours = profile.lifespan().asHours();
+        BoaviztaUsage usage = new BoaviztaUsage(
+            getLocation(profile.location()),
+            List.of(new BoaviztaUsage.LoadSegment(100, loadPercentage)),
+            (double) lifespanHours
+        );
+        return switch (profile) {
+            case CloudServerProfile cloud -> this.client.getInstanceImpact(
+                true, (int) lifespanHours, CRITERIA,
+                new BoaviztaCloudInstanceImpactRequest(getProvider(cloud.provider()), cloud.instanceType(), usage)
+            );
+            case BareServerProfile server -> this.client.getServerImpact(
+                true, (int) lifespanHours, CRITERIA,
+                new BoaviztaServerImpactRequest(serverConfiguration(server), usage)
+            );
+        };
+    }
+
+    private static BoaviztaServerImpactRequest.Configuration serverConfiguration(BareServerProfile server)
+    {
+        List<BoaviztaServerImpactRequest.Configuration.Disk> disks = new ArrayList<>();
+        if (server.ssd() != null)
+            disks.add(new BoaviztaServerImpactRequest.Configuration.Disk(server.ssd().units(), "ssd", server.ssd().capacity()));
+        if (server.hdd() != null)
+            disks.add(new BoaviztaServerImpactRequest.Configuration.Disk(server.hdd().units(), "hdd", server.hdd().capacity()));
+
+        return new BoaviztaServerImpactRequest.Configuration(
+            new BoaviztaServerImpactRequest.Configuration.CPU(server.cpu().units(), server.cpu().coreUnits(), server.cpu().name()),
+            List.of(new BoaviztaServerImpactRequest.Configuration.RAM(server.ram().units(), server.ram().capacity())),
+            disks.isEmpty() ? null : disks,
+            server.gpu() != null ? new BoaviztaServerImpactRequest.Configuration.GPU(server.gpu().units(), server.gpu().name()) : null
+        );
+    }
+
+    private static BoaviztaImpactResponse scale(BoaviztaImpactResponse response, double factor)
+    {
+        Map<String, BoaviztaImpactResponse.Impact> scaled = new LinkedHashMap<>();
+        response.impacts().forEach((key, impact) -> scaled.put(key, scaleImpact(impact, factor)));
+        return new BoaviztaImpactResponse(scaled, 0);
+    }
+
+    private static BoaviztaImpactResponse.Impact scaleImpact(BoaviztaImpactResponse.Impact impact, double factor)
+    {
+        return new BoaviztaImpactResponse.Impact(impact.unit(), impact.description(), scaleItem(impact.embedded(), factor), scaleItem(impact.use(), factor));
+    }
+
+    private static BoaviztaImpactResponse.Impact.ImpactItem scaleItem(BoaviztaImpactResponse.Impact.ImpactItem item, double factor)
+    {
+        if (item == null) return null;
+        return new BoaviztaImpactResponse.Impact.ImpactItem((float) (item.value() * factor), (float) (item.min() * factor), (float) (item.max() * factor), item.warnings());
+    }
+
+    private static BoaviztaImpactResponse add(BoaviztaImpactResponse left, BoaviztaImpactResponse right)
+    {
+        Map<String, BoaviztaImpactResponse.Impact> sum = new LinkedHashMap<>(left.impacts());
+        right.impacts().forEach((key, impact) -> sum.merge(key, impact, BoaviztaEvaluationResolver::addImpact));
+        return new BoaviztaImpactResponse(sum, 0);
+    }
+
+    private static BoaviztaImpactResponse.Impact addImpact(BoaviztaImpactResponse.Impact left, BoaviztaImpactResponse.Impact right)
+    {
+        return new BoaviztaImpactResponse.Impact(left.unit(), left.description(), addItem(left.embedded(), right.embedded()), addItem(left.use(), right.use()));
+    }
+
+    private static BoaviztaImpactResponse.Impact.ImpactItem addItem(BoaviztaImpactResponse.Impact.ImpactItem left, BoaviztaImpactResponse.Impact.ImpactItem right)
+    {
+        if (left == null)
+            return right;
+        if (right == null)
+            return left;
+        List<String> warnings = new ArrayList<>();
+        if (left.warnings() != null)
+            warnings.addAll(left.warnings());
+        if (right.warnings() != null)
+            warnings.addAll(right.warnings());
+        return new BoaviztaImpactResponse.Impact.ImpactItem(left.value() + right.value(), left.min() + right.min(), left.max() + right.max(), warnings);
+    }
+
+    public Footprint convert(BoaviztaImpactResponse impact, Double share, TimeRange range, long lifespanHours)
+    {
+        double prorationFactor = Duration.between(range.start(), range.end()).toSeconds() / (double) (lifespanHours * 3600L);
+        return new Footprint(
+            convert(impact.impacts().get("gwp"), share, prorationFactor),
+            convert(impact.impacts().get("pe"), share, prorationFactor),
+            convert(impact.impacts().get("adp"), share, prorationFactor)
+        );
+    }
+
+    private static Footprint.FootprintImpact convert(BoaviztaImpactResponse.Impact input, Double share, double prorationFactor)
+    {
+        if (input == null)
+            return null;
+        List<String> embeddedWarnings = new ArrayList<>(input.embedded().warnings() == null ? Collections.emptyList() : input.embedded().warnings());
+        List<String> useWarnings = new ArrayList<>(input.use().warnings() == null ? Collections.emptyList() : input.use().warnings());
+        if (share != 1.0d)
+        {
+            embeddedWarnings.add(rebalanceWarning);
+            useWarnings.add(rebalanceWarning);
+        }
+        embeddedWarnings.add(timeProrationWarning);
+        useWarnings.add(timeProrationWarning);
+
+        return new Footprint.FootprintImpact(
+            input.unit(),
+            input.description(),
+            new Footprint.FootprintImpact.FootprintImpactItem(
+                (float) (input.embedded().value() * share * prorationFactor),
+                embeddedWarnings
+            ),
+            new Footprint.FootprintImpact.FootprintImpactItem(
+                (float) (input.use().value() * share * prorationFactor),
+                useWarnings
+            )
+        );
+    }
+
+    public ServerSpecification computeSpecification(ServerProfile profile)
+    {
+        return switch (profile) {
+            case CloudServerProfile cloud -> convert(this.client.getInstanceConfig(getProvider(cloud.provider()), cloud.instanceType()));
+            case BareServerProfile server -> convert(server);
+        };
+    }
+
+    private static ServerSpecification convert(BareServerProfile server)
+    {
+        return new ServerSpecification(
+            server.cpu().vcpu(),
+            server.ram().units() * server.ram().capacity(),
+            server.ssd() != null ? server.ssd().units() * server.ssd().capacity() : null,
+            server.hdd() != null ? server.hdd().units() * server.hdd().capacity() : 0,
+            server.gpu() != null ? server.gpu().units() : 0,
+            null
+        );
+    }
+
+    private static ServerSpecification convert(BoaviztaInstanceConfigResponse config)
+    {
+        return new ServerSpecification(
+            config.vcpu() == null || config.vcpu().def() == null ? 0 : config.vcpu().def(),
+            config.memory() == null || config.memory().def() == null ? 0 : config.memory().def(),
+            config.ssdStorage() == null || config.ssdStorage().def() == null ? 0 : config.ssdStorage().def(),
+            config.hddStorage() == null || config.hddStorage().def() == null ? 0 : config.hddStorage().def(),
+            config.gpuUnits() == null || config.gpuUnits().def() == null ? 0 : config.gpuUnits().def(),
+            config.platform() == null || config.platform().def() == null ? null : config.platform().def()
+        );
+    }
+
+    private static BoaviztaServerProvider getProvider(ServerProvider provider)
+    {
+        return BoaviztaServerProvider.forName(provider)
+            .orElseThrow(() -> new IllegalArgumentException("Unsupported Server provider: " + provider));
+    }
+
+    private static String getLocation(Country location)
+    {
+        return location == Country.WORLD ? WORLD_LOCATION : location.alpha3();
+    }
+
+    private record Share(String serviceId, double share) {}
+}

@@ -135,6 +135,8 @@ Core modules provide ready-to-use implementations of asset types and their assoc
 
 Below is a list of currently implemented core modules shipped as part of the `wombat-core-module` library. Follow the links to each of their dedicated documentation for more information on how to use them.
 
+Asset-type modules define a kind of asset and serve the assets of that type:
+
 | Module                                                                                 | Family                 | Description                                                                                                          |
 |----------------------------------------------------------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------|
 | [`tech.illuin.wombat-module.kubernetes-api`](doc/module/kubernetes-api.md)             | `KUBERNETES_CONTAINER` | Connects to Kubernetes cluster APIs to poll CPU and memory resource metrics.                                         |
@@ -144,31 +146,28 @@ Below is a list of currently implemented core modules shipped as part of the `wo
 | [`tech.illuin.wombat-module.llm-anthropic`](doc/module/llm-anthropic.md)               | `LLM`                  | Queries the Anthropic Admin usage report on demand for per-model token usage over the evaluated time range.          |
 | [`tech.illuin.wombat-module.llm-vertexai`](doc/module/llm-vertexai.md)                 | `LLM`                  | Queries the VertexAI usage report on demand for per-model token usage over the evaluated time range.                 |
 
-#### Default Components
+Family modules define no asset, and serve every asset of their family (see [Family Modules](#family-modules)):
+
+| Module                                                                                 | Family                 | Description                                                                                                          |
+|----------------------------------------------------------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------|
+| [`tech.illuin.wombat-module.kubernetes-metrics`](doc/module/kubernetes-metrics.md)     | `KUBERNETES_CONTAINER` | Resolves the activity of sourced Kubernetes assets from the container metrics in the metric store.                   |
+| [`tech.illuin.wombat-module.llm-metrics`](doc/module/llm-metrics.md)                   | `LLM`                  | Resolves the activity of sourced LLM assets from the request and token metrics in the metric store.                  |
+| [`tech.illuin.wombat-module.boavizta`](doc/module/boavizta.md)                         | `KUBERNETES_CONTAINER` | Estimates multi-criteria impacts (GHG emissions, primary energy, abiotic depletion) of server workloads with Boavizta. |
+| [`tech.illuin.wombat-module.ecologits`](doc/module/ecologits.md)                       | `LLM`                  | Estimates multi-criteria footprints of LLM inferences with EcoLogits.                                                |
+
+#### Family Modules
 
 While `WombatModules` are allowed to declare specific [asset types](doc/concept-definition.md#technical-concepts) and introduce a complete pipeline for resolving activity and making impact estimates, most of the time you will only want an override for a single part of the pipeline, like a `WombatSource`, or a `WombatActivityResolver`.
 
 For instance, if you need to sample LLM service data from a specific database, you will only be concerned about a `WombatSource` implementation.
 
-In such cases, the rest of the pipeline will rely on "default components" based on the [service family](doc/type-glossary.md#servicefamily).
-Basically, for each part of the pipeline [described earlier](#core-principles) there are two scenarios:
+In such cases, the rest of the pipeline relies on the modules serving the asset's [service family](doc/type-glossary.md#servicefamily) as a whole. A module's `type()` says what it serves: an `AssetType` it defines, or a `FamilyType` naming a family. For each part of the pipeline, and for a given asset:
 
-* either the type of the `Asset` being evaluated requires its own component as declared by its associated `WombatModule`, and the engine will use that
-* or, the type of the `Asset` being evaluated has no such requirement, in which case the corresponding default for this `Asset`'s family will be used
+* the module of the asset's type is asked first, if it provides that part
+* then the family modules of the asset's family, in the order they were registered
+* the first component to accept the asset (`AssetProcessor.accept`) serves it ; when none does, the asset is not evaluated for that part
 
-At the time of this writing, the `wombat-core` library ships with the following default component implementations:
-
-For the `KUBERNETES_CONTAINER` family:
-* Activity Resolvers:
-  * `KubernetesActivityResolver` aggregates historical container and node metrics from a metric store
-* Evaluation Resolvers:
-  * `BoaviztaEvaluationResolver` estimates multi-criteria environmental impacts (GHG emissions, primary energy, abiotic depletion) for server and container workloads using the Boavizta API
-
-For the `LLM` family:
-* Activity Resolvers:
-  * `LLMActivityResolver` aggregates historical LLM request activity and token consumption from a metric store
-* Evaluation Resolvers:
-  * `EcologitsEvaluationResolver` estimates multi-criteria environmental footprints for AI/LLM inferences using EcoLogits
+A family module is a module like any other: it is detected, registered and closed the same way, and its components follow the same [lifecycle](#component-lifecycle). The family modules above are what an asset-type module falls back to, e.g. `kubernetes-api` only sources metrics, and relies on `kubernetes-metrics` to read them back and on `boavizta` to estimate their impacts.
 
 ## How to Use
 
@@ -231,34 +230,34 @@ LLMMetricResolver llmMetricResolver = new MicrometerLLMMetricResolver(meterRegis
 
 #### Now, assemble the `WombatCore`
 
-The `WombatCore` is also handed `WombatServices`, the system components made available to modules. For now this is the `SecretResolver` modules use to read the credentials their assets reference by key (an API key, a password, etc.). `SecretResolver.standard()` reads them from the process environment, which is also what the `WombatCore` falls back to when no `WombatServices` is given. It only reads variables prefixed with `WOMBAT_ASSET_SECRET_`: the key `PROM_PASSWORD` reads `WOMBAT_ASSET_SECRET_PROM_PASSWORD`, so an asset cannot reach the other variables of the process.
+The `WombatCore` is handed `WombatServices`, the system components made available to modules:
+* the `SecretResolver` modules use to read the credentials their assets reference by key (an API key, a password, etc.). `SecretResolver.standard()` reads them from the process environment. It only reads variables prefixed with `WOMBAT_ASSET_SECRET_`: the key `PROM_PASSWORD` reads `WOMBAT_ASSET_SECRET_PROM_PASSWORD`, so an asset cannot reach the other variables of the process.
+* the `MetricResolvers`, the read side of the metric store the `WombatMetricPersister` writes to, from which the `kubernetes-metrics` and `llm-metrics` modules resolve the activity of sourced assets
+* the `ModuleSettings` of the modules that have some, e.g. the endpoint of a self-hosted BoaviztAPI ; a module given none applies its defaults
 
-[Default components](#default-components) are registered per family as factories, `null` meaning there is no default for that part of the pipeline. Assets whose type has neither a module component nor a default for a given part are not evaluated for that part, and an error is logged when the evaluator is created.
+Every part of the pipeline comes from a module, the [family modules](#family-modules) included. Assets whose type has no module component, and no family module component, for a given part are not evaluated for that part, and an error is logged when the evaluator is created.
 
 ```java
-/* From wombat-core-module, against the public APIs or your own instances; the second argument is an optional HTTP proxy, e.g. "http://proxy:3128" */
-BoaviztaClient boaviztaClient = BoaviztaClientConfig.create("https://api.boavizta.org/v1/", null);
-EcologitsClient ecologitsClient = EcologitsClientConfig.create("https://api.ecologits.ai/", null);
-
-/* Default components are stateless, a single instance can serve every asset */
-WombatActivityResolver k8sActivity = new KubernetesActivityResolver(k8sMetricResolver);
-WombatActivityResolver llmActivity = new LLMActivityResolver(llmMetricResolver);
-WombatEvaluationResolver boavizta = new BoaviztaEvaluationResolver(boaviztaClient);
-WombatEvaluationResolver ecologits = new EcologitsEvaluationResolver(ecologitsClient);
+WombatServices services = new WombatServices(
+    SecretResolver.standard(),
+    new MetricResolvers(k8sMetricResolver, llmMetricResolver),
+    /* Optional: the public APIs apply otherwise; the second argument is an HTTP proxy, e.g. "http://proxy:3128" */
+    List.of(new BoaviztaSettings("http://boaviztapi:5000/v1/", null))
+);
 
 try (WombatCore core = new WombatCore(
     contextProvider,
-    new WombatServices(SecretResolver.standard()),
+    services,
     metricPersister,
     List.of(
         new KubernetesAPIModule(),
         new KubernetesStaticModule(),
-        new LLMStaticModule()
-    ),
-    defaults -> {
-        defaults.register(KUBERNETES_CONTAINER, (services, asset) -> k8sActivity, (services, asset) -> boavizta, null);
-        defaults.register(LLM, (services, asset) -> llmActivity, (services, asset) -> ecologits, null);
-    }
+        new LLMStaticModule(),
+        new KubernetesMetricsModule(),
+        new LLMMetricsModule(),
+        new BoaviztaModule(),
+        new EcologitsModule()
+    )
 )) {
     /* The evaluator keeps the resolvers it built for each asset, you should reuse it throughout your app ; e.g. make it injectable if applicable */
     AssetEvaluator evaluator = core.createEvaluator();
@@ -275,6 +274,8 @@ Both the `AssetMonitor` and the `AssetEvaluator` read the context on every call:
 
 Custom modules enable tracking domain-specific assets , integrating custom activity modeling or even custom impact/cost resolving. To create a custom module, define an `Asset` with its profile, implement `WombatModule`, and provide factories for the relevant components (such as a `WombatActivityResolver`).
 
+A module bringing a methodology for a whole family rather than an asset-type, e.g. another impact estimation for LLMs, returns a `FamilyType` from `type()`, declares no asset class, and provides the same factories: see the [Ecologits module](module/src/main/java/tech/illuin/wombat/module/ecologits/EcologitsModule.java) for one with its own `ModuleSettings`.
+
 Here is an example of a custom module providing modeled activity data for LLM traffic:
 
 ```java
@@ -288,7 +289,7 @@ public class MySimulationModule implements WombatModule
     public AssetType type() { return TYPE; }
 
     @Override
-    public Class<? extends Asset> assetClass() { return MySimulationAsset.class; }
+    public Optional<Class<? extends Asset>> assetClass() { return Optional.of(MySimulationAsset.class); }
 
     @Override
     public Optional<ProcessorFactory<WombatActivityResolver>> activityResolver()
@@ -372,7 +373,9 @@ A module never builds its components upfront: each method of `WombatModule` retu
 * a component is built once per asset identity (`AssetIdentity`) and then kept
 * the component is handed the asset as it currently is on every call, so its settings should be read from there rather than captured by the factory ; anything built by the factory remains as it was built until the asset is refreshed with `refresh(asset.identity())`, or leaves the context
 * if the component implements `AutoCloseable`, it is closed when its asset is refreshed or leaves the context, and when the `AssetMonitor` or `AssetEvaluator` is closed
-* a factory may return the same instance for every asset (as the default components above do), such an instance must then not implement `AutoCloseable` since it would be closed along with the first asset to go ; release its resources from `WombatModule.close()` instead
+* a family module's components follow the same rules: they are built once per asset identity they serve, and handed that asset on every call
+* when the first candidate built for an asset rejects it (`accept`), it is discarded at once, closed if it implements `AutoCloseable`, and the next candidate is built
+* a factory may return the same instance for every asset, such an instance must then not implement `AutoCloseable` since it would be closed along with the first asset to go ; release its resources from `WombatModule.close()` instead
 * a factory failing leaves nothing behind: its exception propagates to the call that needed the component, and building it is attempted again the next time it is needed
 
 ## How to build
