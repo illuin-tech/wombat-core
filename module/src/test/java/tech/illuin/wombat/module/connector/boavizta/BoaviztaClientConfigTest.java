@@ -7,7 +7,8 @@ import feign.Response;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.connector.boavizta.connector.BoaviztaClient;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaCloudInstanceImpactRequest;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaUsage;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerProvider;
 
 import java.io.IOException;
@@ -51,10 +52,10 @@ class BoaviztaClientConfigTest
             false,
             24,
             Set.of("gwp"),
-            new BoaviztaInstanceImpactRequest(
+            new BoaviztaCloudInstanceImpactRequest(
                 BoaviztaServerProvider.aws,
                 "c5.2xlarge",
-                new BoaviztaInstanceImpactRequest.Usage("FRA", List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, 30.0)))
+                new BoaviztaUsage("FRA", List.of(new BoaviztaUsage.LoadSegment(100, 30.0)))
             )
         );
 

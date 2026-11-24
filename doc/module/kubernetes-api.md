@@ -36,12 +36,54 @@ namespaces: # optional (default: empty) - Whitelist of Kubernetes namespaces to 
 context: "prod-cluster-ctx" # optional (default: active context) - Kubeconfig context name to target.
 read-timeout: "PT10S" # optional (default: client default) - HTTP read timeout for Kubernetes API requests.
 period: "5m" # optional (default: monitor default) - Polling interval for metric sampling (e.g. `30s`, `1m`, `5m`, `1h`).
-profile: # required - Server hardware profile configuration.
+profile: # required - Server hardware profile configuration, a cloud instance type or a bare server specification (see Profile Types).
+  type: "cloud" # optional (default: `cloud`) - Profile type: `cloud` for a provider's instance type, `server` for a bare server specification.
   provider: "aws" # required - Infrastructure provider (`aws`, `azure`, `gcp`, `ovhcloud`, `scaleway`).
   instance-type: "m5.2xlarge" # required - Machine or virtual instance specification (e.g. `m5.xlarge`, `n2-standard-4`).
   location: "FRA" # required - ISO 3166-1 alpha-3 (or alpha-2) country code (e.g. `FRA`, `USA`, `DEU`).
   lifespan: "5y" # required - Expected operational lifespan of server hardware (e.g. `5y`, `60m`, `1825d`).
 ```
+
+## Profile Types
+
+The `profile.type` property selects how the nodes' hardware is described. Profiles without a `type` are `cloud` ones.
+
+### `cloud`
+
+The nodes are instances of a cloud provider's catalog: `provider` and `instance-type` identify them in the Boavizta dataset, which supplies their hardware and vCPU count. Its properties are listed in the configuration specification above.
+
+### `server`
+
+The nodes are bare servers, specified component by component: on-premises machines, or providers and instance types the Boavizta dataset does not cover. Their impacts come from Boavizta's server endpoint.
+
+```yaml
+id: "k8s-onprem-cluster" # required - Unique identifier for the monitored asset.
+environment-id: "production" # required - Identifier of the target environment.
+kubeconfig-key: "secrets.kubernetes.onprem" # required - Secret holding the kubeconfig contents.
+profile: # required - Server hardware profile configuration.
+  type: "server" # required - Selects the bare server specification.
+  location: "FRA" # required - ISO 3166-1 alpha-3 (or alpha-2) country code.
+  lifespan: "5y" # required - Expected operational lifespan of server hardware.
+  cpu: # required - Processors of a node.
+    units: 2 # required - Number of processors.
+    core-units: 24 # required - Number of cores per processor.
+    threads-per-core: 2 # optional (default: 2) - Hardware threads per core.
+    name: "Intel Xeon Gold 6342" # optional (default: Boavizta's default) - Processor model.
+  ram: # required - Memory of a node.
+    units: 8 # required - Number of memory modules.
+    capacity: 32 # required - Capacity of a module, in GB.
+  ssd: # optional (default: Boavizta's default, one 1 TB SSD) - SSDs of a node.
+    units: 2 # required - Number of disks.
+    capacity: 960 # required - Capacity of a disk, in GB.
+  hdd: # optional (default: none) - HDDs of a node.
+    units: 1 # required - Number of disks.
+    capacity: 4000 # required - Capacity of a disk, in GB.
+  gpu: # optional (default: none) - GPUs of a node.
+    units: 1 # required - Number of GPUs.
+    name: "NVIDIA A100" # optional (default: Boavizta's default) - GPU model.
+```
+
+A node's vCPU count, against which the measured CPU usage is set, is `units` × `core-units` × `threads-per-core`: 96 in the example above.
 
 ## Basic Setup
 

@@ -10,7 +10,7 @@ import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.activity.kubernetes.KubernetesActivityData;
 import tech.illuin.wombat.core.activity.kubernetes.RelativeCPUUsage;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.profile.ServerProfile;
+import tech.illuin.wombat.core.asset.profile.CloudServerProfile;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.connector.boavizta.impact.BoaviztaEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
@@ -73,8 +73,8 @@ public final class CanonicalBoavizta implements CanonicalEngine
     @Override
     public CanonicalImpacts evaluate(Asset asset, List<ActivityData> activity)
     {
-        if (!(asset.profile() instanceof ServerProfile profile))
-            throw new IllegalArgumentException("asset " + asset.identity().id() + " has no server profile");
+        if (!(asset.profile() instanceof CloudServerProfile profile))
+            throw new IllegalArgumentException("asset " + asset.identity().id() + " has no cloud server profile");
 
         double totalHours = activity.stream().mapToDouble(CanonicalBoavizta::hours).sum();
         List<Segment> workload = activity.stream()

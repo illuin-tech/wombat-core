@@ -3,7 +3,8 @@ package tech.illuin.wombat.module.conformance;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaCloudInstanceImpactRequest;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaUsage;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerProvider;
 import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationRequest;
 import tech.illuin.wombat.core.connector.ecologits.connector.model.EcologitsEstimationResponse;
@@ -42,10 +43,10 @@ class SidecarSmokeTest
             true,
             8760,
             Set.of("gwp", "adp", "pe"),
-            new BoaviztaInstanceImpactRequest(
+            new BoaviztaCloudInstanceImpactRequest(
                 BoaviztaServerProvider.aws,
                 "c5.2xlarge",
-                new BoaviztaInstanceImpactRequest.Usage("FRA", List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, 30.0)))
+                new BoaviztaUsage("FRA", List.of(new BoaviztaUsage.LoadSegment(100, 30.0)))
             )
         );
         CanonicalImpacts canonical = new CanonicalBoavizta(ConformanceSidecars.boaviztaUri())

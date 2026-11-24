@@ -10,7 +10,9 @@ import tech.illuin.wombat.core.asset.profile.ServerProvider;
 import tech.illuin.wombat.core.connector.boavizta.connector.BoaviztaClient;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceConfigResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaCloudInstanceImpactRequest;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaUsage;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerImpactRequest;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerProvider;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
@@ -20,6 +22,8 @@ import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesImpact;
 import tech.illuin.wombat.core.activity.kubernetes.KubernetesActivityData;
 import tech.illuin.wombat.core.activity.kubernetes.NanocoresCPUUsage;
 import tech.illuin.wombat.core.activity.kubernetes.RelativeCPUUsage;
+import tech.illuin.wombat.core.asset.profile.BareServerProfile;
+import tech.illuin.wombat.core.asset.profile.CloudServerProfile;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.ServerSpecification;
 
@@ -32,6 +36,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
 
     private static final double NANOCORES_PER_CORE = 1_000_000_000.0;
     private static final double FULL_LOAD = 100.0;
+    private static final Set<String> CRITERIA = Set.of("gwp", "adp", "pe");
     /** Boavizta's world average, ISO 3166 having no code for the world. */
     private static final String WORLD_LOCATION = "WOR";
     private static final String rebalanceWarning = "This usage has been rebalanced by the Wombat service, it does not come from the Boavizta API";
@@ -80,7 +85,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             nodeCount = specification.nodesRequired(cpuUsageCore);
             logger.info("Used CPU load {} ({} node(s) required)", cpuUsageCore, nodeCount);
 
-            impactResponse = this.computeImpact(profile, nanocores);
+            impactResponse = this.computeImpact(profile, specification, nanocores);
         }
         else
             throw new WombatEvaluationException("Unsupported CPUUsage type: " + (kubernetesActivityData.cpuUsage() != null ? kubernetesActivityData.cpuUsage().getClass() : "null"));
@@ -141,16 +146,13 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             .toList();
     }
 
-    private BoaviztaImpactResponse computeImpact(ServerProfile profile, double load)
+    private BoaviztaImpactResponse computeImpact(ServerProfile profile, ServerSpecification specs, double load)
     {
-        BoaviztaInstanceConfigResponse instanceConfig = this.getInstanceConfig(profile.provider(), profile.instanceType());
-
-        ServerSpecification specs = convert(instanceConfig);
         int vcpu = specs.vcpu() != null  ? specs.vcpu() : 0;
         double cores = load / NANOCORES_PER_CORE;
         int nodeCount = specs.nodesRequired(cores);
 
-        logger.info("Boavizta instance has {} vCPU; {} cores used spread over {} node(s)", vcpu, cores, nodeCount);
+        logger.info("Server has {} vCPU; {} cores used spread over {} node(s)", vcpu, cores, nodeCount);
 
         BoaviztaImpactResponse impact = vcpu > 0
             ? this.computeImpactFromRatio(profile, cores / vcpu)
@@ -182,28 +184,37 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     private BoaviztaImpactResponse requestImpactFromPercentage(ServerProfile profile, double loadPercentage)
     {
         long lifespanHours = profile.lifespan().asHours();
-        return this.getInstanceImpact(
-            new BoaviztaInstanceImpactRequest(
-                getProvider(profile.provider()),
-                profile.instanceType(),
-                new BoaviztaInstanceImpactRequest.Usage(
-                    getLocation(profile.location()),
-                    List.of(new BoaviztaInstanceImpactRequest.Usage.LoadSegment(100, loadPercentage)),
-                    (double) lifespanHours
-                )
-            ),
-            (int) lifespanHours
+        BoaviztaUsage usage = new BoaviztaUsage(
+            getLocation(profile.location()),
+            List.of(new BoaviztaUsage.LoadSegment(100, loadPercentage)),
+            (double) lifespanHours
         );
+        return switch (profile) {
+            case CloudServerProfile cloud -> this.client.getInstanceImpact(
+                true, (int) lifespanHours, CRITERIA,
+                new BoaviztaCloudInstanceImpactRequest(getProvider(cloud.provider()), cloud.instanceType(), usage)
+            );
+            case BareServerProfile server -> this.client.getServerImpact(
+                true, (int) lifespanHours, CRITERIA,
+                new BoaviztaServerImpactRequest(serverConfiguration(server), usage)
+            );
+        };
     }
 
-    private BoaviztaImpactResponse getInstanceImpact(BoaviztaInstanceImpactRequest request, int duration)
+    private static BoaviztaServerImpactRequest.Configuration serverConfiguration(BareServerProfile server)
     {
-        return this.client.getInstanceImpact(true, duration, Set.of("gwp", "adp", "pe"), request);
-    }
+        List<BoaviztaServerImpactRequest.Configuration.Disk> disks = new ArrayList<>();
+        if (server.ssd() != null)
+            disks.add(new BoaviztaServerImpactRequest.Configuration.Disk(server.ssd().units(), "ssd", server.ssd().capacity()));
+        if (server.hdd() != null)
+            disks.add(new BoaviztaServerImpactRequest.Configuration.Disk(server.hdd().units(), "hdd", server.hdd().capacity()));
 
-    private BoaviztaInstanceConfigResponse getInstanceConfig(ServerProvider provider, String instanceType)
-    {
-        return this.client.getInstanceConfig(getProvider(provider), instanceType);
+        return new BoaviztaServerImpactRequest.Configuration(
+            new BoaviztaServerImpactRequest.Configuration.CPU(server.cpu().units(), server.cpu().coreUnits(), server.cpu().name()),
+            List.of(new BoaviztaServerImpactRequest.Configuration.RAM(server.ram().units(), server.ram().capacity())),
+            disks.isEmpty() ? null : disks,
+            server.gpu() != null ? new BoaviztaServerImpactRequest.Configuration.GPU(server.gpu().units(), server.gpu().name()) : null
+        );
     }
 
     private static BoaviztaImpactResponse scale(BoaviztaImpactResponse response, double factor)
@@ -290,9 +301,22 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
 
     public ServerSpecification computeSpecification(ServerProfile profile)
     {
-        BoaviztaServerProvider provider = getProvider(profile.provider());
-        BoaviztaInstanceConfigResponse config = this.client.getInstanceConfig(provider, profile.instanceType());
-        return convert(config);
+        return switch (profile) {
+            case CloudServerProfile cloud -> convert(this.client.getInstanceConfig(getProvider(cloud.provider()), cloud.instanceType()));
+            case BareServerProfile server -> convert(server);
+        };
+    }
+
+    private static ServerSpecification convert(BareServerProfile server)
+    {
+        return new ServerSpecification(
+            server.cpu().vcpu(),
+            server.ram().units() * server.ram().capacity(),
+            server.ssd() != null ? server.ssd().units() * server.ssd().capacity() : null,
+            server.hdd() != null ? server.hdd().units() * server.hdd().capacity() : 0,
+            server.gpu() != null ? server.gpu().units() : 0,
+            null
+        );
     }
 
     private static ServerSpecification convert(BoaviztaInstanceConfigResponse config)
