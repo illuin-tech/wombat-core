@@ -8,8 +8,8 @@ import java.util.Optional;
  * Resolves a secret by key, so credentials are supplied by the environment instead of being carried in
  * configuration or persisted alongside the assets that use them.
  * <p>
- * Assets reference a secret by the <em>name</em> of the variable holding it, never by value: the name is safe to
- * store, log and review, and the value only exists in memory for as long as a client needs it.
+ * Assets reference a secret by its <em>key</em>, never by value: the key is safe to store, log and review, and the
+ * value only exists in memory for as long as a client needs it.
  */
 public interface SecretResolver
 {

@@ -38,7 +38,7 @@ public class GoogleClientConfigTest
     @Test
     void buildsAClientFromAServiceAccountKeyReadFromTheDeclaredVariable() throws Exception
     {
-        GoogleClient client = GoogleClientConfig.create(asset("g", "GOOGLE_SA_KEY"), secrets(Map.of("GOOGLE_SA_KEY", serviceAccountJson())));
+        GoogleClient client = GoogleClientConfig.create(asset("g", "GOOGLE_SA_KEY"), secrets(Map.of(EnvironmentSecretResolver.PREFIX + "GOOGLE_SA_KEY", serviceAccountJson())));
 
         assertNotNull(client);
     }
@@ -57,7 +57,7 @@ public class GoogleClientConfigTest
     @Test
     void failsOnAMalformedServiceAccountKey()
     {
-        SecretResolver secrets = secrets(Map.of("GOOGLE_SA_KEY", "not json"));
+        SecretResolver secrets = secrets(Map.of(EnvironmentSecretResolver.PREFIX + "GOOGLE_SA_KEY", "not json"));
 
         assertThrows(IllegalStateException.class, () -> GoogleClientConfig.create(asset("g", "GOOGLE_SA_KEY"), secrets));
     }
@@ -87,7 +87,7 @@ public class GoogleClientConfigTest
             LLMVertexAIAsset base = asset("g", "GOOGLE_SA_KEY");
             LLMVertexAIAsset proxied = new LLMVertexAIAsset(base.identity(), "http://monitoring.invalid", base.resourceName(),
                 base.credentialsKey(), "http://127.0.0.1:" + proxy.getAddress().getPort(), base.profile());
-            GoogleClient client = GoogleClientConfig.create(proxied, secrets(Map.of("GOOGLE_SA_KEY", mapper.writeValueAsString(json))));
+            GoogleClient client = GoogleClientConfig.create(proxied, secrets(Map.of(EnvironmentSecretResolver.PREFIX + "GOOGLE_SA_KEY", mapper.writeValueAsString(json))));
 
             assertEquals(List.of(), client.query("projects/my-project", "f", "start", "end", "3600s", null).timeSeries());
             assertTrue(requests.stream().anyMatch(request -> request.startsWith("POST http://oauth.invalid/token")), requests.toString());

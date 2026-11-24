@@ -6,7 +6,7 @@ public class MissingSecretException extends RuntimeException
 
     public MissingSecretException(String key)
     {
-        super("No value provided for required secret " + key + "; set the " + key + " environment variable");
+        super("no value provided for required secret " + key);
         this.key = key;
     }
 

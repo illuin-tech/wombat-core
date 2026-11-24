@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -19,10 +20,7 @@ public class DirectorySecretResolver implements SecretResolver
 
     public DirectorySecretResolver(Path directory)
     {
-        if (directory == null)
-            throw new IllegalArgumentException("directory must not be null");
-
-        this.directory = directory;
+        this.directory = Objects.requireNonNull(directory, "directory cannot be null");
     }
 
     @Override
@@ -35,7 +33,7 @@ public class DirectorySecretResolver implements SecretResolver
     public Optional<String> find(String key)
     {
         if (key == null || key.isBlank())
-            throw new IllegalArgumentException("Secret key must not be null or blank");
+            throw new IllegalArgumentException("key cannot be null or blank");
         if (!Files.isDirectory(this.directory))
             return Optional.empty();
 
@@ -44,7 +42,7 @@ public class DirectorySecretResolver implements SecretResolver
             if (!Files.exists(exactFile))
                 return Optional.empty();
             if (!Files.isRegularFile(exactFile))
-                throw new IllegalArgumentException("Secret file in directory " + this.directory + " cannot be read (not a regular file)");
+                throw new IllegalArgumentException("secret file in directory " + this.directory + " cannot be read (not a regular file)");
 
             if (exactFile.toRealPath().getFileName().toString().equals(key))
                 return readFileValue(exactFile);
@@ -100,7 +98,7 @@ public class DirectorySecretResolver implements SecretResolver
         public DirectorySecretResolver build()
         {
             if (this.directory == null)
-                throw new IllegalStateException("Directory must be configured before building DirectorySecretResolver");
+                throw new IllegalStateException("directory must be configured before building DirectorySecretResolver");
             return new DirectorySecretResolver(this.directory);
         }
     }

@@ -36,7 +36,7 @@ It is currently composed of the following properties:
 
 ### `SecretKey`
 
-The name under which a credential is bound in the configured secret resolver (e.g. an environment variable), never the credential itself: it is safe to store, log and review.
+The name under which a credential is bound in the configured secret resolver (e.g. the environment variable `WOMBAT_ASSET_SECRET_<key>`), never the credential itself: it is safe to store, log and review.
 
 - **Format**: a non-blank string (e.g. `secrets.anthropic.admin-key`); an empty value means no secret, for optional keys.
 - **Usage**: Used by assets requiring credentials, such as the `admin-key` of an Anthropic asset or the `password-key` of a Prometheus asset.

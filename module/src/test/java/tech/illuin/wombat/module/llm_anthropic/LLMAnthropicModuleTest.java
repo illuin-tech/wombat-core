@@ -34,7 +34,7 @@ public class LLMAnthropicModuleTest
         // Building the client does not dial Anthropic.
         Optional<ProcessorFactory<WombatActivityResolver>> factory = this.module.activityResolver();
         assertTrue(factory.isPresent());
-        assertInstanceOf(LLMAnthropicActivityResolver.class, factory.get().create(services(Map.of("ANTHROPIC_ADMIN_KEY", "k")), asset()));
+        assertInstanceOf(LLMAnthropicActivityResolver.class, factory.get().create(services(Map.of(EnvironmentSecretResolver.PREFIX + "ANTHROPIC_ADMIN_KEY", "k")), asset()));
         assertTrue(this.module.source().isEmpty());
     }
 

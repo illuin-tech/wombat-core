@@ -87,7 +87,7 @@ public class KeyStoreSecretResolver implements SecretResolver
             return Optional.empty();
         }
         catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableEntryException e) {
-            throw new IllegalStateException("Failed to retrieve secret '" + key + "' from KeyStore", e);
+            throw new IllegalStateException("failed to retrieve secret '" + key + "' from the keystore", e);
         }
     }
 
@@ -171,8 +171,7 @@ public class KeyStoreSecretResolver implements SecretResolver
 
         public Builder load(InputStream input, char[] password)
         {
-            if (input == null)
-                throw new IllegalArgumentException("input stream cannot be null");
+            Objects.requireNonNull(input, "input cannot be null");
             try {
                 KeyStore ks = this.provider != null
                     ? KeyStore.getInstance(this.type, this.provider)
@@ -182,7 +181,7 @@ public class KeyStoreSecretResolver implements SecretResolver
                 return this;
             }
             catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException e) {
-                throw new IllegalArgumentException("Failed to load KeyStore of type " + this.type, e);
+                throw new IllegalArgumentException("failed to load keystore of type " + this.type, e);
             }
         }
 
@@ -193,13 +192,12 @@ public class KeyStoreSecretResolver implements SecretResolver
 
         public Builder load(Path path, char[] password)
         {
-            if (path == null)
-                throw new IllegalArgumentException("path cannot be null");
+            Objects.requireNonNull(path, "path cannot be null");
             try (InputStream is = Files.newInputStream(path)) {
                 return this.load(is, password);
             }
             catch (IOException e) {
-                throw new IllegalArgumentException("Failed to read KeyStore file at " + path, e);
+                throw new IllegalArgumentException("failed to read keystore file at " + path, e);
             }
         }
 
@@ -227,12 +225,12 @@ public class KeyStoreSecretResolver implements SecretResolver
             if (rawStream == null)
                 rawStream = KeyStoreSecretResolver.class.getResourceAsStream(resourceName.startsWith("/") ? resourceName : "/" + resourceName);
             if (rawStream == null)
-                throw new IllegalArgumentException("KeyStore resource not found: " + resourceName);
+                throw new IllegalArgumentException("keystore resource not found: " + resourceName);
             try (InputStream is = rawStream) {
                 return this.load(is, password);
             }
             catch (IOException e) {
-                throw new IllegalArgumentException("Failed to read KeyStore resource " + resourceName, e);
+                throw new IllegalArgumentException("failed to read keystore resource " + resourceName, e);
             }
         }
 
@@ -244,7 +242,7 @@ public class KeyStoreSecretResolver implements SecretResolver
         public KeyStoreSecretResolver build()
         {
             if (this.keyStore == null)
-                throw new IllegalStateException("KeyStore must be configured before building KeyStoreSecretResolver");
+                throw new IllegalStateException("keyStore must be configured before building KeyStoreSecretResolver");
             return new KeyStoreSecretResolver(this.keyStore, this.defaultProtection, this.caseInsensitive);
         }
     }

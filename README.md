@@ -231,7 +231,7 @@ LLMMetricResolver llmMetricResolver = new MicrometerLLMMetricResolver(meterRegis
 
 #### Now, assemble the `WombatCore`
 
-The `WombatCore` is also handed `WombatServices`, the system components made available to modules. For now this is the `SecretResolver` modules use to read the credentials their assets reference by variable name (an API key, a password, etc.). `SecretResolver.standard()` reads them from the process environment, which is also what the `WombatCore` falls back to when no `WombatServices` is given.
+The `WombatCore` is also handed `WombatServices`, the system components made available to modules. For now this is the `SecretResolver` modules use to read the credentials their assets reference by key (an API key, a password, etc.). `SecretResolver.standard()` reads them from the process environment, which is also what the `WombatCore` falls back to when no `WombatServices` is given. It only reads variables prefixed with `WOMBAT_ASSET_SECRET_`: the key `PROM_PASSWORD` reads `WOMBAT_ASSET_SECRET_PROM_PASSWORD`, so an asset cannot reach the other variables of the process.
 
 [Default components](#default-components) are registered per family as factories, `null` meaning there is no default for that part of the pipeline. Assets whose type has neither a module component nor a default for a given part are not evaluated for that part, and an error is logged when the evaluator is created.
 
