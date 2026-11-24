@@ -4,14 +4,17 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.source.WombatSource;
+import tech.illuin.wombat.core.source.WombatSourceException;
 import tech.illuin.wombat.core.source.data.KubernetesData;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
 
+import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,20 +38,20 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
     }
 
     @Override
-    public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset)
+    public List<MetricData> source(Instant heartbeat, Instant lastActivation, Asset asset) throws WombatSourceException
     {
         KubernetesAPIAsset kubernetesAsset = (KubernetesAPIAsset) asset;
 
         logger.trace("Persisting pods usages for kubernetes config {}", asset.identity().id());
 
-        List<PodMetrics> podMetricsList = this.client
-            .top()
-            .pods()
-            .inNamespace(kubernetesAsset.namespace())
-            .metrics()
-            .getItems();
-
-        return this.outputToTarget(podMetricsList, kubernetesAsset);
+        try {
+            return this.outputToTarget(this.fetchPodMetrics(kubernetesAsset), kubernetesAsset);
+        }
+        catch (KubernetesClientException e) {
+            if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN)
+                throw new WombatSourceException("Cannot list pod metrics cluster-wide for asset " + asset.identity().id() + ": restrict namespaces to the ones its kubeconfig can read", e);
+            throw new WombatSourceException("Cannot list pod metrics for asset " + asset.identity().id() + ": " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -57,15 +60,33 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
         this.client.close();
     }
 
+    private List<PodMetrics> fetchPodMetrics(KubernetesAPIAsset asset)
+    {
+        if (asset.namespaces().isEmpty())
+            return this.client.top().pods().metrics().getItems();
+
+        List<PodMetrics> podMetricsList = new ArrayList<>();
+        for (String namespace : asset.namespaces())
+        {
+            try {
+                podMetricsList.addAll(this.client.top().pods().metrics(namespace).getItems());
+            }
+            catch (KubernetesClientException e) {
+                logger.warn("Cannot list pod metrics in namespace {} for asset {}, skipping it: {}", namespace, asset.identity().id(), e.getMessage());
+            }
+        }
+        return podMetricsList;
+    }
+
     private List<MetricData> outputToTarget(List<PodMetrics> podMetricsList, KubernetesAPIAsset properties)
     {
         String clusterId = properties.identity().id();
-        String namespace = properties.namespace();
 
-        logger.trace("Recording metrics for {} pods in {}/{}", podMetricsList.size(), clusterId, namespace);
+        logger.trace("Recording metrics for {} pods in {} {}", podMetricsList.size(), clusterId, properties.namespaces());
         List<MetricData> metricData = new ArrayList<>();
         for (PodMetrics podMetrics : podMetricsList)
         {
+            String namespace = podMetrics.getMetadata().getNamespace();
             String podName = podMetrics.getMetadata().getName();
             for (ContainerMetrics cm : podMetrics.getContainers())
             {

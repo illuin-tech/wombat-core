@@ -14,6 +14,7 @@ import tech.illuin.wombat.module.kubernetes_api.source.KubernetesAPISource;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -84,7 +85,7 @@ public class KubernetesAPIModuleTest
     {
         return new KubernetesAPIAsset(
             AssetIdentity.of("k", "env", KubernetesAPIModule.TYPE),
-            SecretKey.of("KUBECONFIG_TEST"), "default", Optional.empty(), Optional.empty(), Period.ZERO, null
+            SecretKey.of("KUBECONFIG_TEST"), Set.of("default"), Optional.empty(), Optional.empty(), Period.ZERO, null
         );
     }
 }
