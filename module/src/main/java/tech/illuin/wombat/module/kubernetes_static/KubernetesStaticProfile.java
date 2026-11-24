@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
-import tech.illuin.wombat.core.asset.profile.ServerProfile;
+import tech.illuin.wombat.core.asset.profile.CloudServerProfile;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 import tech.illuin.wombat.module.kubernetes_static.scenario.Scenario;
 
@@ -27,7 +27,7 @@ public record KubernetesStaticProfile(
     @Positive @JsonProperty(defaultValue = "1") @JsonPropertyDescription("Number of identical nodes") int nodeCount,
     @JsonProperty(defaultValue = "UTC") @JsonPropertyDescription("Time zone the scenarios' times are evaluated in, e.g. Europe/Paris") ZoneId zoneId,
     @NotNull @NotEmpty @JsonPropertyDescription("Superposed load scenarios") List<@Valid Scenario> scenarios
-) implements ServerProfile
+) implements CloudServerProfile
 {
     public KubernetesStaticProfile
     {

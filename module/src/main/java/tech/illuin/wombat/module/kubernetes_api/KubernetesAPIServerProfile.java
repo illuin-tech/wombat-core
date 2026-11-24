@@ -1,20 +1,22 @@
 package tech.illuin.wombat.module.kubernetes_api;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import tech.illuin.wombat.core.activity.commons.Country;
+import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
-import tech.illuin.wombat.core.asset.profile.ServerProfile;
-import tech.illuin.wombat.core.asset.profile.ServerProvider;
 
-@JsonClassDescription("Hardware of the cluster's nodes")
-public record KubernetesAPIServerProfile(
-    @NotNull @JsonPropertyDescription("Infrastructure provider") ServerProvider provider,
-    // The kebab-case @JsonAlias read assets persisted before 0.15, when properties were named that way
-    @NotBlank @JsonPropertyDescription("Instance type of the nodes, e.g. m5.xlarge or n2-standard-4") @JsonAlias("instance-type") String instanceType,
-    @NotNull @JsonPropertyDescription("Country hosting the nodes") Country location,
-    @NotNull @JsonPropertyDescription("Expected operational lifespan of the hardware") Lifetime lifespan
-) implements ServerProfile {}
+@JsonClassDescription("Hardware of the cluster's nodes, a cloud instance type or a bare server specification")
+// Profiles without a type are cloud ones, as all were before bare servers were supported
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type", defaultImpl = KubernetesAPICloudProfile.class)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = KubernetesAPICloudProfile.class, name = "cloud"),
+    @JsonSubTypes.Type(value = KubernetesAPIBareServerProfile.class, name = "server")
+})
+public sealed interface KubernetesAPIServerProfile extends AssetProfile permits KubernetesAPICloudProfile, KubernetesAPIBareServerProfile
+{
+    Country location();
+
+    Lifetime lifespan();
+}

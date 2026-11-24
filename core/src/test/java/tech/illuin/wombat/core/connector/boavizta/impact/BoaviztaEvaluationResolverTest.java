@@ -9,7 +9,8 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
-import tech.illuin.wombat.core.asset.profile.ServerProfile;
+import tech.illuin.wombat.core.asset.profile.BareServerProfile;
+import tech.illuin.wombat.core.asset.profile.CloudServerProfile;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
@@ -17,7 +18,8 @@ import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.connector.boavizta.connector.BoaviztaClient;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaImpactResponse;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceConfigResponse;
-import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaInstanceImpactRequest;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaCloudInstanceImpactRequest;
+import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerImpactRequest;
 import tech.illuin.wombat.core.connector.boavizta.connector.model.BoaviztaServerProvider;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
@@ -83,7 +85,7 @@ class BoaviztaEvaluationResolverTest
             1
         );
 
-        when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaInstanceImpactRequest.class)))
+        when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaCloudInstanceImpactRequest.class)))
             .thenReturn(mockImpact);
 
         TestServerProfile profile = new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", FRANCE, Lifetime.ofHours(1000), 3);
@@ -127,7 +129,7 @@ class BoaviztaEvaluationResolverTest
 
         when(client.getInstanceConfig(eq(BoaviztaServerProvider.aws), eq("c5a.4xlarge")))
             .thenReturn(new BoaviztaInstanceConfigResponse(new BoaviztaInstanceConfigResponse.IntConfigItem(16), null, null, null, null, null));
-        when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaInstanceImpactRequest.class)))
+        when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaCloudInstanceImpactRequest.class)))
             .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
 
         TestAsset asset = new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", Country.WORLD, Lifetime.ofHours(1000), 1));
@@ -147,7 +149,7 @@ class BoaviztaEvaluationResolverTest
 
         when(client.getInstanceConfig(eq(BoaviztaServerProvider.aws), eq("c5a.4xlarge")))
             .thenReturn(new BoaviztaInstanceConfigResponse(new BoaviztaInstanceConfigResponse.IntConfigItem(16), null, null, null, null, null));
-        when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaInstanceImpactRequest.class)))
+        when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaCloudInstanceImpactRequest.class)))
             .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
 
         TestAsset asset = new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", FRANCE, Lifetime.ofYears(3), 1));
@@ -158,13 +160,92 @@ class BoaviztaEvaluationResolverTest
         verify(client).getInstanceImpact(eq(true), eq((int) lifespanHours), anySet(), argThat(request -> request.usage().hoursLifeTime() == lifespanHours));
     }
 
+    @Test
+    void accept_kubernetesFamilyWithBareServerProfile_returnsTrue()
+    {
+        assertTrue(this.resolver.accept(new TestAsset(K8S_TYPE, bareServer(null, null))));
+    }
+
+    @Test
+    void resolve_bareServer_sendsItsConfigurationToTheServerEndpoint() throws Exception
+    {
+        BoaviztaClient client = mock(BoaviztaClient.class);
+        BoaviztaEvaluationResolver evalResolver = new BoaviztaEvaluationResolver(client);
+
+        when(client.getServerImpact(eq(true), anyInt(), anySet(), any(BoaviztaServerImpactRequest.class)))
+            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
+
+        TestBareServerProfile profile = bareServer(new BareServerProfile.Disk(2, 960), new BareServerProfile.GPU(1, "NVIDIA A100"));
+        TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-01T01:00:00Z"), Duration.ofHours(1));
+        evalResolver.resolve(new TestAsset(K8S_TYPE, profile), new KubernetesActivityData(ActivityRegime.MODELED, Set.of("srv-1"), range, CPUUsage.relative(0.50), Map.of("srv-1", 1.0), Map.of()));
+
+        long lifespanHours = Lifetime.ofYears(5).asHours();
+        BoaviztaServerImpactRequest.Configuration expected = new BoaviztaServerImpactRequest.Configuration(
+            new BoaviztaServerImpactRequest.Configuration.CPU(2, 24, "Intel Xeon Gold 6342"),
+            List.of(new BoaviztaServerImpactRequest.Configuration.RAM(8, 32)),
+            List.of(new BoaviztaServerImpactRequest.Configuration.Disk(2, "ssd", 960)),
+            new BoaviztaServerImpactRequest.Configuration.GPU(1, "NVIDIA A100")
+        );
+        verify(client).getServerImpact(eq(true), eq((int) lifespanHours), anySet(), argThat(request ->
+            expected.equals(request.configuration())
+                && request.usage().hoursLifeTime() == lifespanHours
+                && "FRA".equals(request.usage().usageLocation())
+                && request.usage().timeWorkload().getFirst().loadPercentage() == 50.0
+        ));
+        verifyNoMoreInteractions(client);
+    }
+
+    @Test
+    void resolve_bareServerNanocores_readsTheVcpuFromTheProfile() throws Exception
+    {
+        BoaviztaClient client = mock(BoaviztaClient.class);
+        BoaviztaEvaluationResolver evalResolver = new BoaviztaEvaluationResolver(client);
+
+        when(client.getServerImpact(eq(true), anyInt(), anySet(), any(BoaviztaServerImpactRequest.class)))
+            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
+
+        TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-01T01:00:00Z"), Duration.ofHours(1));
+        AssetImpact impact = (AssetImpact) evalResolver.resolve(
+            new TestAsset(K8S_TYPE, bareServer(null, null)),
+            new KubernetesActivityData(ActivityRegime.MEASURED, Set.of("srv-1"), range, CPUUsage.nanocores(48_000_000_000.0), Map.of("srv-1", 1.0), Map.of())
+        );
+
+        KubernetesImpact k8sImpact = (KubernetesImpact) impact.serviceImpacts().getFirst();
+        assertEquals(50.0, k8sImpact.loadPercent(), 1e-9);
+        assertEquals(1, k8sImpact.nodeCount());
+        assertEquals(96, k8sImpact.serverSpecification().vcpu());
+        assertEquals(256, k8sImpact.serverSpecification().memory());
+        assertNull(k8sImpact.serverSpecification().ssdStorage());
+        verify(client).getServerImpact(eq(true), anyInt(), anySet(), argThat(request -> request.usage().timeWorkload().getFirst().loadPercentage() == 50.0));
+        verifyNoMoreInteractions(client);
+    }
+
+    private static TestBareServerProfile bareServer(BareServerProfile.Disk ssd, BareServerProfile.GPU gpu)
+    {
+        return new TestBareServerProfile(
+            FRANCE, Lifetime.ofYears(5),
+            new BareServerProfile.CPU(2, 24, 2, "Intel Xeon Gold 6342"), new BareServerProfile.RAM(8, 32),
+            ssd, null, gpu
+        );
+    }
+
     private record TestServerProfile(
         ServerProvider provider,
         String instanceType,
         Country location,
         Lifetime lifespan,
         int nodeCount
-    ) implements ServerProfile {}
+    ) implements CloudServerProfile {}
+
+    private record TestBareServerProfile(
+        Country location,
+        Lifetime lifespan,
+        CPU cpu,
+        RAM ram,
+        Disk ssd,
+        Disk hdd,
+        GPU gpu
+    ) implements BareServerProfile {}
 
     private record TestAsset(AssetType type, AssetProfile profile) implements Asset
     {

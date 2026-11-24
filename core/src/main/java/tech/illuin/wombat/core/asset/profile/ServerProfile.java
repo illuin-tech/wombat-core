@@ -1,17 +1,10 @@
 package tech.illuin.wombat.core.asset.profile;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import tech.illuin.wombat.core.activity.commons.Country;
 
-public interface ServerProfile extends AssetProfile
+public sealed interface ServerProfile extends AssetProfile permits CloudServerProfile, BareServerProfile
 {
-    @NotNull
-    ServerProvider provider();
-
-    @NotBlank
-    String instanceType();
-
     @NotNull
     Country location();
 

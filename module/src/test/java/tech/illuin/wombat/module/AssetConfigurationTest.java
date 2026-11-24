@@ -24,6 +24,7 @@ import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
+import tech.illuin.wombat.module.kubernetes_api.KubernetesAPICloudProfile;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
 
 import java.io.IOException;
@@ -160,7 +161,7 @@ class AssetConfigurationTest
         assertEquals("env", kubernetes.identity().environmentId());
         assertNull(kubernetes.kubeconfigKey());
         assertEquals(Duration.ofSeconds(10), kubernetes.readTimeout().orElseThrow());
-        assertEquals("m5.large", kubernetes.profile().instanceType());
+        assertEquals("m5.large", assertInstanceOf(KubernetesAPICloudProfile.class, kubernetes.profile()).instanceType());
 
         LLMPrometheusAsset prometheus = assertInstanceOf(LLMPrometheusAsset.class, JSON.readValue("""
             {
