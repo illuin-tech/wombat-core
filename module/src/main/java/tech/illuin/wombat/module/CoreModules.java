@@ -23,9 +23,8 @@ public final class CoreModules
     private CoreModules() {}
 
     /**
-     * @return new instances of the modules, so that no two cores share one: the asset-type modules, then the family
-     *         modules in the order they are tried in among those of a family, as in the {@code META-INF/services} file
-     *         {@link java.util.ServiceLoader} reads
+     * @return new instances, so that no two cores share one, in the order of the {@code META-INF/services} file: family
+     *         modules last, in the order they are tried in
      */
     public static List<WombatModule> all()
     {

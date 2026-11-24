@@ -185,7 +185,7 @@ public class AssetEvaluator implements AutoCloseable
     {
         Optional<WombatEvaluationResolver> resolver = this.costResolvers.get(asset);
 
-        /* A warn although cost is optional: it was asked for, and no module can price the asset */
+        /* The cost was asked for, and no module can price the asset */
         if (resolver.isEmpty())
         {
             logger.warn("Skipping cost of asset {}: no cost resolver accepts asset-type {}", asset.identity().id(), asset.type().name());

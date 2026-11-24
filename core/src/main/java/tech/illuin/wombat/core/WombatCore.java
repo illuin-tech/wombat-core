@@ -104,7 +104,7 @@ public final class WombatCore implements AutoCloseable
             module.close();
     }
 
-    /* Once per core rather than per evaluator: the modules are fixed from here on, while a host may create many evaluators */
+    /* Once per core, as a host may create many evaluators out of the same modules */
     private void reportMissingFeatures()
     {
         for (WombatModule module : this.modules.values())
