@@ -23,9 +23,9 @@ public class KubernetesAPIModule implements WombatModule
     }
 
     @Override
-    public Class<? extends Asset> assetClass()
+    public Optional<Class<? extends Asset>> assetClass()
     {
-        return KubernetesAPIAsset.class;
+        return Optional.of(KubernetesAPIAsset.class);
     }
 
     @Override

@@ -13,7 +13,7 @@ public record AssetType(
     @NotBlank String localName,
     @NotNull ActivityRegime regime,
     @NotNull ServiceFamily family
-) {
+) implements ModuleType {
     public AssetType
     {
         Objects.requireNonNull(namespace, "namespace must not be null");
@@ -26,10 +26,11 @@ public record AssetType(
             throw new IllegalArgumentException("localName must not be blank");
     }
 
+    @Override
     @JsonProperty("name")
     public String name()
     {
-        return this.namespace + "." + this.localName;
+        return ModuleType.super.name();
     }
 
     public static AssetType of(String namespace, String localName, ActivityRegime regime, ServiceFamily family)

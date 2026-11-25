@@ -14,6 +14,9 @@ import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
+import tech.illuin.wombat.core.module.MetricResolvers;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.SecretResolver;
 
@@ -28,11 +31,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 
 class AssetEvaluatorTest
 {
     private static final AssetType TYPE = AssetType.of("tech.illuin", "wombat-module", "test", ActivityRegime.MODELED, ServiceFamily.LLM);
-    private static final WombatServices SERVICES = new WombatServices(SecretResolver.standard());
+    private static final WombatServices SERVICES = new WombatServices(
+        SecretResolver.standard(),
+        new MetricResolvers(mock(KubernetesMetricResolver.class), mock(LLMMetricResolver.class)),
+        List.of()
+    );
     private static final TimeRange RANGE = new TimeRange(Instant.ofEpochMilli(0), Instant.ofEpochMilli(1_000));
 
     @Test

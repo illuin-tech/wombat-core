@@ -22,9 +22,9 @@ public class KubernetesStaticModule implements WombatModule
     }
 
     @Override
-    public Class<? extends Asset> assetClass()
+    public Optional<Class<? extends Asset>> assetClass()
     {
-        return KubernetesStaticAsset.class;
+        return Optional.of(KubernetesStaticAsset.class);
     }
 
     @Override

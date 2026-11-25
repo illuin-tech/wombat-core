@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
-import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.ModuleType;
 import tech.illuin.wombat.core.context.WombatContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 import tech.illuin.wombat.core.module.ProcessorFactory;
@@ -49,9 +49,9 @@ public class AssetMonitor implements AutoCloseable
         this.lastActivation = new ConcurrentHashMap<>();
     }
 
-    public AssetMonitor register(AssetType type, ProcessorFactory<WombatSource> factory)
+    public AssetMonitor register(ModuleType type, ProcessorFactory<WombatSource> factory)
     {
-        if (this.sources.supports(type))
+        if (this.sources.registered(type))
         {
             logger.trace("Source for {} was already registered", type.name());
             return this;
@@ -74,7 +74,7 @@ public class AssetMonitor implements AutoCloseable
         {
             environment.assets().stream()
                 .filter(asset -> asset instanceof Monitorable)
-                .filter(asset -> this.sources.supports(asset.type()))
+                .filter(this.sources::supports)
                 .forEach(asset -> {
                     Instant lastActivated = this.lastActivation.computeIfAbsent(asset.identity(), id -> Instant.MIN);
 
@@ -126,7 +126,7 @@ public class AssetMonitor implements AutoCloseable
     private void runSource(Instant heartbeat, Instant lastActivation, Asset asset)
     {
         Optional<WombatSource> source = this.sources.get(asset);
-        if (source.isEmpty() || !source.get().accept(asset))
+        if (source.isEmpty())
         {
             logger.trace("Skipping asset {}: no source accepts asset-type {}", asset.identity().id(), asset.type().name());
             return;

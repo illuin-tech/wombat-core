@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
+import tech.illuin.wombat.core.module.ModuleSettings;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.core.source.Period;
@@ -56,7 +57,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class AssetConfigurationTest
 {
-    private static final List<WombatModule> MODULES = StreamSupport.stream(ServiceLoader.load(WombatModule.class).spliterator(), false).toList();
+    private static final List<WombatModule> ALL_MODULES = StreamSupport.stream(ServiceLoader.load(WombatModule.class).spliterator(), false).toList();
+    /* The modules defining an asset-type: family modules define none */
+    private static final List<WombatModule> MODULES = ALL_MODULES.stream()
+        .filter(module -> module.assetClass().isPresent())
+        .toList();
+    private static final List<WombatModule> CONFIGURABLE_MODULES = ALL_MODULES.stream()
+        .filter(module -> module.settingsClass().isPresent())
+        .toList();
     private static final ObjectMapper YAML = register(YAMLMapper.builder().findAndAddModules().propertyNamingStrategy(PropertyNamingStrategies.KEBAB_CASE).build());
     private static final ObjectMapper JSON = register(JsonMapper.builder().findAndAddModules().build());
     private static final Path DOCS = Path.of("..", "doc", "module");
@@ -74,7 +82,9 @@ class AssetConfigurationTest
         List<String> mismatches = new ArrayList<>();
         Set<Class<?>> visited = new HashSet<>();
         for (WombatModule module : MODULES)
-            collectMismatches(JSON.constructType(module.assetClass()), visited, mismatches);
+            collectMismatches(JSON.constructType(module.assetClass().orElseThrow()), visited, mismatches);
+        for (WombatModule module : CONFIGURABLE_MODULES)
+            collectMismatches(JSON.constructType(module.settingsClass().orElseThrow()), visited, mismatches);
 
         assertTrue(visited.size() > MODULES.size(), "no nested type was walked");
         assertEquals(List.of(), mismatches);
@@ -100,12 +110,35 @@ class AssetConfigurationTest
         }
     }
 
+    /** Every family module is documented, and the settings of those having some are read without losing any key. */
+    @Test
+    void settingsDocs_areReadWithoutIgnoringAnyKey() throws IOException
+    {
+        for (WombatModule module : ALL_MODULES)
+        {
+            String name = module.type().name();
+            Path doc = DOCS.resolve(name.substring(name.lastIndexOf('.') + 1) + ".md");
+            assertTrue(Files.exists(doc), "module " + name + " has no " + doc);
+        }
+
+        assertFalse(CONFIGURABLE_MODULES.isEmpty(), "no module has settings");
+        for (WombatModule module : CONFIGURABLE_MODULES)
+        {
+            String name = module.type().name();
+            JsonNode source = readSettings(DOCS.resolve(name.substring(name.lastIndexOf('.') + 1) + ".md"), name);
+            ModuleSettings settings = YAML.treeToValue(source, ModuleSettings.class);
+
+            assertInstanceOf(module.settingsClass().orElseThrow(), settings);
+            assertKeysRead(source, YAML.valueToTree(settings), name);
+        }
+    }
+
     @Test
     void assets_cascadeValidationToTheirProfile() throws NoSuchFieldException
     {
         for (WombatModule module : MODULES)
         {
-            Class<?> asset = module.assetClass();
+            Class<?> asset = module.assetClass().orElseThrow();
             assertTrue(asset.getDeclaredField("profile").isAnnotationPresent(Valid.class), asset.getSimpleName() + ".profile is not @Valid");
         }
     }
@@ -259,6 +292,23 @@ class AssetConfigurationTest
         }
     }
 
+    /**
+     * @return the settings documented in {@code doc}, from its YAML block starting with a {@code uri}
+     */
+    private static JsonNode readSettings(Path doc, String type) throws IOException
+    {
+        Matcher matcher = YAML_BLOCK.matcher(Files.readString(doc));
+        while (matcher.find())
+        {
+            if (!matcher.group(1).startsWith("uri:"))
+                continue;
+            ObjectNode settings = (ObjectNode) YAML.readTree(matcher.group(1));
+            settings.put("type", type);
+            return settings;
+        }
+        throw new IllegalStateException("no settings documented in " + doc);
+    }
+
     private static void assertKeysRead(JsonNode source, JsonNode read, String path)
     {
         if (source.isObject())
@@ -277,7 +327,8 @@ class AssetConfigurationTest
 
     private static <M extends ObjectMapper> M register(M mapper)
     {
-        MODULES.forEach(module -> mapper.registerSubtypes(new NamedType(module.assetClass(), module.type().name())));
+        MODULES.forEach(module -> mapper.registerSubtypes(new NamedType(module.assetClass().orElseThrow(), module.type().name())));
+        CONFIGURABLE_MODULES.forEach(module -> mapper.registerSubtypes(new NamedType(module.settingsClass().orElseThrow(), module.type().name())));
         return mapper;
     }
 }

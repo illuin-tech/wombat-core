@@ -22,9 +22,9 @@ public class LLMStaticModule implements WombatModule
     }
 
     @Override
-    public Class<? extends Asset> assetClass()
+    public Optional<Class<? extends Asset>> assetClass()
     {
-        return LLMStaticAsset.class;
+        return Optional.of(LLMStaticAsset.class);
     }
 
     @Override

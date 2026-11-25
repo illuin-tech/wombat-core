@@ -23,9 +23,9 @@ public class LLMVertexAIModule implements WombatModule
     }
 
     @Override
-    public Class<? extends Asset> assetClass()
+    public Optional<Class<? extends Asset>> assetClass()
     {
-        return LLMVertexAIAsset.class;
+        return Optional.of(LLMVertexAIAsset.class);
     }
 
     @Override

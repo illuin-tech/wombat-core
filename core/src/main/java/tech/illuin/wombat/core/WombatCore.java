@@ -2,68 +2,64 @@ package tech.illuin.wombat.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.illuin.wombat.core.activity.WombatActivityResolver;
-import tech.illuin.wombat.core.asset.type.ServiceFamily;
+import tech.illuin.wombat.core.asset.type.AssetType;
+import tech.illuin.wombat.core.asset.type.FamilyType;
+import tech.illuin.wombat.core.asset.type.ModuleType;
 import tech.illuin.wombat.core.context.WombatContextProvider;
-import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
 import tech.illuin.wombat.core.evaluation.AssetEvaluator;
 import tech.illuin.wombat.core.module.ProcessorFactory;
 import tech.illuin.wombat.core.module.WombatModule;
 import tech.illuin.wombat.core.module.WombatServices;
-import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.core.source.AssetMonitor;
 import tech.illuin.wombat.core.source.persistence.WombatMetricPersister;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 public final class WombatCore implements AutoCloseable
 {
+    /* Ordered: the family modules of a family are tried in registration order */
     private final Map<String, WombatModule> modules;
     private final WombatContextProvider contextProvider;
     private final WombatServices services;
     private final WombatMetricPersister persister;
-    private final CoreDefaults defaults;
 
     private static final Logger logger = LoggerFactory.getLogger(WombatCore.class);
-
-    /** Resolves secrets from the process environment, which is where a deployment supplies them. */
-    public WombatCore(
-        WombatContextProvider contextProvider,
-        WombatMetricPersister persister,
-        Collection<WombatModule> modules,
-        Consumer<CoreDefaults> defaultsAdjuster
-    ) {
-        this(contextProvider, new WombatServices(SecretResolver.standard()), persister, modules, defaultsAdjuster);
-    }
 
     public WombatCore(
         WombatContextProvider contextProvider,
         WombatServices services,
         WombatMetricPersister persister,
-        Collection<WombatModule> modules,
-        Consumer<CoreDefaults> defaultsAdjuster
+        Collection<WombatModule> modules
     ) {
         this.contextProvider = contextProvider;
         this.services = services;
         this.persister = persister;
-        this.modules = new HashMap<>();
-        this.defaults = new CoreDefaults();
-        defaultsAdjuster.accept(this.defaults);
+        this.modules = new LinkedHashMap<>();
         for (WombatModule module : modules)
             this.register(module);
+        this.reportMissingFeatures();
     }
 
     private void register(WombatModule module)
     {
         String name = module.type().name();
         if (this.modules.containsKey(name))
-            throw new IllegalArgumentException("A module was already registered for asset-type " + name + " with type " + this.modules.get(name).getClass().getSimpleName());
+            throw new IllegalArgumentException("A module was already registered under " + name + " with type " + this.modules.get(name).getClass().getSimpleName());
+
+        switch (module.type())
+        {
+            case AssetType type when module.assetClass().isEmpty() ->
+                throw new IllegalArgumentException("Module " + type.name() + " defines an asset-type but no asset class");
+            case FamilyType type when module.assetClass().isPresent() ->
+                throw new IllegalArgumentException("Module " + type.name() + " serves family " + type.family() + " but declares an asset class");
+            default -> {}
+        }
 
         this.modules.put(name, module);
-        logger.info("Registered module {} for asset-type {}", module.getClass().getSimpleName(), name);
+        logger.info("Registered module {} under {}", module.getClass().getSimpleName(), name);
     }
 
     public AssetMonitor createMonitor()
@@ -80,7 +76,7 @@ public final class WombatCore implements AutoCloseable
         {
             module.source().ifPresentOrElse(
                 factory -> monitor.register(module.type(), factory),
-                () -> logger.debug("Skipping monitor registration for asset-type {}", module.type().name())
+                () -> logger.debug("Skipping monitor registration for module {}", module.type().name())
             );
         }
         return monitor;
@@ -93,21 +89,9 @@ public final class WombatCore implements AutoCloseable
 
         for (WombatModule module : this.modules.values())
         {
-            ServiceFamily family = module.type().family();
-            String typeName = module.type().name();
-
-            module.activityResolver().or(() -> this.defaults.getActivityResolver(family)).ifPresentOrElse(
-                factory -> calculator.registerActivityResolver(module.type(), factory),
-                () -> logger.error("No activity-resolver available for asset-type {}, its assets will not be evaluated", typeName)
-            );
-            module.impactResolver().or(() -> this.defaults.getImpactResolver(family)).ifPresentOrElse(
-                factory -> calculator.registerImpactResolver(module.type(), factory),
-                () -> logger.error("No impact-resolver available for asset-type {}, impacts of its assets will not be evaluated", typeName)
-            );
-            module.costResolver().or(() -> this.defaults.getCostResolver(family)).ifPresentOrElse(
-                factory -> calculator.registerCostResolver(module.type(), factory),
-                () -> logger.error("No cost-resolver available for asset-type {}, costs of its assets will not be evaluated", typeName)
-            );
+            module.activityResolver().ifPresent(factory -> calculator.registerActivityResolver(module.type(), factory));
+            module.impactResolver().ifPresent(factory -> calculator.registerImpactResolver(module.type(), factory));
+            module.costResolver().ifPresent(factory -> calculator.registerCostResolver(module.type(), factory));
         }
 
         return calculator;
@@ -120,44 +104,40 @@ public final class WombatCore implements AutoCloseable
             module.close();
     }
 
-    public static final class CoreDefaults
+    /* Once per core, as a host may create many evaluators out of the same modules */
+    private void reportMissingFeatures()
     {
-        private final Map<ServiceFamily, ProcessorFactory<WombatActivityResolver>> defaultActivityResolvers;
-        private final Map<ServiceFamily, ProcessorFactory<WombatEvaluationResolver>> defaultImpactResolvers;
-        private final Map<ServiceFamily, ProcessorFactory<WombatEvaluationResolver>> defaultCostResolvers;
-
-        private CoreDefaults()
+        for (WombatModule module : this.modules.values())
         {
-            this.defaultActivityResolvers = new HashMap<>();
-            this.defaultImpactResolvers = new HashMap<>();
-            this.defaultCostResolvers = new HashMap<>();
-        }
+            if (!(module.type() instanceof AssetType type))
+                continue;
 
-        public CoreDefaults register(
-            ServiceFamily family,
-            ProcessorFactory<WombatActivityResolver> activityResolver,
-            ProcessorFactory<WombatEvaluationResolver> impactResolver,
-            ProcessorFactory<WombatEvaluationResolver> costResolver
-        ) {
-            this.defaultActivityResolvers.put(family, activityResolver);
-            this.defaultImpactResolvers.put(family, impactResolver);
-            this.defaultCostResolvers.put(family, costResolver);
-            return this;
+            if (!this.provides(type, WombatModule::activityResolver))
+                logger.error("No activity-resolver available for asset-type {}, its assets will not be evaluated", type.name());
+            if (!this.provides(type, WombatModule::impactResolver))
+                logger.error("No impact-resolver available for asset-type {}, impacts of its assets will not be evaluated", type.name());
+            /* Cost is optional, and no built-in module prices anything yet */
+            if (!this.provides(type, WombatModule::costResolver))
+                logger.info("No cost-resolver available for asset-type {}, costs of its assets will not be evaluated", type.name());
         }
+    }
 
-        public Optional<ProcessorFactory<WombatActivityResolver>> getActivityResolver(ServiceFamily family)
+    /**
+     * @return whether the module of {@code type}, or a family module of its family, provides the feature
+     */
+    private boolean provides(AssetType type, Function<WombatModule, Optional<? extends ProcessorFactory<?>>> feature)
+    {
+        return this.modules.values().stream()
+            .filter(module -> isServedBy(type, module.type()))
+            .anyMatch(module -> feature.apply(module).isPresent());
+    }
+
+    private static boolean isServedBy(AssetType type, ModuleType moduleType)
+    {
+        return switch (moduleType)
         {
-            return Optional.ofNullable(this.defaultActivityResolvers.get(family));
-        }
-
-        public Optional<ProcessorFactory<WombatEvaluationResolver>> getImpactResolver(ServiceFamily family)
-        {
-            return Optional.ofNullable(this.defaultImpactResolvers.get(family));
-        }
-
-        public Optional<ProcessorFactory<WombatEvaluationResolver>> getCostResolver(ServiceFamily family)
-        {
-            return Optional.ofNullable(this.defaultCostResolvers.get(family));
-        }
+            case AssetType own -> own.name().equals(type.name());
+            case FamilyType family -> family.family() == type.family();
+        };
     }
 }

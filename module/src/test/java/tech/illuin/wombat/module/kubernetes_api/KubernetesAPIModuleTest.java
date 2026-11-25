@@ -4,6 +4,9 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.module.ProcessorFactory;
+import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
+import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
+import tech.illuin.wombat.core.module.MetricResolvers;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.MissingSecretException;
@@ -12,6 +15,7 @@ import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.core.source.WombatSource;
 import tech.illuin.wombat.module.kubernetes_api.source.KubernetesAPISource;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -78,7 +82,11 @@ public class KubernetesAPIModuleTest
 
     private static WombatServices services(Map<String, String> secrets)
     {
-        return new WombatServices(new EnvironmentSecretResolver(secrets::get));
+        return new WombatServices(
+            new EnvironmentSecretResolver(secrets::get),
+            new MetricResolvers(mock(KubernetesMetricResolver.class), mock(LLMMetricResolver.class)),
+            List.of()
+        );
     }
 
     private static KubernetesAPIAsset asset()
