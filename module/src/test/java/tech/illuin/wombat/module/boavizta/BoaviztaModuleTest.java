@@ -57,8 +57,14 @@ class BoaviztaModuleTest
     {
         // The literal, as documented: the version is part of the URI.
         assertEquals("https://api.boavizta.org/v1/", BoaviztaSettings.DEFAULT.uri());
-        assertEquals("https://api.boavizta.org/v1/", new BoaviztaSettings(" ", null).uri());
         assertEquals(BoaviztaModule.TYPE, BoaviztaSettings.DEFAULT.type());
+    }
+
+    @Test
+    void settings_requireAUri()
+    {
+        // Settings given are complete: only a module given none falls back to the public API.
+        assertThrows(NullPointerException.class, () -> new BoaviztaSettings(null, "http://proxy.example.com:3128"));
     }
 
     private static WombatServices services(List<ModuleSettings> settings)

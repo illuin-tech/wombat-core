@@ -57,8 +57,14 @@ class EcologitsModuleTest
     {
         // The literal, as documented: the client appends its own versioned path.
         assertEquals("https://api.ecologits.ai/", EcologitsSettings.DEFAULT.uri());
-        assertEquals("https://api.ecologits.ai/", new EcologitsSettings(" ", null).uri());
         assertEquals(EcologitsModule.TYPE, EcologitsSettings.DEFAULT.type());
+    }
+
+    @Test
+    void settings_requireAUri()
+    {
+        // Settings given are complete: only a module given none falls back to the public API.
+        assertThrows(NullPointerException.class, () -> new EcologitsSettings(null, "http://proxy.example.com:3128"));
     }
 
     private static WombatServices services(List<ModuleSettings> settings)

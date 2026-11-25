@@ -10,7 +10,7 @@ import tech.illuin.wombat.core.asset.type.ModuleType;
  * <p>
  * Described like an asset, a record with Jackson and Jakarta annotations, and named by the type of its module so that a
  * host can read them as documents keyed by {@code type}. The host hands them to the core in {@link WombatServices},
- * from which a factory reads them with {@link WombatServices#settings(ModuleType)}.
+ * from which a factory reads them with {@link WombatServices#settings(ModuleType, Class)}.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 public interface ModuleSettings

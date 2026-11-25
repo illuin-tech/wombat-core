@@ -11,6 +11,8 @@ import tech.illuin.wombat.module.boavizta.impact.BoaviztaEvaluationResolver;
 
 import java.util.Optional;
 
+import static tech.illuin.wombat.module.boavizta.BoaviztaSettings.DEFAULT;
+
 public class BoaviztaModule implements WombatModule
 {
     public static final FamilyType TYPE = FamilyType.of("tech.illuin", "wombat-module", "boavizta", ServiceFamily.KUBERNETES_CONTAINER);
@@ -31,9 +33,7 @@ public class BoaviztaModule implements WombatModule
     public Optional<ProcessorFactory<WombatEvaluationResolver>> impactResolver()
     {
         return Optional.of((services, asset) -> {
-            BoaviztaSettings settings = services.settings(TYPE)
-                .map(BoaviztaSettings.class::cast)
-                .orElse(BoaviztaSettings.DEFAULT);
+            BoaviztaSettings settings = services.settings(TYPE, BoaviztaSettings.class).orElse(DEFAULT);
             return new BoaviztaEvaluationResolver(BoaviztaClientConfig.create(settings.uri(), settings.proxyUrl()));
         });
     }

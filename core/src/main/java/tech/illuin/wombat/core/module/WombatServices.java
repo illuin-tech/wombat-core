@@ -47,4 +47,12 @@ public record WombatServices(
             .filter(entry -> entry.type().name().equals(type.name()))
             .findFirst();
     }
+
+    /**
+     * @return the settings given for the module of type {@code type}, cast to {@code expected}, empty when it was given none
+     */
+    public <S extends ModuleSettings> Optional<S> settings(ModuleType type, Class<S> expected)
+    {
+        return this.settings(type).map(expected::cast);
+    }
 }

@@ -165,7 +165,7 @@ public final class ProcessorPool<P extends AssetProcessor> implements AutoClosea
         return processor;
     }
 
-    /* AutoCloseable.close() declares Exception: a processor failing to close must not prevent discarding the others. */
+    /* A processor failing to close must not prevent discarding the others. */
     @SuppressWarnings("checkstyle:IllegalCatch")
     private void release(AssetIdentity identity, P processor)
     {

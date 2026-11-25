@@ -148,24 +148,7 @@ public class AssetEvaluator implements AutoCloseable
 
     public Optional<AssetEvaluation> computeImpact(Asset asset, ActivityData activity) throws WombatEvaluationException
     {
-        Optional<WombatEvaluationResolver> resolver = this.impactResolvers.get(asset);
-
-        if (resolver.isEmpty() && !this.impactResolvers.supports(asset))
-        {
-            logger.debug("Skipping impact of asset {}: no impact resolver registered for asset-type {}", asset.identity().id(), asset.type());
-            return Optional.empty();
-        }
-        if (resolver.isEmpty())
-        {
-            logger.warn(
-                "Skipping impact of asset {}: no impact resolver accepts asset-type {} with profile {}",
-                asset.identity().id(),
-                asset.type().name(),
-                asset.profile().getClass().getName()
-            );
-            return Optional.empty();
-        }
-        return Optional.of(resolver.get().resolve(asset, activity));
+        return this.computeEvaluation("impact", this.impactResolvers, asset, activity);
     }
 
     public CompletableFuture<Optional<AssetEvaluation>> computeImpactAsync(Asset asset, ActivityData activity)
@@ -183,15 +166,7 @@ public class AssetEvaluator implements AutoCloseable
 
     public Optional<AssetEvaluation> computeCost(Asset asset, ActivityData activity) throws WombatEvaluationException
     {
-        Optional<WombatEvaluationResolver> resolver = this.costResolvers.get(asset);
-
-        /* The cost was asked for, and no module can price the asset */
-        if (resolver.isEmpty())
-        {
-            logger.warn("Skipping cost of asset {}: no cost resolver accepts asset-type {}", asset.identity().id(), asset.type().name());
-            return Optional.empty();
-        }
-        return Optional.of(resolver.get().resolve(asset, activity));
+        return this.computeEvaluation("cost", this.costResolvers, asset, activity);
     }
 
     public CompletableFuture<Optional<AssetEvaluation>> computeCostAsync(Asset asset, ActivityData activity)
@@ -214,5 +189,34 @@ public class AssetEvaluator implements AutoCloseable
         this.activityResolvers.close();
         this.impactResolvers.close();
         this.costResolvers.close();
+    }
+
+    private Optional<AssetEvaluation> computeEvaluation(
+        String kind,
+        ProcessorPool<WombatEvaluationResolver> resolvers,
+        Asset asset,
+        ActivityData activity
+    ) throws WombatEvaluationException
+    {
+        Optional<WombatEvaluationResolver> resolver = resolvers.get(asset);
+
+        if (resolver.isEmpty() && !resolvers.supports(asset))
+        {
+            logger.debug("Skipping {} of asset {}: no {}-resolver registered for asset-type {}", kind, asset.identity().id(), kind, asset.type().name());
+            return Optional.empty();
+        }
+        if (resolver.isEmpty())
+        {
+            logger.warn(
+                "Skipping {} of asset {}: no {}-resolver accepts asset-type {} with profile {}",
+                kind,
+                asset.identity().id(),
+                kind,
+                asset.type().name(),
+                asset.profile().getClass().getName()
+            );
+            return Optional.empty();
+        }
+        return Optional.of(resolver.get().resolve(asset, activity));
     }
 }

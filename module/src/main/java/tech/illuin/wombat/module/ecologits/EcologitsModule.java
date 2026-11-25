@@ -11,6 +11,8 @@ import tech.illuin.wombat.module.ecologits.impact.EcologitsEvaluationResolver;
 
 import java.util.Optional;
 
+import static tech.illuin.wombat.module.ecologits.EcologitsSettings.DEFAULT;
+
 public class EcologitsModule implements WombatModule
 {
     public static final FamilyType TYPE = FamilyType.of("tech.illuin", "wombat-module", "ecologits", ServiceFamily.LLM);
@@ -31,9 +33,7 @@ public class EcologitsModule implements WombatModule
     public Optional<ProcessorFactory<WombatEvaluationResolver>> impactResolver()
     {
         return Optional.of((services, asset) -> {
-            EcologitsSettings settings = services.settings(TYPE)
-                .map(EcologitsSettings.class::cast)
-                .orElse(EcologitsSettings.DEFAULT);
+            EcologitsSettings settings = services.settings(TYPE, EcologitsSettings.class).orElse(DEFAULT);
             return new EcologitsEvaluationResolver(EcologitsClientConfig.create(settings.uri(), settings.proxyUrl()));
         });
     }

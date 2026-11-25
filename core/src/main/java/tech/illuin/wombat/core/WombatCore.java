@@ -20,7 +20,7 @@ import java.util.function.Function;
 
 public final class WombatCore implements AutoCloseable
 {
-    /* Ordered: family modules serving the same feature of the same family are tried in registration order */
+    /* Ordered: the family modules of a family are tried in registration order */
     private final Map<String, WombatModule> modules;
     private final WombatContextProvider contextProvider;
     private final WombatServices services;
@@ -52,9 +52,9 @@ public final class WombatCore implements AutoCloseable
         switch (module.type())
         {
             case AssetType type when module.assetClass().isEmpty() ->
-                throw new IllegalArgumentException("Module " + module.getClass().getSimpleName() + " defines asset-type " + name + " but no asset class");
+                throw new IllegalArgumentException("Module " + type.name() + " defines an asset-type but no asset class");
             case FamilyType type when module.assetClass().isPresent() ->
-                throw new IllegalArgumentException("Module " + module.getClass().getSimpleName() + " serves family " + type.family() + " but declares an asset class");
+                throw new IllegalArgumentException("Module " + type.name() + " serves family " + type.family() + " but declares an asset class");
             default -> {}
         }
 

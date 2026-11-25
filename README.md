@@ -146,14 +146,14 @@ Asset-type modules define a kind of asset and serve the assets of that type:
 | [`tech.illuin.wombat-module.llm-anthropic`](doc/module/llm-anthropic.md)               | `LLM`                  | Queries the Anthropic Admin usage report on demand for per-model token usage over the evaluated time range.          |
 | [`tech.illuin.wombat-module.llm-vertexai`](doc/module/llm-vertexai.md)                 | `LLM`                  | Queries the VertexAI usage report on demand for per-model token usage over the evaluated time range.                 |
 
-Family modules define no asset, and serve every asset of their family (see [Family Modules](#family-modules)):
+Family modules define no asset type, and can serve every asset of their family (see [Family Modules](#family-modules)):
 
-| Module                                                                                 | Family                 | Description                                                                                                          |
-|----------------------------------------------------------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------|
-| [`tech.illuin.wombat-module.kubernetes-metrics`](doc/module/kubernetes-metrics.md)     | `KUBERNETES_CONTAINER` | Resolves the activity of sourced Kubernetes assets from the container metrics in the metric store.                   |
-| [`tech.illuin.wombat-module.llm-metrics`](doc/module/llm-metrics.md)                   | `LLM`                  | Resolves the activity of sourced LLM assets from the request and token metrics in the metric store.                  |
-| [`tech.illuin.wombat-module.boavizta`](doc/module/boavizta.md)                         | `KUBERNETES_CONTAINER` | Estimates multi-criteria impacts (GHG emissions, primary energy, abiotic depletion) of server workloads with Boavizta. |
-| [`tech.illuin.wombat-module.ecologits`](doc/module/ecologits.md)                       | `LLM`                  | Estimates multi-criteria footprints of LLM inferences with EcoLogits.                                                |
+| Module                                                                                 | Family                 | Description                                                                                                                                                      |
+|----------------------------------------------------------------------------------------|------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`tech.illuin.wombat-module.kubernetes-metrics`](doc/module/kubernetes-metrics.md)     | `KUBERNETES_CONTAINER` | Resolves the activity of sourced Kubernetes assets from the container metrics in a metric store.                                                                 |
+| [`tech.illuin.wombat-module.llm-metrics`](doc/module/llm-metrics.md)                   | `LLM`                  | Resolves the activity of sourced LLM assets from the request and token metrics in a metric store.                                                                |
+| [`tech.illuin.wombat-module.boavizta`](doc/module/boavizta.md)                         | `KUBERNETES_CONTAINER` | Estimates multi-criteria impacts (GHG emissions, primary energy, abiotic depletion) of server workloads with [Boavizta](https://github.com/Boavizta/boaviztapi). |
+| [`tech.illuin.wombat-module.ecologits`](doc/module/ecologits.md)                       | `LLM`                  | Estimates multi-criteria footprints of LLM inferences with [EcoLogits](https://ecologits.ai/latest/).                                                            |
 
 `CoreModules.all()` builds them all, asset-type modules first, then the family modules in the order above, which is the order they are tried in.
 
