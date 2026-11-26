@@ -18,4 +18,17 @@ public interface Asset
 
     @NotNull
     AssetProfile profile();
+
+    /**
+     * Required of the assets whose module registers a {@link tech.illuin.wombat.core.evaluation.WombatProfileResolver},
+     * which they are evaluated with the profile of.
+     *
+     * @return this asset with {@code profile} in place of its own
+     * @throws UnsupportedOperationException when this asset's profile cannot be replaced
+     * @throws IllegalArgumentException when this asset cannot hold {@code profile}
+     */
+    default Asset withProfile(AssetProfile profile)
+    {
+        throw new UnsupportedOperationException("Asset-type " + this.type().name() + " cannot have its profile replaced");
+    }
 }

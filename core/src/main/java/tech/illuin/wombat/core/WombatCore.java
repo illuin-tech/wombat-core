@@ -92,6 +92,7 @@ public final class WombatCore implements AutoCloseable
             module.activityResolver().ifPresent(factory -> calculator.registerActivityResolver(module.type(), factory));
             module.impactResolver().ifPresent(factory -> calculator.registerImpactResolver(module.type(), factory));
             module.costResolver().ifPresent(factory -> calculator.registerCostResolver(module.type(), factory));
+            module.profileResolver().ifPresent(factory -> calculator.registerProfileResolver(module.type(), factory));
         }
 
         return calculator;

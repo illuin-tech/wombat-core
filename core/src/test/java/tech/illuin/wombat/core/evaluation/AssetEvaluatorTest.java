@@ -2,6 +2,7 @@ package tech.illuin.wombat.core.evaluation;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
+import tech.illuin.wombat.core.activity.commons.ActivityData;
 import tech.illuin.wombat.core.activity.commons.AssetActivity;
 import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
@@ -9,14 +10,20 @@ import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
+import tech.illuin.wombat.core.asset.profile.inference.InferredProfile;
+import tech.illuin.wombat.core.asset.profile.inference.ProfileOrigin;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.context.ResolvedContext;
 import tech.illuin.wombat.core.context.WombatContextProvider;
+import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
+import tech.illuin.wombat.core.evaluation.impact.commons.Footprint;
+import tech.illuin.wombat.core.evaluation.impact.commons.ImpactProvider;
 import tech.illuin.wombat.core.evaluation.impact.kubernetes.KubernetesMetricResolver;
 import tech.illuin.wombat.core.evaluation.impact.llm.LLMMetricResolver;
 import tech.illuin.wombat.core.module.MetricResolvers;
+import tech.illuin.wombat.core.module.ProcessorFactory;
 import tech.illuin.wombat.core.module.WombatServices;
 import tech.illuin.wombat.core.secret.SecretResolver;
 
@@ -31,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 class AssetEvaluatorTest
@@ -115,6 +123,141 @@ class AssetEvaluatorTest
         assertEquals(List.of("evaluator-test"), threads);
     }
 
+    @Test
+    void computeImpact_evaluatesWithTheResolvedProfile() throws WombatEvaluationException
+    {
+        AssetProfile inferred = new AssetProfile() {};
+        List<AssetProfile> evaluated = new CopyOnWriteArrayList<>();
+
+        try (AssetEvaluator evaluator = new AssetEvaluator(contextOf(List.of()), SERVICES))
+        {
+            evaluator.registerImpactResolver(TYPE, recordingProfiles(evaluated));
+            evaluator.registerCostResolver(TYPE, recordingProfiles(evaluated));
+            evaluator.registerProfileResolver(TYPE, (services, asset) -> resolved -> inferred);
+
+            evaluator.computeImpact(new TestAsset("a1"), mock(ActivityData.class));
+            evaluator.computeCost(new TestAsset("a1"), mock(ActivityData.class));
+        }
+
+        assertEquals(List.of(inferred, inferred), evaluated);
+    }
+
+    @Test
+    void computeImpact_keepsTheDeclaredProfileWhenNoProfileResolverAcceptsIt() throws WombatEvaluationException
+    {
+        List<AssetProfile> evaluated = new CopyOnWriteArrayList<>();
+        TestAsset asset = new TestAsset("a1");
+
+        try (AssetEvaluator evaluator = new AssetEvaluator(contextOf(List.of()), SERVICES))
+        {
+            evaluator.registerImpactResolver(TYPE, recordingProfiles(evaluated));
+            evaluator.registerProfileResolver(TYPE, (services, declared) -> new WombatProfileResolver() {
+                @Override
+                public boolean accept(Asset candidate)
+                {
+                    return false;
+                }
+
+                @Override
+                public AssetProfile resolve(Asset candidate)
+                {
+                    throw new AssertionError("A profile resolver rejecting an asset must not resolve it");
+                }
+            });
+
+            evaluator.computeImpact(asset, mock(ActivityData.class));
+        }
+
+        assertEquals(Collections.singletonList(asset.profile()), evaluated);
+    }
+
+    @Test
+    void computeImpact_failsOnlyThisAssetWhenItsProfileResolverCannotBeBuilt()
+    {
+        try (AssetEvaluator evaluator = new AssetEvaluator(contextOf(List.of()), SERVICES))
+        {
+            evaluator.registerImpactResolver(TYPE, recordingProfiles(new ArrayList<>()));
+            evaluator.registerProfileResolver(TYPE, (services, asset) -> {
+                throw new IllegalStateException("no kubeconfig");
+            });
+
+            assertThrows(WombatEvaluationException.class, () -> evaluator.computeImpact(new TestAsset("a1"), mock(ActivityData.class)));
+        }
+    }
+
+    @Test
+    void computeImpact_tellsWhereAnInferredProfileComesFrom() throws WombatEvaluationException
+    {
+        try (AssetEvaluator evaluator = new AssetEvaluator(contextOf(List.of()), SERVICES))
+        {
+            evaluator.registerImpactResolver(TYPE, (services, declared) -> (asset, activity) -> impact(asset));
+            evaluator.registerProfileResolver(TYPE, (services, asset) -> resolved -> new TestInferredProfile());
+
+            AssetImpact impact = (AssetImpact) evaluator.computeImpact(new TestAsset("a1"), mock(ActivityData.class)).orElseThrow();
+
+            assertEquals(ProfileOrigin.RESOURCE_QUOTAS, impact.profileOrigin());
+            assertEquals(List.of("a slice"), impact.warnings());
+        }
+    }
+
+    @Test
+    void computeImpact_tellsADeclaredProfileIsDeclared() throws WombatEvaluationException
+    {
+        try (AssetEvaluator evaluator = new AssetEvaluator(contextOf(List.of()), SERVICES))
+        {
+            evaluator.registerImpactResolver(TYPE, (services, declared) -> (asset, activity) -> impact(asset));
+
+            AssetImpact impact = (AssetImpact) evaluator.computeImpact(new TestAsset("a1"), mock(ActivityData.class)).orElseThrow();
+
+            assertEquals(ProfileOrigin.DECLARED, impact.profileOrigin());
+            assertEquals(List.of(), impact.warnings());
+        }
+    }
+
+    @Test
+    void report_tellsTheAssetsThatFailedOnceEach() throws WombatEvaluationException
+    {
+        try (AssetEvaluator evaluator = new AssetEvaluator(contextOf(List.of(new TestAsset("a1"), new TestAsset("a2"))), SERVICES))
+        {
+            evaluator.registerActivityResolver(TYPE, (services, asset) -> (resolved, range, filter) ->
+                Optional.of(new AssetActivity(resolved.identity(), List.of(mock(ActivityData.class), mock(ActivityData.class))))
+            );
+            evaluator.registerImpactResolver(TYPE, (services, declared) -> (asset, activity) -> impact(asset));
+            evaluator.registerCostResolver(TYPE, (services, declared) -> (asset, activity) -> impact(asset));
+            evaluator.registerProfileResolver(TYPE, (services, declared) -> new WombatProfileResolver() {
+                @Override
+                public boolean accept(Asset candidate)
+                {
+                    return candidate.identity().id().equals("a2");
+                }
+
+                @Override
+                public AssetProfile resolve(Asset candidate) throws WombatEvaluationException
+                {
+                    throw new WombatEvaluationException("forbidden to list nodes");
+                }
+            });
+
+            EvaluationReport report = evaluator.report(RANGE, AssetFilter.none());
+
+            assertEquals(4, report.evaluations().size());
+            assertEquals(List.of(new AssetEvaluationFailure(new TestAsset("a2").identity(), "forbidden to list nodes")), report.failures());
+        }
+    }
+
+    private static AssetImpact impact(Asset asset)
+    {
+        return new AssetImpact(asset.identity(), Footprint.sum(List.of()), List.of(), ImpactProvider.BOAVIZTA, RANGE);
+    }
+
+    private static ProcessorFactory<WombatEvaluationResolver> recordingProfiles(List<AssetProfile> evaluated)
+    {
+        return (services, declared) -> (asset, activity) -> {
+            evaluated.add(asset.profile());
+            return mock(AssetEvaluation.class);
+        };
+    }
+
     private static AssetEvaluator evaluator(List<Asset> assets, List<RecordingResolver> created)
     {
         return new AssetEvaluator(contextOf(assets), SERVICES).registerActivityResolver(TYPE, (services, asset) -> {
@@ -149,8 +292,34 @@ class AssetEvaluatorTest
         }
     }
 
-    private record TestAsset(String assetId) implements Asset
+    private record TestInferredProfile() implements AssetProfile, InferredProfile
     {
+        @Override
+        public ProfileOrigin origin()
+        {
+            return ProfileOrigin.RESOURCE_QUOTAS;
+        }
+
+        @Override
+        public List<String> warnings()
+        {
+            return List.of("a slice");
+        }
+    }
+
+    private record TestAsset(String assetId, AssetProfile profile) implements Asset
+    {
+        TestAsset(String assetId)
+        {
+            this(assetId, null);
+        }
+
+        @Override
+        public TestAsset withProfile(AssetProfile replacement)
+        {
+            return new TestAsset(this.assetId, replacement);
+        }
+
         @Override
         public AssetIdentity identity()
         {
@@ -161,12 +330,6 @@ class AssetEvaluatorTest
         public AssetType type()
         {
             return TYPE;
-        }
-
-        @Override
-        public AssetProfile profile()
-        {
-            return null;
         }
     }
 }
