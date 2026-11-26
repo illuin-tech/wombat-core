@@ -7,10 +7,10 @@ import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.asset.profile.BareServerProfile;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
-import tech.illuin.wombat.core.asset.profile.inference.InferredBareServerProfile;
-import tech.illuin.wombat.core.asset.profile.inference.InferredCloudServerProfile;
-import tech.illuin.wombat.core.asset.profile.inference.ProfileOrigin;
-import tech.illuin.wombat.core.asset.profile.inference.ResourceAmount;
+import tech.illuin.wombat.module.kubernetes_api.profile.InferredBareServerProfile;
+import tech.illuin.wombat.module.kubernetes_api.profile.InferredCloudServerProfile;
+import tech.illuin.wombat.module.kubernetes_api.profile.KubernetesProfileOrigin;
+import tech.illuin.wombat.module.kubernetes_api.profile.ResourceAmount;
 import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.core.source.Period;
 
@@ -56,7 +56,7 @@ public class KubernetesAPIAssetTest
     void anInferredCloudProfileBecomesADeclaredOne()
     {
         KubernetesAPIAsset asset = asset("KUBECONFIG_PROD");
-        KubernetesAPIAsset inferred = asset.withProfile(new InferredCloudServerProfile(ServerProvider.aws, "m5.xlarge", Country.WORLD, Lifetime.ofYears(5), 3, ProfileOrigin.NODES, List.of()));
+        KubernetesAPIAsset inferred = asset.withProfile(new InferredCloudServerProfile(ServerProvider.aws, "m5.xlarge", Country.WORLD, Lifetime.ofYears(5), 3, KubernetesProfileOrigin.NODES, List.of()));
 
         assertEquals(new KubernetesAPICloudProfile(ServerProvider.aws, "m5.xlarge", Country.WORLD, Lifetime.ofYears(5)), inferred.profile());
         assertEquals(asset.identity(), inferred.identity());
@@ -66,7 +66,7 @@ public class KubernetesAPIAssetTest
     @Test
     void anInferredBareServerProfileBecomesADeclaredOne()
     {
-        var profile = InferredBareServerProfile.of(new ResourceAmount(4, 16.0 * 1024 * 1024 * 1024), Country.FRANCE, Lifetime.ofYears(6), 1, ProfileOrigin.RESOURCE_QUOTAS, List.of());
+        var profile = InferredBareServerProfile.of(new ResourceAmount(4, 16.0 * 1024 * 1024 * 1024), Country.FRANCE, Lifetime.ofYears(6), 1, KubernetesProfileOrigin.RESOURCE_QUOTAS, List.of());
 
         assertEquals(
             new KubernetesAPIBareServerProfile(Country.FRANCE, Lifetime.ofYears(6), new BareServerProfile.CPU(1, 2, 2, null), new BareServerProfile.RAM(1, 16), null, null, null),

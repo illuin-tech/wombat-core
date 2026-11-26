@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.core.asset.profile;
 
 import java.util.List;
 

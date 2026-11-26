@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.module.kubernetes_api.profile;
 
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;

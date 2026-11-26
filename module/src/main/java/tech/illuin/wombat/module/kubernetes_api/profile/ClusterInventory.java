@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.module.kubernetes_api.profile;
 
 import java.util.List;
 import java.util.Map;

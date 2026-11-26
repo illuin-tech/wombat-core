@@ -1,12 +1,12 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.module.kubernetes_api.profile;
+
+import tech.illuin.wombat.core.asset.profile.ProfileOrigin;
 
 /**
- * Where an evaluated profile comes from, from the most to the least faithful to the hardware.
+ * Where a profile inferred from a Kubernetes cluster comes from, from the most to the least faithful to the hardware.
  */
-public enum ProfileOrigin
+public enum KubernetesProfileOrigin implements ProfileOrigin
 {
-    /** Declared by the user. */
-    DECLARED,
     /** The nodes' instance type, or their capacity when their provider is unknown. */
     NODES,
     /** The namespaces' resource quotas: a slice of the cluster, not its nodes. */

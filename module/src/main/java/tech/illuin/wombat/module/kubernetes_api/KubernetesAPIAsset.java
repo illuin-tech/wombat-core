@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.PatchableAsset;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
 import tech.illuin.wombat.core.asset.profile.BareServerProfile;
 import tech.illuin.wombat.core.asset.profile.CloudServerProfile;
@@ -34,7 +34,7 @@ public record KubernetesAPIAsset(
     @JsonPropertyDescription("Read timeout of the Kubernetes API requests (ISO-8601), the client's default when omitted") @JsonAlias("read-timeout") Optional<Duration> readTimeout,
     @JsonPropertyDescription("Polling interval, the monitor's default when omitted") Period period,
     @NotNull @Valid @JsonPropertyDescription("Server hardware profile, inferred from the cluster when omitted") KubernetesAPIServerProfile profile
-) implements Asset, SecretAware, Monitorable
+) implements PatchableAsset, SecretAware, Monitorable
 {
     public KubernetesAPIAsset
     {

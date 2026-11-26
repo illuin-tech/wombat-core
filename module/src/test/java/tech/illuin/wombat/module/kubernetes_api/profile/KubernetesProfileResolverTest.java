@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.module.kubernetes_api.profile;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -66,10 +65,15 @@ class KubernetesProfileResolverTest
     );
 
     @Test
-    void onlyAcceptsInferableProfiles()
+    void acceptsEveryAssetAndKeepsADeclaredProfileWithoutInferring() throws ProfileInferenceException
     {
+        // Accepting does not depend on the profile, which an edit of the asset may switch to or from an inferred one
+        ServerProfile declared = profile("m5.large");
         assertTrue(this.resolver.accept(asset(NO_HINTS)));
-        assertFalse(this.resolver.accept(asset(profile("m5.large"))));
+        assertTrue(this.resolver.accept(asset(declared)));
+
+        assertSame(declared, this.resolver.resolve(asset(declared)));
+        verify(this.inference, times(0)).infer(any(), any(), any());
     }
 
     @Test
@@ -118,7 +122,7 @@ class KubernetesProfileResolverTest
 
     private static ServerProfile profile(String instanceType)
     {
-        return new InferredCloudServerProfile(ServerProvider.aws, instanceType, Country.FRANCE, Lifetime.ofYears(4), 1, ProfileOrigin.NODES, List.of());
+        return new InferredCloudServerProfile(ServerProvider.aws, instanceType, Country.FRANCE, Lifetime.ofYears(4), 1, KubernetesProfileOrigin.NODES, List.of());
     }
 
     private static Asset asset(AssetProfile profile)

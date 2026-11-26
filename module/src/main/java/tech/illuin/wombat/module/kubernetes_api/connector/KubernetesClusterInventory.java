@@ -4,9 +4,9 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory;
-import tech.illuin.wombat.core.asset.profile.inference.InventoryUnavailableException;
-import tech.illuin.wombat.core.asset.profile.inference.ResourceAmount;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory;
+import tech.illuin.wombat.module.kubernetes_api.profile.InventoryUnavailableException;
+import tech.illuin.wombat.module.kubernetes_api.profile.ResourceAmount;
 import tech.illuin.wombat.core.secret.MissingSecretException;
 
 import java.net.HttpURLConnection;
@@ -113,16 +113,14 @@ public class KubernetesClusterInventory implements ClusterInventory
      */
     private synchronized KubernetesClient client() throws InventoryUnavailableException
     {
-        if (this.client == null)
-        {
-            try {
+        try {
+            if (this.client == null)
                 this.client = this.clientFactory.get();
-            }
-            catch (MissingSecretException | IllegalArgumentException | KubernetesClientException e) {
-                throw new InventoryUnavailableException("cannot connect to the cluster: " + e.getMessage(), e);
-            }
+            return this.client;
         }
-        return this.client;
+        catch (MissingSecretException | IllegalArgumentException | KubernetesClientException e) {
+            throw new InventoryUnavailableException("cannot connect to the cluster: " + e.getMessage(), e);
+        }
     }
 
     private static Pod pod(io.fabric8.kubernetes.api.model.Pod pod)

@@ -9,9 +9,10 @@ import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.Environment;
+import tech.illuin.wombat.core.asset.PatchableAsset;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
-import tech.illuin.wombat.core.asset.profile.inference.InferredProfile;
-import tech.illuin.wombat.core.asset.profile.inference.ProfileOrigin;
+import tech.illuin.wombat.core.asset.profile.InferredProfile;
+import tech.illuin.wombat.core.asset.profile.ProfileOrigin;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
@@ -59,9 +60,9 @@ class AssetEvaluatorTest
 
         try (AssetEvaluator evaluator = evaluator(assets, created))
         {
-            evaluator.evaluate(RANGE, AssetFilter.none());
+            evaluator.report(RANGE, AssetFilter.none());
             assets.add(new TestAsset("a1"));
-            evaluator.evaluate(RANGE, AssetFilter.none());
+            evaluator.report(RANGE, AssetFilter.none());
         }
 
         assertEquals(1, created.size());
@@ -76,9 +77,9 @@ class AssetEvaluatorTest
 
         try (AssetEvaluator evaluator = evaluator(assets, created))
         {
-            evaluator.evaluate(RANGE, AssetFilter.none());
+            evaluator.report(RANGE, AssetFilter.none());
             assets.removeIf(asset -> asset.identity().id().equals("a1"));
-            evaluator.evaluate(RANGE, AssetFilter.none());
+            evaluator.report(RANGE, AssetFilter.none());
 
             RecordingResolver a1 = created.stream().filter(r -> r.resolved.contains("a1")).findFirst().orElseThrow();
             RecordingResolver a2 = created.stream().filter(r -> r.resolved.contains("a2")).findFirst().orElseThrow();
@@ -95,9 +96,9 @@ class AssetEvaluatorTest
 
         try (AssetEvaluator evaluator = evaluator(List.of(asset), created))
         {
-            evaluator.evaluate(RANGE, AssetFilter.none());
+            evaluator.report(RANGE, AssetFilter.none());
             evaluator.refresh(asset.identity());
-            evaluator.evaluate(RANGE, AssetFilter.none());
+            evaluator.report(RANGE, AssetFilter.none());
 
             assertEquals(2, created.size());
             assertEquals(1, created.getFirst().closed.get());
@@ -117,7 +118,7 @@ class AssetEvaluatorTest
                 threads.add(Thread.currentThread().getName());
                 return Optional.empty();
             });
-            evaluator.evaluate(RANGE, AssetFilter.none());
+            evaluator.report(RANGE, AssetFilter.none());
         }
 
         assertEquals(List.of("evaluator-test"), threads);
@@ -186,6 +187,23 @@ class AssetEvaluatorTest
     }
 
     @Test
+    void computeImpact_failsAnAssetThatCannotTakeItsResolvedProfile()
+    {
+        List<AssetProfile> evaluated = new ArrayList<>();
+
+        try (AssetEvaluator evaluator = new AssetEvaluator(contextOf(List.of()), SERVICES))
+        {
+            evaluator.registerImpactResolver(TYPE, recordingProfiles(evaluated));
+            evaluator.registerProfileResolver(TYPE, (services, asset) -> resolved -> new TestInferredProfile());
+
+            assertThrows(WombatEvaluationException.class, () -> evaluator.computeImpact(new UnpatchableAsset("a1"), mock(ActivityData.class)));
+        }
+
+        // Never evaluated with its declared profile under the origin of the resolved one
+        assertEquals(List.of(), evaluated);
+    }
+
+    @Test
     void computeImpact_tellsWhereAnInferredProfileComesFrom() throws WombatEvaluationException
     {
         try (AssetEvaluator evaluator = new AssetEvaluator(contextOf(List.of()), SERVICES))
@@ -195,7 +213,7 @@ class AssetEvaluatorTest
 
             AssetImpact impact = (AssetImpact) evaluator.computeImpact(new TestAsset("a1"), mock(ActivityData.class)).orElseThrow();
 
-            assertEquals(ProfileOrigin.RESOURCE_QUOTAS, impact.profileOrigin());
+            assertEquals(TestOrigin.INFERRED_FOR_TEST, impact.profileOrigin());
             assertEquals(List.of("a slice"), impact.warnings());
         }
     }
@@ -292,12 +310,18 @@ class AssetEvaluatorTest
         }
     }
 
+    /** The origins a module would define for the profiles it infers. */
+    private enum TestOrigin implements ProfileOrigin
+    {
+        INFERRED_FOR_TEST
+    }
+
     private record TestInferredProfile() implements AssetProfile, InferredProfile
     {
         @Override
         public ProfileOrigin origin()
         {
-            return ProfileOrigin.RESOURCE_QUOTAS;
+            return TestOrigin.INFERRED_FOR_TEST;
         }
 
         @Override
@@ -307,7 +331,7 @@ class AssetEvaluatorTest
         }
     }
 
-    private record TestAsset(String assetId, AssetProfile profile) implements Asset
+    private record TestAsset(String assetId, AssetProfile profile) implements PatchableAsset
     {
         TestAsset(String assetId)
         {
@@ -330,6 +354,27 @@ class AssetEvaluatorTest
         public AssetType type()
         {
             return TYPE;
+        }
+    }
+
+    private record UnpatchableAsset(String assetId) implements Asset
+    {
+        @Override
+        public AssetIdentity identity()
+        {
+            return AssetIdentity.of(this.assetId, "env", this.type());
+        }
+
+        @Override
+        public AssetType type()
+        {
+            return TYPE;
+        }
+
+        @Override
+        public AssetProfile profile()
+        {
+            return null;
         }
     }
 }

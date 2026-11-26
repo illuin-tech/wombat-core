@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.module.kubernetes_api.profile;
 
 /**
  * A part of the {@link ClusterInventory} could not be read, typically because the credentials are not allowed to.

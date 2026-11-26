@@ -14,9 +14,9 @@ import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import org.junit.jupiter.api.Test;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory;
-import tech.illuin.wombat.core.asset.profile.inference.InventoryUnavailableException;
-import tech.illuin.wombat.core.asset.profile.inference.ResourceAmount;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory;
+import tech.illuin.wombat.module.kubernetes_api.profile.InventoryUnavailableException;
+import tech.illuin.wombat.module.kubernetes_api.profile.ResourceAmount;
 import tech.illuin.wombat.core.secret.MissingSecretException;
 
 import java.net.URI;

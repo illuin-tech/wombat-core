@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.module.kubernetes_api.profile;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6,10 +6,10 @@ import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory.Container;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory.Node;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory.Pod;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory.Quota;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory.Container;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory.Node;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory.Pod;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory.Quota;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -77,49 +77,48 @@ public class KubernetesProfileInference
 
     private Optional<ServerProfile> fromNodes(ClusterInventory inventory, Country location, Lifetime lifespan, List<String> defaults, List<String> failures)
     {
-        List<Node> nodes;
         try {
-            nodes = inventory.nodes();
+            List<Node> nodes = inventory.nodes();
+            if (nodes.isEmpty())
+            {
+                failures.add("no node listed");
+                return Optional.empty();
+            }
+
+            Optional<ServerProvider> clusterProvider = inventory.apiServerHost().flatMap(CloudPlacement::apiServerProvider);
+            List<NodeKind> kinds = nodes.stream()
+                .sorted(Comparator.comparing(Node::name, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(node -> NodeKind.of(node, clusterProvider))
+                .toList();
+            List<NodeKind> dominant = dominant(kinds, NodeKind::key);
+            NodeKind kind = dominant.getFirst();
+            List<String> warnings = new ArrayList<>(defaults);
+            if (dominant.size() < kinds.size())
+            {
+                logger.info("Nodes are of several kinds, inferring the profile of the most common one ({} out of {} nodes)", dominant.size(), kinds.size());
+                warnings.add("Nodes are of several kinds, only the most common one is profiled (" + dominant.size() + " out of " + kinds.size() + " nodes)");
+            }
+
+            if (kind.isCloud())
+            {
+                logger.info("Inferred a {} {} profile in {} from {} node(s)", kind.provider(), kind.instanceType(), location.alpha3(), dominant.size());
+                return Optional.of(new InferredCloudServerProfile(kind.provider(), kind.instanceType(), location, lifespan, dominant.size(), KubernetesProfileOrigin.NODES, warnings));
+            }
+
+            if (kind.capacity().cpuCores() <= 0)
+            {
+                failures.add("nodes tell neither a known provider and instance type nor their capacity");
+                return Optional.empty();
+            }
+            logger.info("Nodes are of no known provider and instance type, inferring a bare server of their capacity {} from {} node(s)", kind.capacity(), dominant.size());
+            warnings.add("Nodes are of no known provider and instance type, a server of their capacity is assumed");
+            warnings.add(UNKNOWN_DISKS);
+            return Optional.of(InferredBareServerProfile.of(kind.capacity(), location, lifespan, dominant.size(), KubernetesProfileOrigin.NODES, warnings));
         }
         catch (InventoryUnavailableException e) {
             failures.add("nodes unreadable (" + e.getMessage() + ")");
             return Optional.empty();
         }
-        if (nodes.isEmpty())
-        {
-            failures.add("no node listed");
-            return Optional.empty();
-        }
-
-        Optional<ServerProvider> clusterProvider = inventory.apiServerHost().flatMap(CloudPlacement::apiServerProvider);
-        List<NodeKind> kinds = nodes.stream()
-            .sorted(Comparator.comparing(Node::name, Comparator.nullsLast(Comparator.naturalOrder())))
-            .map(node -> NodeKind.of(node, clusterProvider))
-            .toList();
-        List<NodeKind> dominant = dominant(kinds, NodeKind::key);
-        NodeKind kind = dominant.getFirst();
-        List<String> warnings = new ArrayList<>(defaults);
-        if (dominant.size() < kinds.size())
-        {
-            logger.info("Nodes are of several kinds, inferring the profile of the most common one ({} out of {} nodes)", dominant.size(), kinds.size());
-            warnings.add("Nodes are of several kinds, only the most common one is profiled (" + dominant.size() + " out of " + kinds.size() + " nodes)");
-        }
-
-        if (kind.isCloud())
-        {
-            logger.info("Inferred a {} {} profile in {} from {} node(s)", kind.provider(), kind.instanceType(), location.alpha3(), dominant.size());
-            return Optional.of(new InferredCloudServerProfile(kind.provider(), kind.instanceType(), location, lifespan, dominant.size(), ProfileOrigin.NODES, warnings));
-        }
-
-        if (kind.capacity().cpuCores() <= 0)
-        {
-            failures.add("nodes tell neither a known provider and instance type nor their capacity");
-            return Optional.empty();
-        }
-        logger.info("Nodes are of no known provider and instance type, inferring a bare server of their capacity {} from {} node(s)", kind.capacity(), dominant.size());
-        warnings.add("Nodes are of no known provider and instance type, a server of their capacity is assumed");
-        warnings.add(UNKNOWN_DISKS);
-        return Optional.of(InferredBareServerProfile.of(kind.capacity(), location, lifespan, dominant.size(), ProfileOrigin.NODES, warnings));
     }
 
     private Optional<ServerProfile> fromQuotas(ClusterInventory inventory, Set<String> namespaces, Country location, Lifetime lifespan, List<String> defaults, List<String> failures)
@@ -134,14 +133,10 @@ public class KubernetesProfileInference
         List<String> memoryUnbounded = new ArrayList<>();
         for (String namespace : new TreeSet<>(namespaces))
         {
-            List<Quota> quotas;
-            try {
-                quotas = inventory.quotas(namespace);
-            }
-            catch (InventoryUnavailableException e) {
-                failures.add("quotas of namespace " + namespace + " unreadable (" + e.getMessage() + ")");
+            Optional<List<Quota>> read = readQuotas(inventory, namespace, failures);
+            if (read.isEmpty())
                 return Optional.empty();
-            }
+            List<Quota> quotas = read.get();
 
             Optional<Double> cpu = tightest(quotas, CPU_QUOTA_KEYS);
             if (cpu.isEmpty())
@@ -164,7 +159,21 @@ public class KubernetesProfileInference
         }
         warnings.add(UNKNOWN_DISKS);
         logger.info("Inferred a bare server profile of {} from the quotas of namespaces {}", total, namespaces);
-        return Optional.of(InferredBareServerProfile.of(total, location, lifespan, 1, ProfileOrigin.RESOURCE_QUOTAS, warnings));
+        return Optional.of(InferredBareServerProfile.of(total, location, lifespan, 1, KubernetesProfileOrigin.RESOURCE_QUOTAS, warnings));
+    }
+
+    /**
+     * @return the quotas of {@code namespace}, empty when they cannot be read, which is added to {@code failures}
+     */
+    private static Optional<List<Quota>> readQuotas(ClusterInventory inventory, String namespace, List<String> failures)
+    {
+        try {
+            return Optional.of(inventory.quotas(namespace));
+        }
+        catch (InventoryUnavailableException e) {
+            failures.add("quotas of namespace " + namespace + " unreadable (" + e.getMessage() + ")");
+            return Optional.empty();
+        }
     }
 
     /**
@@ -181,33 +190,32 @@ public class KubernetesProfileInference
 
     private Optional<ServerProfile> fromContainers(ClusterInventory inventory, Set<String> namespaces, Country location, Lifetime lifespan, List<String> defaults, List<String> failures)
     {
-        List<Pod> pods;
         try {
-            pods = inventory.pods(namespaces).stream()
+            List<Pod> pods = inventory.pods(namespaces).stream()
                 .filter(pod -> !TERMINATED_PHASES.contains(pod.phase()))
                 .toList();
+
+            ResourceAmount requests = sum(pods, Container::requests);
+            if (requests.cpuCores() > 0)
+                return Optional.of(this.slice(requests, location, lifespan, KubernetesProfileOrigin.CONTAINER_REQUESTS, pods.size(), defaults));
+
+            ResourceAmount limits = sum(pods, Container::limits);
+            if (limits.cpuCores() > 0)
+                return Optional.of(this.slice(limits, location, lifespan, KubernetesProfileOrigin.CONTAINER_LIMITS, pods.size(), defaults));
+
+            failures.add(pods.isEmpty() ? "no running pod" : "no container requests nor limits CPU");
+            return Optional.empty();
         }
         catch (InventoryUnavailableException e) {
             failures.add("pods unreadable (" + e.getMessage() + ")");
             return Optional.empty();
         }
-
-        ResourceAmount requests = sum(pods, Container::requests);
-        if (requests.cpuCores() > 0)
-            return Optional.of(this.slice(requests, location, lifespan, ProfileOrigin.CONTAINER_REQUESTS, pods.size(), defaults));
-
-        ResourceAmount limits = sum(pods, Container::limits);
-        if (limits.cpuCores() > 0)
-            return Optional.of(this.slice(limits, location, lifespan, ProfileOrigin.CONTAINER_LIMITS, pods.size(), defaults));
-
-        failures.add(pods.isEmpty() ? "no running pod" : "no container requests nor limits CPU");
-        return Optional.empty();
     }
 
-    private ServerProfile slice(ResourceAmount resources, Country location, Lifetime lifespan, ProfileOrigin origin, int podCount, List<String> defaults)
+    private ServerProfile slice(ResourceAmount resources, Country location, Lifetime lifespan, KubernetesProfileOrigin origin, int podCount, List<String> defaults)
     {
         List<String> warnings = new ArrayList<>(defaults);
-        String sizedAfter = origin == ProfileOrigin.CONTAINER_REQUESTS ? "resource requests" : "resource limits, none requesting any";
+        String sizedAfter = origin == KubernetesProfileOrigin.CONTAINER_REQUESTS ? "resource requests" : "resource limits, none requesting any";
         warnings.add("Sized after the " + sizedAfter + " of " + podCount + " pod(s): a slice of the cluster, not its nodes");
         ResourceAmount sized = resources;
         if (resources.memoryBytes() <= 0)

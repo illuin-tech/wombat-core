@@ -129,7 +129,7 @@ Wombat relies on three fundamental component interfaces representing distinct st
 * `WombatActivityResolver` are activity data aggregators. Given an `Asset`, a `TimeRange` and an optional `AssetFilter`, it computes a standardized representation of `AssetActivity` with `ActivityData` data-points (e.g. CPU nanocores, LLM token counts) from historical metrics or modeled profiles
 * `WombatEvaluationResolver` are evaluation engines. Given an `Asset` and its resolved `ActivityData`, it computes either multi-criteria environmental footprints (`AssetImpact`, a `Footprint` per service) or financial costs (`AssetCost`, a `Money` per service, in any currency).
 
-A module can also provide a `WombatProfileResolver`, which resolves the profile an asset is evaluated with when the asset leaves it to infer, e.g. a Kubernetes cluster's hardware read from its nodes. The `AssetEvaluator` hands the evaluation resolvers the asset with that profile (`Asset.withProfile`), and its `report` tells the assets it could not evaluate and why.
+A module can also provide a `WombatProfileResolver`, which resolves the profile an asset is evaluated with when the asset leaves it to infer, e.g. a Kubernetes cluster's hardware read from its nodes. The asset class of such a module must implement `PatchableAsset`, which the `WombatCore` checks when registering the module: the `AssetEvaluator` hands the evaluation resolvers the asset with that profile (`PatchableAsset.withProfile`), and its `report` tells the assets it could not evaluate and why. A resolved profile implementing `InferredProfile` tells the impact where it comes from (`AssetImpact.profileOrigin`) and what it had to assume (`warnings`): core only defines `ProfileOrigin.DECLARED`, each module defines the origins of the profiles it infers.
 
 ### Core Modules
 
@@ -256,7 +256,10 @@ try (WombatCore core = new WombatCore(contextProvider, services, metricPersister
     
     Instant now = Instant.now();
     TimeRange range = new TimeRange(now.minus(Duration.ofHours(24)), now);
-    List<AssetEvaluation> results = evaluator.evaluate(range, AssetFilter.none());
+    EvaluationReport report = evaluator.report(range, AssetFilter.none());
+    /* The evaluations, and the assets that could not be evaluated with the reason why */
+    List<AssetEvaluation> results = report.evaluations();
+    List<AssetEvaluationFailure> failures = report.failures();
 }
 ```
 

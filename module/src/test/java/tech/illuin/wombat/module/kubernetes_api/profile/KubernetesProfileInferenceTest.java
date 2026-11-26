@@ -1,15 +1,16 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.module.kubernetes_api.profile;
 
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.profile.BareServerProfile;
+import tech.illuin.wombat.core.asset.profile.InferredProfile;
 import tech.illuin.wombat.core.asset.profile.Lifetime;
 import tech.illuin.wombat.core.asset.profile.ServerProfile;
 import tech.illuin.wombat.core.asset.profile.ServerProvider;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory.Container;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory.Node;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory.Pod;
-import tech.illuin.wombat.core.asset.profile.inference.ClusterInventory.Quota;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory.Container;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory.Node;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory.Pod;
+import tech.illuin.wombat.module.kubernetes_api.profile.ClusterInventory.Quota;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,7 +49,7 @@ class KubernetesProfileInferenceTest
         assertSame(Country.WORLD, profile.location());
         assertEquals(Lifetime.ofYears(5), profile.lifespan());
         assertEquals(2, profile.nodeCount());
-        assertEquals(ProfileOrigin.NODES, profile.origin());
+        assertEquals(KubernetesProfileOrigin.NODES, profile.origin());
         assertEquals(List.of(
             "No location set, the world average is assumed",
             "No lifespan set, 5y is assumed",
@@ -82,7 +83,7 @@ class KubernetesProfileInferenceTest
         assertEquals(new BareServerProfile.CPU(1, 4, 2, null), profile.cpu());
         assertEquals(new BareServerProfile.RAM(1, 32), profile.ram());
         assertSame(Country.WORLD, profile.location());
-        assertEquals(ProfileOrigin.NODES, profile.origin());
+        assertEquals(KubernetesProfileOrigin.NODES, profile.origin());
     }
 
     @Test
@@ -114,7 +115,7 @@ class KubernetesProfileInferenceTest
         assertEquals(5, profile.cpu().vcpu());
         assertEquals(new BareServerProfile.RAM(1, 20), profile.ram());
         assertSame(Country.WORLD, profile.location());
-        assertEquals(ProfileOrigin.RESOURCE_QUOTAS, profile.origin());
+        assertEquals(KubernetesProfileOrigin.RESOURCE_QUOTAS, profile.origin());
         assertTrue(this.inventory.reads.stream().noneMatch("pods"::equals));
     }
 
@@ -141,7 +142,7 @@ class KubernetesProfileInferenceTest
 
         var profile = assertInstanceOf(InferredBareServerProfile.class, this.inference.infer(this.inventory, Set.of("payments", "analytics"), NO_HINTS));
 
-        assertEquals(ProfileOrigin.CONTAINER_REQUESTS, profile.origin());
+        assertEquals(KubernetesProfileOrigin.CONTAINER_REQUESTS, profile.origin());
         assertEquals(2, profile.cpu().vcpu());
         assertEquals(new BareServerProfile.RAM(1, 2), profile.ram());
     }
@@ -154,7 +155,7 @@ class KubernetesProfileInferenceTest
 
         var profile = assertInstanceOf(InferredBareServerProfile.class, this.inference.infer(this.inventory, Set.of(), NO_HINTS));
 
-        assertEquals(ProfileOrigin.CONTAINER_REQUESTS, profile.origin());
+        assertEquals(KubernetesProfileOrigin.CONTAINER_REQUESTS, profile.origin());
         assertTrue(this.inventory.reads.stream().noneMatch(read -> read.startsWith("quotas")));
     }
 
@@ -181,7 +182,7 @@ class KubernetesProfileInferenceTest
 
         var profile = assertInstanceOf(InferredBareServerProfile.class, this.inference.infer(this.inventory, Set.of(), NO_HINTS));
 
-        assertEquals(ProfileOrigin.CONTAINER_LIMITS, profile.origin());
+        assertEquals(KubernetesProfileOrigin.CONTAINER_LIMITS, profile.origin());
         assertEquals(new BareServerProfile.CPU(1, 1, 1, null), profile.cpu());
     }
 

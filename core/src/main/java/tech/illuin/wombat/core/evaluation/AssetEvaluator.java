@@ -9,8 +9,9 @@ import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.PatchableAsset;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
-import tech.illuin.wombat.core.asset.profile.inference.InferredProfile;
+import tech.illuin.wombat.core.asset.profile.InferredProfile;
 import tech.illuin.wombat.core.asset.type.ModuleType;
 import tech.illuin.wombat.core.asset.Environment;
 import tech.illuin.wombat.core.context.WombatContext;
@@ -75,21 +76,8 @@ public class AssetEvaluator implements AutoCloseable
         return this;
     }
 
-    public <E extends AssetEvaluation> List<E> evaluate(TimeRange range, AssetFilter filter, Class<E> evalType) throws WombatEvaluationException
-    {
-        return this.evaluate(range, filter).stream()
-            .filter(evalType::isInstance)
-            .map(evalType::cast)
-            .toList();
-    }
-
-    public List<AssetEvaluation> evaluate(TimeRange range, AssetFilter filter) throws WombatEvaluationException
-    {
-        return this.report(range, filter).evaluations();
-    }
-
     /**
-     * Evaluates the assets as {@link #evaluate(TimeRange, AssetFilter)} does, also telling which could not be and why.
+     * Evaluates the assets of the context accepted by {@code filter} over {@code range}, also telling which could not be and why.
      */
     public EvaluationReport report(TimeRange range, AssetFilter filter) throws WombatEvaluationException
     {
@@ -201,67 +189,44 @@ public class AssetEvaluator implements AutoCloseable
         return evaluation;
     }
 
-    public CompletableFuture<Optional<AssetEvaluation>> computeImpactAsync(Asset asset, ActivityData activity)
-    {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return this.computeImpact(asset, activity);
-            }
-            catch (WombatEvaluationException e) {
-                logger.error("An error occurred while evaluating asset {}", asset.identity(), e);
-                return Optional.empty();
-            }
-        }, this.executorService);
-    }
-
     public Optional<AssetEvaluation> computeCost(Asset declared, ActivityData activity) throws WombatEvaluationException
     {
         return this.computeEvaluation("cost", this.costResolvers, withProfile(declared, this.resolveProfile(declared)), activity);
     }
 
-    public CompletableFuture<Optional<AssetEvaluation>> computeCostAsync(Asset asset, ActivityData activity)
-    {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return this.computeCost(asset, activity);
-            }
-            catch (WombatEvaluationException e) {
-                logger.error("An error occurred while evaluating asset {}", asset.identity(), e);
-                return Optional.empty();
-            }
-        }, this.executorService);
-    }
-
     /**
-     * A failing factory throws unchecked exceptions, which would fail every asset's evaluation instead of this one's.
+     * A failing factory or resolver throws unchecked exceptions, which would fail every asset's evaluation instead of this one's.
+     * {@link WombatProfileResolver#resolve(Asset)} throwing a checked exception, it cannot be called from {@link Optional#map}.
      *
      * @return the profile the asset's profile resolver resolves, empty when none accepts it
      */
     @SuppressWarnings("checkstyle:IllegalCatch")
     private Optional<AssetProfile> resolveProfile(Asset asset) throws WombatEvaluationException
     {
-        Optional<WombatProfileResolver> resolver;
         try {
-            resolver = this.profileResolvers.get(asset);
+            Optional<WombatProfileResolver> resolver = this.profileResolvers.get(asset);
+            return resolver.isPresent() ? Optional.of(resolver.get().resolve(asset)) : Optional.empty();
         }
         catch (RuntimeException e) {
-            throw new WombatEvaluationException("Cannot build the profile resolver of asset " + asset.identity().id() + ": " + e.getMessage(), e);
+            throw new WombatEvaluationException("Cannot resolve the profile of asset " + asset.identity().id() + ": " + e.getMessage(), e);
         }
-        if (resolver.isEmpty())
-            return Optional.empty();
-        return Optional.of(resolver.get().resolve(asset));
     }
 
     /**
+     * A profile resolved for an asset that cannot take it fails the asset, rather than leaving it evaluated with its
+     * declared profile under the origin of the resolved one.
+     *
      * @return {@code asset} with the {@code resolved} profile, or as is when none was
      */
     @SuppressWarnings("checkstyle:IllegalCatch")
     private static Asset withProfile(Asset asset, Optional<AssetProfile> resolved) throws WombatEvaluationException
     {
-        if (resolved.isEmpty() || resolved.get() == asset.profile())
-            return asset;
         try {
-            return asset.withProfile(resolved.get());
+            if (resolved.isEmpty())
+                return asset;
+            if (!(asset instanceof PatchableAsset patchable))
+                throw new WombatEvaluationException("Asset-type " + asset.type().name() + " cannot have its profile replaced by a resolved one");
+            return patchable.withProfile(resolved.get());
         }
         catch (RuntimeException e) {
             throw new WombatEvaluationException("Cannot evaluate asset " + asset.identity().id() + " with its resolved profile: " + e.getMessage(), e);

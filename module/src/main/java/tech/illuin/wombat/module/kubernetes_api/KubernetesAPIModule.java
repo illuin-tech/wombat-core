@@ -2,7 +2,7 @@ package tech.illuin.wombat.module.kubernetes_api;
 
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
 import tech.illuin.wombat.core.asset.Asset;
-import tech.illuin.wombat.core.asset.profile.inference.KubernetesProfileResolver;
+import tech.illuin.wombat.module.kubernetes_api.profile.KubernetesProfileResolver;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.core.evaluation.WombatProfileResolver;

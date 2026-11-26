@@ -1,4 +1,4 @@
-package tech.illuin.wombat.core.asset.profile.inference;
+package tech.illuin.wombat.module.kubernetes_api.profile;
 
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.profile.AssetProfile;
@@ -44,16 +44,25 @@ public final class KubernetesProfileResolver implements WombatProfileResolver, A
         this.clock = clock;
     }
 
+    /**
+     * Serves every asset of the type it is registered for: whether an asset's profile is left to infer is a setting an
+     * edit may change, so it is read on each {@link #resolve(Asset)} rather than decided once here.
+     */
     @Override
     public boolean accept(Asset asset)
     {
-        return asset.profile() instanceof InferableServerProfile;
+        return true;
     }
 
+    /**
+     * @return the inferred profile of an asset declaring an {@link InferableServerProfile}, the declared profile otherwise
+     */
     @Override
     public synchronized AssetProfile resolve(Asset asset) throws ProfileInferenceException
     {
-        InferableServerProfile hints = (InferableServerProfile) asset.profile();
+        if (!(asset.profile() instanceof InferableServerProfile hints))
+            return asset.profile();
+
         Set<String> polled = this.namespaces.apply(asset);
         Instant now = this.clock.instant();
 
