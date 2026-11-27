@@ -7,7 +7,7 @@ import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaCloudInstanceI
 import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaUsage;
 import tech.illuin.wombat.module.boavizta.connector.model.BoaviztaServerProvider;
 import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationRequest;
-import tech.illuin.wombat.core.evaluation.impact.llm.EcologitsEstimationResponse;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationResponse;
 import tech.illuin.wombat.module.boavizta.connector.BoaviztaClientConfig;
 import tech.illuin.wombat.module.ecologits.connector.EcologitsClientConfig;
 import tech.illuin.wombat.module.conformance.canonical.CanonicalBoavizta;

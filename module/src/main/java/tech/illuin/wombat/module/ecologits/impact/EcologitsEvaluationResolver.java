@@ -11,7 +11,7 @@ import tech.illuin.wombat.core.asset.profile.LLMProfile;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.module.ecologits.connector.EcologitsClient;
 import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationRequest;
-import tech.illuin.wombat.core.evaluation.impact.llm.EcologitsEstimationResponse;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationResponse;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationException;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
@@ -96,7 +96,6 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
                 model,
                 location,
                 footprint,
-                estimation,
                 serviceActivity.outputTokenCount(),
                 serviceActivity.requestCount()
             );
@@ -144,7 +143,7 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
         if (response == null || response.impacts() == null)
             return false;
         EcologitsEstimationResponse.Impacts impacts = response.impacts();
-        return impacts.gwp() != null && impacts.pe() != null && impacts.adpe() != null;
+        return impacts.energy() != null && impacts.gwp() != null && impacts.pe() != null && impacts.adpe() != null;
     }
 
     private Footprint convert(EcologitsEstimationResponse response)
@@ -155,7 +154,9 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
         return new Footprint(
             convert(impacts.gwp(), usage == null ? null : usage.gwp(), embodied == null ? null : embodied.gwp()),
             convert(impacts.pe(), usage == null ? null : usage.pe(), embodied == null ? null : embodied.pe()),
-            convert(impacts.adpe(), usage == null ? null : usage.adpe(), embodied == null ? null : embodied.adpe())
+            convert(impacts.adpe(), usage == null ? null : usage.adpe(), embodied == null ? null : embodied.adpe()),
+            /* Energy is consumed at inference only, Ecologits reports no embodied share */
+            convert(impacts.energy(), usage == null ? null : usage.energy(), null)
         );
     }
 

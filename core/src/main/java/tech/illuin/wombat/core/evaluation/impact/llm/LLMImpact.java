@@ -15,7 +15,6 @@ public record LLMImpact(
     String model,
     Country location,
     Footprint footprint,
-    EcologitsEstimationResponse estimation,
     long outputTokenCount,
     double requestCount
 ) implements ServiceImpact {}

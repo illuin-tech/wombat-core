@@ -86,7 +86,8 @@ class FootprintsTest
         Footprint footprint = new Footprint(
             impact("kgCO2eq", 1.0f, 2.0f),
             impact("MJ", 10.0f, 20.0f),
-            impact("kgSbeq", 0.1f, 0.2f)
+            impact("kgSbeq", 0.1f, 0.2f),
+            impact("kWh", 0.0f, 5.0f)
         );
 
         Footprint scaled = footprint.multiply(2.0);
@@ -97,6 +98,7 @@ class FootprintsTest
         assertEquals(40.0f, scaled.pe().use().value(), 1e-4);
         assertEquals(0.2f, scaled.adp().embedded().value(), 1e-4);
         assertEquals(0.4f, scaled.adp().use().value(), 1e-4);
+        assertEquals(10.0f, scaled.energy().use().value(), 1e-4);
     }
 
     @Test
@@ -116,6 +118,7 @@ class FootprintsTest
         Footprint partialFootprint = new Footprint(
             scaledImpact,
             null,
+            null,
             null
         );
 
@@ -123,6 +126,7 @@ class FootprintsTest
         assertEquals(30.0f, scaledFootprint.gwp().embedded().value(), 1e-4);
         assertNull(scaledFootprint.pe());
         assertNull(scaledFootprint.adp());
+        assertNull(scaledFootprint.energy());
     }
 
     @Test

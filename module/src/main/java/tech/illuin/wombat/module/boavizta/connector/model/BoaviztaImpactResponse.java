@@ -7,7 +7,8 @@ import java.util.Map;
 
 public record BoaviztaImpactResponse(
     @JsonProperty("impacts") Map<String, Impact> impacts,
-    @JsonProperty("node_count") int nodeCount
+    @JsonProperty("node_count") int nodeCount,
+    @JsonProperty("verbose") Verbose verbose
 ) {
     public record Impact(
         String unit,
@@ -20,6 +21,16 @@ public record BoaviztaImpactResponse(
             float min,
             float max,
             List<String> warnings
+        ) {}
+    }
+
+    /** The part of the verbose output that gives the energy behind the use-phase impacts. */
+    public record Verbose(
+        @JsonProperty("avg_power") Value avgPower,
+        @JsonProperty("use_time_ratio") Value useTimeRatio
+    ) {
+        public record Value(
+            double value
         ) {}
     }
 }

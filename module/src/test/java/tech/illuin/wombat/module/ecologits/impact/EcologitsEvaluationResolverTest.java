@@ -15,7 +15,7 @@ import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.ServiceFamily;
 import tech.illuin.wombat.module.ecologits.connector.EcologitsClient;
 import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationRequest;
-import tech.illuin.wombat.core.evaluation.impact.llm.EcologitsEstimationResponse;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationResponse;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.impact.commons.AssetImpact;
 import tech.illuin.wombat.core.evaluation.impact.llm.LLMImpact;
@@ -99,6 +99,13 @@ class EcologitsEvaluationResolverTest
         // Footprint total equals sum of service footprints
         float expectedGwp = (float) (impact1.footprint().gwp().totalValue() + impact2.footprint().gwp().totalValue());
         assertEquals(expectedGwp, impact.footprint().gwp().totalValue(), 1e-4);
+
+        // Energy is the per-request use-phase estimate times the request count (100 tokens per request, 50 kWh)
+        assertEquals(500f, impact1.footprint().energy().use().value(), 1e-4);
+        assertEquals(1500f, impact2.footprint().energy().use().value(), 1e-4);
+        assertEquals(0f, impact.footprint().energy().embedded().value(), 1e-4);
+        assertEquals(2000f, impact.footprint().energy().use().value(), 1e-4);
+        assertEquals("kWh", impact.footprint().energy().unit());
     }
 
     /** ISO 3166 has no code for the world, Ecologits names its electricity mix WOR. */
@@ -124,8 +131,9 @@ class EcologitsEvaluationResolverTest
         EcologitsEstimationResponse.Metric gwp = new EcologitsEstimationResponse.Metric("gwp", "GWP", EcologitsEstimationResponse.Metric.EcologitsRange.of(value), "kgCO2eq");
         EcologitsEstimationResponse.Metric pe = new EcologitsEstimationResponse.Metric("pe", "PE", EcologitsEstimationResponse.Metric.EcologitsRange.of(value * 2), "MJ");
         EcologitsEstimationResponse.Metric adpe = new EcologitsEstimationResponse.Metric("adpe", "ADPe", EcologitsEstimationResponse.Metric.EcologitsRange.of(value * 0.1), "kgSbeq");
+        EcologitsEstimationResponse.Metric energy = new EcologitsEstimationResponse.Metric("energy", "Energy", EcologitsEstimationResponse.Metric.EcologitsRange.of(value * 0.5), "kWh");
         EcologitsEstimationResponse.Impacts impacts = new EcologitsEstimationResponse.Impacts(
-            null, gwp, adpe, pe, null, null, null
+            energy, gwp, adpe, pe, null, null, null
         );
         return new EcologitsEstimationResponse(impacts);
     }

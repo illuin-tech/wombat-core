@@ -30,6 +30,9 @@ class GlobalImpactTest
         assertEquals(0.4f, global.adp().embedded(), 1e-6);
         assertEquals(0.6f, global.adp().use(), 1e-6);
         assertEquals(1f, global.adp().total(), 1e-6);
+        assertEquals(0f, global.energy().embedded());
+        assertEquals(600f, global.energy().use());
+        assertEquals("kWh", global.energy().unit());
     }
 
     @Test
@@ -40,6 +43,7 @@ class GlobalImpactTest
         assertNull(global.gwp());
         assertNull(global.pe());
         assertNull(global.adp());
+        assertNull(global.energy());
     }
 
     private static Footprint footprint(float gwpEmbedded, float gwpUse, float peEmbedded, float peUse, float adpEmbedded, float adpUse)
@@ -47,7 +51,8 @@ class GlobalImpactTest
         return new Footprint(
             impact("kgCO2eq", gwpEmbedded, gwpUse),
             impact("MJ", peEmbedded, peUse),
-            impact("kgSbeq", adpEmbedded, adpUse)
+            impact("kgSbeq", adpEmbedded, adpUse),
+            impact("kWh", 0f, gwpUse * 100)
         );
     }
 
