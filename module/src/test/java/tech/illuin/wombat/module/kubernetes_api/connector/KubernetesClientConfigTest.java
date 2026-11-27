@@ -3,14 +3,12 @@ package tech.illuin.wombat.module.kubernetes_api.connector;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.asset.AssetIdentity;
-import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
 import tech.illuin.wombat.core.secret.SecretKey;
-import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIModule;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,7 +47,7 @@ public class KubernetesClientConfigTest
     @Test
     void targetsTheCurrentContextByDefault()
     {
-        try (KubernetesClient client = KubernetesClientConfig.create(asset(Optional.empty()), secrets()))
+        try (KubernetesClient client = KubernetesClientConfig.create(asset(Optional.empty()), KUBECONFIG))
         {
             assertEquals("https://first.example:6443/", client.getMasterUrl().toString());
         }
@@ -58,7 +56,7 @@ public class KubernetesClientConfigTest
     @Test
     void targetsTheRequestedContext()
     {
-        try (KubernetesClient client = KubernetesClientConfig.create(asset(Optional.of("second")), secrets()))
+        try (KubernetesClient client = KubernetesClientConfig.create(asset(Optional.of("second")), KUBECONFIG))
         {
             assertEquals("https://second.example:6443/", client.getMasterUrl().toString());
         }
@@ -68,14 +66,17 @@ public class KubernetesClientConfigTest
     void failsOnAnUnknownContext()
     {
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-            () -> KubernetesClientConfig.create(asset(Optional.of("third")), secrets()));
+            () -> KubernetesClientConfig.create(asset(Optional.of("third")), KUBECONFIG));
 
         assertTrue(e.getMessage().contains("third"), e.getMessage());
     }
 
-    private static SecretResolver secrets()
+    @Test
+    void failsOnAnUnreadableKubeconfig()
     {
-        return new EnvironmentSecretResolver(Map.of(EnvironmentSecretResolver.PREFIX + "KUBECONFIG_TEST", KUBECONFIG)::get);
+        for (String kubeconfig : List.of("clusters: [", "\t\tbad: tab", "a: *unknown", "{\"a\": ", "just a string", " "))
+            for (Optional<String> context : List.of(Optional.<String>empty(), Optional.of("first")))
+                assertThrows(IllegalArgumentException.class, () -> KubernetesClientConfig.create(asset(context), kubeconfig), kubeconfig);
     }
 
     private static KubernetesAPIAsset asset(Optional<String> context)

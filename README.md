@@ -373,6 +373,7 @@ A module never builds its components upfront: each method of `WombatModule` retu
 * which candidate serves an asset is decided once, like the rest of what the factories built: the chosen component is not asked again on each call, and an asset no candidate accepts stays unserved, until the asset is refreshed or leaves the context ; `accept` should therefore depend on the kind of asset (its class, the kind of its profile) rather than on settings an edit may change
 * a factory may return the same instance for every asset, such an instance must then not implement `AutoCloseable` since it would be closed along with the first asset to go ; release its resources from `WombatModule.close()` instead
 * a factory failing leaves nothing behind: its exception propagates to the call that needed the component, and building it is attempted again the next time it is needed
+* a credential should not be captured by the factory either, since a secret rotated in its resolver would then go unseen until the asset is refreshed: the factory takes a `Secret` from `SecretResolver.requireAsync(key)`, which checks the key is bound, and the component reads it with `fetch()` on each use, failing its call when the secret is no longer bound or no longer usable
 
 ## How to build
 

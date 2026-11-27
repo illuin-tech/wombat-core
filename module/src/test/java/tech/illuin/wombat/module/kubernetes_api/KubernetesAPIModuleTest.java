@@ -1,6 +1,5 @@
 package tech.illuin.wombat.module.kubernetes_api;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.AssetIdentity;
@@ -16,6 +15,7 @@ import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.core.source.Period;
 import tech.illuin.wombat.core.source.WombatSource;
+import tech.illuin.wombat.module.kubernetes_api.connector.KubernetesClientSupplier;
 import tech.illuin.wombat.module.kubernetes_api.profile.KubernetesProfileResolver;
 import tech.illuin.wombat.module.kubernetes_api.profile.ProfileInferenceException;
 import tech.illuin.wombat.module.kubernetes_api.source.KubernetesAPISource;
@@ -105,13 +105,13 @@ public class KubernetesAPIModuleTest
     }
 
     @Test
-    void closingTheSourceClosesItsClient()
+    void closingTheSourceClosesItsClients()
     {
-        KubernetesClient client = mock(KubernetesClient.class);
+        KubernetesClientSupplier clients = mock(KubernetesClientSupplier.class);
 
-        new KubernetesAPISource(client).close();
+        new KubernetesAPISource(clients).close();
 
-        verify(client).close();
+        verify(clients).close();
     }
 
     private static WombatServices services(Map<String, String> secrets)

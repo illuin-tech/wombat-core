@@ -23,18 +23,18 @@ import java.util.function.Supplier;
  * Reads the {@link ClusterInventory} of a cluster through its API.
  * <p>
  * The client is only built on the first read, so that assets whose profile is not inferred never connect, nor need
- * their kubeconfig where they are only evaluated.
+ * their kubeconfig where they are only evaluated. Each read then takes the client of the kubeconfig currently bound.
  */
 public class KubernetesClusterInventory implements ClusterInventory
 {
-    private final Supplier<KubernetesClient> clientFactory;
-    private KubernetesClient client;
+    private final Supplier<KubernetesClientSupplier> clientsFactory;
+    private KubernetesClientSupplier clients;
 
     private static final String SIDECAR_RESTART_POLICY = "Always";
 
-    public KubernetesClusterInventory(Supplier<KubernetesClient> clientFactory)
+    public KubernetesClusterInventory(Supplier<KubernetesClientSupplier> clientsFactory)
     {
-        this.clientFactory = clientFactory;
+        this.clientsFactory = clientsFactory;
     }
 
     @Override
@@ -103,20 +103,20 @@ public class KubernetesClusterInventory implements ClusterInventory
     @Override
     public synchronized void close()
     {
-        if (this.client != null)
-            this.client.close();
+        if (this.clients != null)
+            this.clients.close();
     }
 
     /**
      * @throws InventoryUnavailableException when the client cannot be built, e.g. on an instance that only evaluates
-     *     the asset and is not given its kubeconfig
+     *     the asset and is not given its kubeconfig, or when its kubeconfig was rotated into an unusable one
      */
     private synchronized KubernetesClient client() throws InventoryUnavailableException
     {
         try {
-            if (this.client == null)
-                this.client = this.clientFactory.get();
-            return this.client;
+            if (this.clients == null)
+                this.clients = this.clientsFactory.get();
+            return this.clients.get();
         }
         catch (MissingSecretException | IllegalArgumentException | KubernetesClientException e) {
             throw new InventoryUnavailableException("cannot connect to the cluster: " + e.getMessage(), e);

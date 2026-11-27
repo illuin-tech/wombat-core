@@ -4,22 +4,49 @@ package tech.illuin.wombat.module.kubernetes_api.connector;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.utils.Serialization;
+import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
 import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
 
 public class KubernetesClientConfig
 {
-    public static KubernetesClient create(KubernetesAPIAsset properties, SecretResolver secrets)
+    public static KubernetesClientSupplier create(KubernetesAPIAsset properties, SecretResolver secrets)
     {
-        String kubeconfig = secrets.require(properties.kubeconfigKey().value());
-        Config config = Config.fromKubeconfig(properties.context()
-            .map(context -> selectContext(kubeconfig, context, properties))
-            .orElse(kubeconfig)
-        );
+        return new KubernetesClientSupplier(properties, secrets.requireAsync(properties.kubeconfigKey().value()));
+    }
+
+    /**
+     * @throws IllegalArgumentException when the kubeconfig cannot be read, or lacks the asset's context
+     */
+    public static KubernetesClient create(KubernetesAPIAsset properties, String kubeconfig)
+    {
+        Config config = parse(kubeconfig, properties);
         reconcileHttpsProxy(config);
         properties.readTimeout().ifPresent(timeout -> config.setRequestTimeout((int) timeout.toMillis()));
         return new KubernetesClientBuilder().withConfig(config).build();
+    }
+
+    /**
+     * fabric8 reports an unreadable kubeconfig with its own exception, its YAML parser's, or a null pointer on a blank
+     * one. They are all made an {@link IllegalArgumentException}, so a kubeconfig rotated into something unusable fails
+     * the poll as an unknown context does.
+     */
+    private static Config parse(String kubeconfig, KubernetesAPIAsset properties)
+    {
+        if (kubeconfig.isBlank())
+            throw new IllegalArgumentException("The kubeconfig of asset " + properties.identity().id() + " is blank");
+
+        try {
+            return Config.fromKubeconfig(properties.context()
+                .map(context -> selectContext(kubeconfig, context, properties))
+                .orElse(kubeconfig)
+            );
+        }
+        catch (KubernetesClientException | YamlEngineException e) {
+            throw new IllegalArgumentException("Cannot read the kubeconfig of asset " + properties.identity().id() + ": " + e.getMessage(), e);
+        }
     }
 
     /**

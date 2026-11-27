@@ -8,11 +8,13 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.Asset;
+import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.core.source.WombatSource;
 import tech.illuin.wombat.core.source.WombatSourceException;
 import tech.illuin.wombat.core.source.data.KubernetesData;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
+import tech.illuin.wombat.module.kubernetes_api.connector.KubernetesClientSupplier;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
@@ -22,13 +24,13 @@ import java.util.Map;
 
 public class KubernetesAPISource implements WombatSource, AutoCloseable
 {
-    private final KubernetesClient client;
+    private final KubernetesClientSupplier clients;
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesAPISource.class);
 
-    public KubernetesAPISource(KubernetesClient client)
+    public KubernetesAPISource(KubernetesClientSupplier clients)
     {
-        this.client = client;
+        this.clients = clients;
     }
 
     @Override
@@ -44,8 +46,17 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
 
         logger.trace("Persisting pods usages for kubernetes config {}", asset.identity().id());
 
+        KubernetesClient client;
         try {
-            return this.outputToTarget(this.fetchPodMetrics(kubernetesAsset), kubernetesAsset);
+            client = this.clients.get();
+        }
+        /* The kubeconfig was unbound, or rotated to one that cannot be read or lacks the asset's context. */
+        catch (MissingSecretException | IllegalArgumentException e) {
+            throw new WombatSourceException("Cannot build a Kubernetes client for asset " + asset.identity().id() + ": " + e.getMessage(), e);
+        }
+
+        try {
+            return this.outputToTarget(this.fetchPodMetrics(client, kubernetesAsset), kubernetesAsset);
         }
         catch (KubernetesClientException e) {
             if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN)
@@ -57,19 +68,19 @@ public class KubernetesAPISource implements WombatSource, AutoCloseable
     @Override
     public void close()
     {
-        this.client.close();
+        this.clients.close();
     }
 
-    private List<PodMetrics> fetchPodMetrics(KubernetesAPIAsset asset)
+    private List<PodMetrics> fetchPodMetrics(KubernetesClient client, KubernetesAPIAsset asset)
     {
         if (asset.namespaces().isEmpty())
-            return this.client.top().pods().metrics().getItems();
+            return client.top().pods().metrics().getItems();
 
         List<PodMetrics> podMetricsList = new ArrayList<>();
         for (String namespace : asset.namespaces())
         {
             try {
-                podMetricsList.addAll(this.client.top().pods().metrics(namespace).getItems());
+                podMetricsList.addAll(client.top().pods().metrics(namespace).getItems());
             }
             catch (KubernetesClientException e) {
                 logger.warn("Cannot list pod metrics in namespace {} for asset {}, skipping it: {}", namespace, asset.identity().id(), e.getMessage());

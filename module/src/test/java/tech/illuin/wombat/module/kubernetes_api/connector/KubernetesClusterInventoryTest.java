@@ -39,7 +39,13 @@ class KubernetesClusterInventoryTest
     private static final double GI = 1024.0 * 1024.0 * 1024.0;
 
     private final KubernetesClient client = mock(KubernetesClient.class, RETURNS_DEEP_STUBS);
-    private final KubernetesClusterInventory inventory = new KubernetesClusterInventory(() -> this.client);
+    private final KubernetesClientSupplier clients = mock(KubernetesClientSupplier.class);
+    private final KubernetesClusterInventory inventory = new KubernetesClusterInventory(() -> this.clients);
+
+    KubernetesClusterInventoryTest()
+    {
+        when(this.clients.get()).thenReturn(this.client);
+    }
 
     @Test
     void readsTheNodesProviderLabelsAndCapacity() throws InventoryUnavailableException
@@ -127,13 +133,35 @@ class KubernetesClusterInventoryTest
     void theClientIsOnlyBuiltOnTheFirstRead() throws Exception
     {
         when(this.client.getMasterUrl()).thenReturn(URI.create("https://abc.gr7.eu-west-3.eks.amazonaws.com:443/").toURL());
-        KubernetesClusterInventory lazy = new KubernetesClusterInventory(() -> this.client);
+        KubernetesClusterInventory lazy = new KubernetesClusterInventory(() -> this.clients);
 
         lazy.close();
-        verify(this.client, never()).close();
+        verify(this.clients, never()).close();
 
         assertEquals(Optional.of("abc.gr7.eu-west-3.eks.amazonaws.com"), lazy.apiServerHost());
         lazy.close();
-        verify(this.client).close();
+        verify(this.clients).close();
+    }
+
+    @Test
+    void eachReadTakesTheClientOfTheCurrentKubeconfig() throws Exception
+    {
+        KubernetesClient rotated = mock(KubernetesClient.class);
+        when(this.clients.get()).thenReturn(this.client, rotated);
+        when(this.client.getMasterUrl()).thenReturn(URI.create("https://old.example.com/").toURL());
+        when(rotated.getMasterUrl()).thenReturn(URI.create("https://new.example.com/").toURL());
+
+        assertEquals(Optional.of("old.example.com"), this.inventory.apiServerHost());
+        assertEquals(Optional.of("new.example.com"), this.inventory.apiServerHost());
+    }
+
+    @Test
+    void aKubeconfigRotatedIntoAnUnusableOneIsUnavailable()
+    {
+        when(this.clients.get()).thenThrow(new IllegalArgumentException("Cannot read the kubeconfig of asset k8s"));
+
+        var e = assertThrows(InventoryUnavailableException.class, this.inventory::nodes);
+
+        assertEquals("cannot connect to the cluster: Cannot read the kubeconfig of asset k8s", e.getMessage());
     }
 }

@@ -25,7 +25,7 @@ public class AnthropicClientConfig
     {
         Feign.Builder builder = Feign.builder()
             .decoder(new JacksonDecoder())
-            .requestInterceptor(new AnthropicHeadersInterceptor(secrets.require(properties.adminKey().value())));
+            .requestInterceptor(new AnthropicHeadersInterceptor(secrets.requireAsync(properties.adminKey().value())));
 
         if (client != null)
             builder.client(client);
