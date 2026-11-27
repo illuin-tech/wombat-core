@@ -10,63 +10,11 @@ import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
 import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.module.kubernetes_api.KubernetesAPIAsset;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Map;
-
 public class KubernetesClientConfig
 {
-    /** Where Kubernetes mounts the token and CA of a pod's ServiceAccount. */
-    static final Path SERVICE_ACCOUNT = Path.of("/var/run/secrets/kubernetes.io/serviceaccount");
-
     public static KubernetesClientSupplier create(KubernetesAPIAsset properties, SecretResolver secrets)
     {
-        if (properties.inCluster())
-            return new KubernetesClientSupplier(createInCluster(properties, System.getenv(), SERVICE_ACCOUNT));
         return new KubernetesClientSupplier(properties, secrets.requireAsync(properties.kubeconfigKey().value()));
-    }
-
-    /**
-     * A client of the cluster this process runs in, authenticated as its pod's ServiceAccount: the API server from the
-     * {@code KUBERNETES_SERVICE_HOST} and {@code KUBERNETES_SERVICE_PORT} variables Kubernetes sets in every container,
-     * the token and CA from the ServiceAccount's mount. The token is read again on every request, as the kubelet
-     * rotates it. Nothing else is read (no kubeconfig, no {@code KUBERNETES_*} client settings), so the asset polls
-     * this cluster whatever the environment.
-     *
-     * @throws IllegalStateException when this process does not run in a Kubernetes pod with a mounted ServiceAccount token
-     */
-    static KubernetesClient createInCluster(KubernetesAPIAsset properties, Map<String, String> environment, Path serviceAccount)
-    {
-        String host = environment.get("KUBERNETES_SERVICE_HOST");
-        String port = environment.getOrDefault("KUBERNETES_SERVICE_PORT", "443");
-        Path token = serviceAccount.resolve("token");
-        Path ca = serviceAccount.resolve("ca.crt");
-        if (host == null || host.isBlank() || !Files.isReadable(token) || !Files.isReadable(ca))
-        {
-            throw new IllegalStateException(
-                "Asset " + properties.identity().id() + " is in-cluster, but Wombat does not run in a Kubernetes pod with a ServiceAccount token mounted at " + serviceAccount
-            );
-        }
-
-        Config config = Config.empty();
-        config.setMasterUrl("https://" + (host.contains(":") ? "[" + host + "]" : host) + ":" + port);
-        config.setCaCertFile(ca.toString());
-        config.setOauthTokenProvider(() -> readToken(token));
-        properties.readTimeout().ifPresent(timeout -> config.setRequestTimeout((int) timeout.toMillis()));
-        return new KubernetesClientBuilder().withConfig(config).build();
-    }
-
-    private static String readToken(Path token)
-    {
-        try {
-            return Files.readString(token, StandardCharsets.UTF_8).strip();
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException("Cannot read the ServiceAccount token at " + token, e);
-        }
     }
 
     /**

@@ -9,7 +9,7 @@
 
 ## Description
 
-The **Kubernetes API Module** connects directly to Kubernetes cluster APIs, via standard kubeconfig configurations or the ServiceAccount of Wombat's own pod, to collect live CPU and memory metrics from running pods and nodes.
+The **Kubernetes API Module** connects directly to Kubernetes cluster APIs via standard kubeconfig configurations to collect live CPU and memory metrics from running pods and nodes.
 
 Use this module when:
 - You have live Kubernetes clusters (on-premises or managed cloud providers like AWS EKS, Google GKE, Azure AKS, OVHcloud, or Scaleway).
@@ -29,11 +29,11 @@ With an empty `namespaces` whitelist, pod metrics are listed cluster-wide: the k
 ```yaml
 id: "k8s-prod-cluster-01" # required - Unique identifier for the monitored asset.
 environment-id: "production" # required - Identifier of the target environment (e.g. `production`, `staging`).
-kubeconfig-key: "secrets.kubernetes.prod" # required unless in-cluster - Secret holding the kubeconfig contents, resolved by the configured secret resolver.
+kubeconfig-key: "secrets.kubernetes.prod" # required - Secret holding the kubeconfig contents, resolved by the configured secret resolver.
 namespaces: # optional (default: empty) - Whitelist of Kubernetes namespaces to poll (polls all namespaces if empty or omitted).
   - "payments-api"
   - "payments-worker"
-context: "prod-cluster-ctx" # optional (default: active context) - Kubeconfig context name to target. Not allowed with in-cluster.
+context: "prod-cluster-ctx" # optional (default: active context) - Kubeconfig context name to target.
 read-timeout: "PT10S" # optional (default: client default) - HTTP read timeout for Kubernetes API requests.
 period: "5m" # optional (default: monitor default) - Polling interval for metric sampling (e.g. `30s`, `1m`, `5m`, `1h`).
 profile: # optional (default: inferred from the cluster) - Server hardware profile configuration, a cloud instance type, a bare server specification or an inferred one (see Profile Types).
@@ -43,27 +43,6 @@ profile: # optional (default: inferred from the cluster) - Server hardware profi
   location: "FRA" # required - ISO 3166-1 alpha-3 (or alpha-2) country code (e.g. `FRA`, `USA`, `DEU`).
   lifespan: "5y" # required - Expected operational lifespan of server hardware (e.g. `5y`, `60m`, `1825d`).
 ```
-
-### In-cluster
-
-When Wombat runs in the cluster it polls, e.g. a [worker](https://github.com/illuin-tech/wombat/blob/master/doc/distributed.md) next to the workloads, `in-cluster: true` replaces the kubeconfig: the asset is polled with the ServiceAccount of Wombat's pod, so no kubeconfig secret is needed, and nothing has to be rotated (the token Kubernetes mounts is read again on every request).
-
-```yaml
-id: "k8s-local-cluster" # required - Unique identifier for the monitored asset.
-environment-id: "production" # required - Identifier of the target environment.
-in-cluster: true # optional (default: false) - Polls the cluster Wombat runs in, with its pod's ServiceAccount, instead of a kubeconfig. Excludes kubeconfig-key and context.
-namespaces: # optional (default: empty) - Whitelist of Kubernetes namespaces to poll (polls all namespaces if empty or omitted).
-  - "payments-api"
-profile: # optional (default: inferred from the cluster) - Server hardware profile configuration.
-  provider: "aws" # required - Infrastructure provider.
-  instance-type: "m5.2xlarge" # required - Machine or virtual instance specification.
-  location: "FRA" # required - ISO 3166-1 alpha-3 (or alpha-2) country code.
-  lifespan: "5y" # required - Expected operational lifespan of server hardware.
-```
-
-- The API server, token and CA come from what Kubernetes sets in every pod (`KUBERNETES_SERVICE_HOST`, `KUBERNETES_SERVICE_PORT`, `/var/run/secrets/kubernetes.io/serviceaccount`); a kubeconfig or `KUBERNETES_*` client settings in Wombat's environment are ignored. Outside a pod, or with `automountServiceAccountToken: false`, the asset's source fails to start.
-- The pod's ServiceAccount needs the access a kubeconfig would: `list` on `pods.metrics.k8s.io`, through a ClusterRole for an empty `namespaces` whitelist, or a Role in each listed namespace. Inferring the profile needs the access listed in [Inferred](#inferred).
-- All the in-cluster assets of an instance poll the same cluster, each with its own `namespaces` whitelist, e.g. one asset per namespace.
 
 ## Profile Types
 
@@ -108,7 +87,7 @@ A node's vCPU count, against which the measured CPU usage is set, is `units` × 
 
 ### `inferred`
 
-The nodes' hardware is read from the cluster, through the asset's kubeconfig (or its pod's ServiceAccount, [in-cluster](#in-cluster)), each time the asset is evaluated (the result is kept for an hour). Only the hardware is inferred: `location` and `lifespan` can still be set, and win over the defaults.
+The nodes' hardware is read from the cluster, through the asset's kubeconfig, each time the asset is evaluated (the result is kept for an hour). Only the hardware is inferred: `location` and `lifespan` can still be set, and win over the defaults.
 
 ```yaml
 id: "k8s-prod-cluster-01" # required - Unique identifier for the monitored asset.

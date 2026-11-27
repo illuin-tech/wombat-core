@@ -1,9 +1,5 @@
 package tech.illuin.wombat.module.kubernetes_api;
 
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.AssetIdentity;
@@ -45,52 +41,6 @@ public class KubernetesAPIAssetTest
     }
 
     @Test
-    void anInClusterAssetNeedsNoSecret()
-    {
-        assertEquals(Set.of(), inCluster(Optional.empty()).requiredSecretKeys());
-    }
-
-    @Test
-    void anInClusterAssetCannotAlsoHaveAKubeconfig()
-    {
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> new KubernetesAPIAsset(
-            AssetIdentity.of("k", "env", KubernetesAPIModule.TYPE),
-            SecretKey.of("KUBECONFIG_PROD"), true, null, Optional.empty(), Optional.empty(), Period.ZERO, null
-        ));
-
-        assertTrue(e.getMessage().contains("kubeconfig-key"), e.getMessage());
-    }
-
-    /* The app validates what its API receives: an asset with neither cannot be polled. */
-    @Test
-    void anAssetWithNeitherAKubeconfigNorInClusterIsInvalid()
-    {
-        try (ValidatorFactory factory = Validation.byDefaultProvider().configure().messageInterpolator(new ParameterMessageInterpolator()).buildValidatorFactory())
-        {
-            Validator validator = factory.getValidator();
-
-            assertEquals(1, validator.validate(asset(null)).size());
-            assertEquals(Set.of(), validator.validate(asset("KUBECONFIG_PROD")));
-            assertEquals(Set.of(), validator.validate(inCluster(Optional.empty())));
-        }
-    }
-
-    @Test
-    void anInClusterAssetCannotHaveAContext()
-    {
-        assertThrows(IllegalArgumentException.class, () -> inCluster(Optional.of("prod")));
-    }
-
-    @Test
-    void anInferredProfileKeepsTheAssetInCluster()
-    {
-        KubernetesAPIAsset inferred = inCluster(Optional.empty())
-            .withProfile(new InferredCloudServerProfile(ServerProvider.aws, "m5.xlarge", Country.WORLD, Lifetime.ofYears(5), 3, KubernetesProfileOrigin.NODES, List.of()));
-
-        assertTrue(inferred.inCluster());
-    }
-
-    @Test
     void omittedNamespacesMeanEveryNamespace()
     {
         assertEquals(Set.of(), asset("KUBECONFIG_PROD").namespaces());
@@ -128,14 +78,6 @@ public class KubernetesAPIAssetTest
     void otherProfilesAreRejected()
     {
         assertThrows(IllegalArgumentException.class, () -> asset("KUBECONFIG_PROD").withProfile(new AssetProfile() {}));
-    }
-
-    private static KubernetesAPIAsset inCluster(Optional<String> context)
-    {
-        return new KubernetesAPIAsset(
-            AssetIdentity.of("k", "env", KubernetesAPIModule.TYPE),
-            null, true, null, context, Optional.empty(), Period.ZERO, null
-        );
     }
 
     private static KubernetesAPIAsset asset(String kubeconfigKey)

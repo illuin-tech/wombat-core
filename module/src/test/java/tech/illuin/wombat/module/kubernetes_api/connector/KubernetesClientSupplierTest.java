@@ -110,22 +110,6 @@ class KubernetesClientSupplierTest
         }
     }
 
-    @Test
-    void handsOutAnInClusterClientAsIs()
-    {
-        KubernetesClient client = KubernetesClientConfig.create(asset(Optional.empty()), kubeconfig("first"));
-        KubernetesClientSupplier clients = new KubernetesClientSupplier(client);
-
-        assertSame(client, clients.get());
-        clients.close();
-        assertTrue(client.getHttpClient().isClosed());
-    }
-
-    private static KubernetesAPIAsset asset(Optional<String> context)
-    {
-        return new KubernetesAPIAsset(AssetIdentity.of("k", "env", KubernetesAPIModule.TYPE), SecretKey.of("KUBECONFIG_TEST"), null, context, Optional.empty(), Period.ZERO, null);
-    }
-
     private void rotate(String kubeconfig)
     {
         this.environment.put(EnvironmentSecretResolver.PREFIX + "KUBECONFIG_TEST", kubeconfig);
