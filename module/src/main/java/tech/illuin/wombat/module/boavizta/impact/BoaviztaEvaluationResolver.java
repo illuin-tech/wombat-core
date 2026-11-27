@@ -67,9 +67,8 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         double loadPercent;
         int nodeCount;
 
-        if (kubernetesActivityData.cpuUsage() instanceof RelativeCPUUsage relativeUsage)
+        if (kubernetesActivityData.cpuUsage() instanceof RelativeCPUUsage(double ratio))
         {
-            double ratio = relativeUsage.ratio();
             loadPercent = ratio * FULL_LOAD;
             nodeCount = profile.nodeCount();
             logger.info("Relative CPU load {}% over {} node(s)", loadPercent, nodeCount);
@@ -77,13 +76,12 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             BoaviztaImpactResponse singleNodeImpact = this.requestImpactFromPercentage(profile, loadPercent);
             impactResponse = scale(singleNodeImpact, nodeCount);
         }
-        else if (kubernetesActivityData.cpuUsage() instanceof NanocoresCPUUsage nanocoresUsage)
+        else if (kubernetesActivityData.cpuUsage() instanceof NanocoresCPUUsage(double nanocores))
         {
-            double nanocores = nanocoresUsage.nanocores();
             double cpuUsageCore = nanocores / NANOCORES_PER_CORE;
             loadPercent = vcpu > 0 ? cpuUsageCore / vcpu * 100.0 : 0.0;
             nodeCount = specification.nodesRequired(cpuUsageCore);
-            logger.info("Used CPU load {} ({} node(s) required)", cpuUsageCore, nodeCount);
+            logger.debug("Used CPU load {} ({} node(s) required)", cpuUsageCore, nodeCount);
 
             impactResponse = this.computeImpact(profile, specification, nanocores);
         }
@@ -152,7 +150,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         double cores = load / NANOCORES_PER_CORE;
         int nodeCount = specs.nodesRequired(cores);
 
-        logger.info("Server has {} vCPU; {} cores used spread over {} node(s)", vcpu, cores, nodeCount);
+        logger.debug("Server has {} vCPU; {} cores used spread over {} node(s)", vcpu, cores, nodeCount);
 
         BoaviztaImpactResponse impact = vcpu > 0
             ? this.computeImpactFromRatio(profile, cores / vcpu)

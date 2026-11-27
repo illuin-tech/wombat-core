@@ -58,7 +58,7 @@ public final class ConformanceCore
     {
         try (WombatCore core = this.core(asset); AssetEvaluator evaluator = core.createEvaluator())
         {
-            return evaluator.evaluate(range, null, AssetImpact.class);
+            return evaluator.report(range, null).evaluations(AssetImpact.class);
         }
     }
 

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.asset.type.FamilyType;
 import tech.illuin.wombat.core.asset.type.ModuleType;
+import tech.illuin.wombat.core.asset.PatchableAsset;
 import tech.illuin.wombat.core.context.WombatContextProvider;
 import tech.illuin.wombat.core.evaluation.AssetEvaluator;
 import tech.illuin.wombat.core.module.ProcessorFactory;
@@ -53,6 +54,10 @@ public final class WombatCore implements AutoCloseable
         {
             case AssetType type when module.assetClass().isEmpty() ->
                 throw new IllegalArgumentException("Module " + type.name() + " defines an asset-type but no asset class");
+            case AssetType type when module.profileResolver().isPresent() && !PatchableAsset.class.isAssignableFrom(module.assetClass().get()) ->
+                throw new IllegalArgumentException(
+                    "Module " + type.name() + " provides a profile-resolver but its asset class " + module.assetClass().get().getSimpleName() + " is not a PatchableAsset"
+                );
             case FamilyType type when module.assetClass().isPresent() ->
                 throw new IllegalArgumentException("Module " + type.name() + " serves family " + type.family() + " but declares an asset class");
             default -> {}
@@ -92,6 +97,7 @@ public final class WombatCore implements AutoCloseable
             module.activityResolver().ifPresent(factory -> calculator.registerActivityResolver(module.type(), factory));
             module.impactResolver().ifPresent(factory -> calculator.registerImpactResolver(module.type(), factory));
             module.costResolver().ifPresent(factory -> calculator.registerCostResolver(module.type(), factory));
+            module.profileResolver().ifPresent(factory -> calculator.registerProfileResolver(module.type(), factory));
         }
 
         return calculator;

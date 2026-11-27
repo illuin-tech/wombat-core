@@ -18,6 +18,7 @@ import tech.illuin.wombat.core.activity.commons.AssetFilter;
 import tech.illuin.wombat.core.activity.llm.LLMActivityData;
 import tech.illuin.wombat.core.evaluation.AssetEvaluation;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
+import tech.illuin.wombat.core.evaluation.WombatProfileResolver;
 import tech.illuin.wombat.core.evaluation.AssetEvaluator;
 import tech.illuin.wombat.core.activity.commons.TimeRange;
 import tech.illuin.wombat.core.activity.WombatActivityResolver;
@@ -117,7 +118,7 @@ class WombatCoreTest
         // The sourceable asset's module provides no impact-resolver, so only the modeled one is calculated.
         try (WombatCore core = core(context(sourceable("a1"), modeled("static-1")), new SourcingModule(), new ResolvingModule(), family) ; AssetEvaluator evaluator = core.createEvaluator())
         {
-            List<AssetEvaluation> impacts = evaluator.evaluate(RANGE, AssetFilter.none());
+            List<AssetEvaluation> impacts = evaluator.report(RANGE, AssetFilter.none()).evaluations();
 
             assertEquals(1, impacts.size());
             assertEquals("static-1", impacts.getFirst().assetIdentity().id());
@@ -131,7 +132,7 @@ class WombatCoreTest
 
         try (WombatCore core = core(context(sourceable("a1")), new SourcingModule(), family) ; AssetEvaluator evaluator = core.createEvaluator())
         {
-            assertEquals(List.of("family"), providers(evaluator.evaluate(RANGE, AssetFilter.none())));
+            assertEquals(List.of("family"), providers(evaluator.report(RANGE, AssetFilter.none()).evaluations()));
         }
     }
 
@@ -142,7 +143,7 @@ class WombatCoreTest
 
         try (WombatCore core = core(context(modeled("static-1")), family, new ResolvingModule()) ; AssetEvaluator evaluator = core.createEvaluator())
         {
-            assertEquals(List.of("own"), providers(evaluator.evaluate(RANGE, AssetFilter.none())));
+            assertEquals(List.of("own"), providers(evaluator.report(RANGE, AssetFilter.none()).evaluations()));
         }
     }
 
@@ -156,7 +157,7 @@ class WombatCoreTest
 
         try (WombatCore core = core(context(sourceable("a1")), new SourcingModule(), other, first, second) ; AssetEvaluator evaluator = core.createEvaluator())
         {
-            assertEquals(List.of("second"), providers(evaluator.evaluate(RANGE, AssetFilter.none())));
+            assertEquals(List.of("second"), providers(evaluator.report(RANGE, AssetFilter.none()).evaluations()));
         }
     }
 
@@ -185,9 +186,9 @@ class WombatCoreTest
     void createCalculator_skipsAssetTypesWithoutAnyResolver() throws Exception
     {
         // No module provides an activity-resolver, the family modules included: there is nothing to evaluate with.
-        try (WombatCore core = core(context(modeled("static-1")), new ResolvingModule()) ; AssetEvaluator evaluator = assertDoesNotThrow(() -> core.createEvaluator()))
+        try (WombatCore core = core(context(modeled("static-1")), new ResolvingModule()) ; AssetEvaluator evaluator = assertDoesNotThrow(core::createEvaluator))
         {
-            assertEquals(List.of(), evaluator.evaluate(RANGE, AssetFilter.none()));
+            assertEquals(List.of(), evaluator.report(RANGE, AssetFilter.none()).evaluations());
         }
     }
 
@@ -234,6 +235,34 @@ class WombatCoreTest
         };
 
         assertThrows(IllegalArgumentException.class, () -> core(context(), family));
+    }
+
+    @Test
+    void register_rejectsAProfileResolverForAnAssetClassThatIsNotPatchable()
+    {
+        WombatModule module = new WombatModule()
+        {
+            @Override
+            public AssetType type()
+            {
+                return TYPE_STATIC;
+            }
+
+            @Override
+            public Optional<Class<? extends Asset>> assetClass()
+            {
+                return Optional.of(ModeledAsset.class);
+            }
+
+            @Override
+            public Optional<ProcessorFactory<WombatProfileResolver>> profileResolver()
+            {
+                return Optional.of((services, asset) -> resolved -> PROFILE);
+            }
+        };
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> core(context(), module));
+        assertTrue(error.getMessage().contains("ModeledAsset is not a PatchableAsset"), error.getMessage());
     }
 
     @Test

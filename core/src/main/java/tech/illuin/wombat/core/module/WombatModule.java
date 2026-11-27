@@ -4,6 +4,7 @@ import tech.illuin.wombat.core.activity.WombatActivityResolver;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.type.ModuleType;
 import tech.illuin.wombat.core.evaluation.WombatEvaluationResolver;
+import tech.illuin.wombat.core.evaluation.WombatProfileResolver;
 import tech.illuin.wombat.core.source.WombatSource;
 
 import java.util.Optional;
@@ -58,6 +59,11 @@ public interface WombatModule
     }
 
     default Optional<ProcessorFactory<WombatEvaluationResolver>> costResolver()
+    {
+        return Optional.empty();
+    }
+
+    default Optional<ProcessorFactory<WombatProfileResolver>> profileResolver()
     {
         return Optional.empty();
     }

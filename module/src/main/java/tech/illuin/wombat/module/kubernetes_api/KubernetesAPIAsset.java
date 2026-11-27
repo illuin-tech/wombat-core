@@ -7,8 +7,11 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.AssetIdentity;
+import tech.illuin.wombat.core.asset.PatchableAsset;
+import tech.illuin.wombat.core.asset.profile.AssetProfile;
+import tech.illuin.wombat.core.asset.profile.BareServerProfile;
+import tech.illuin.wombat.core.asset.profile.CloudServerProfile;
 import tech.illuin.wombat.core.asset.type.AssetType;
 import tech.illuin.wombat.core.secret.SecretAware;
 import tech.illuin.wombat.core.secret.SecretKey;
@@ -30,18 +33,35 @@ public record KubernetesAPIAsset(
     // The kebab-case @JsonAlias read assets persisted before 0.15, when properties were named that way
     @JsonPropertyDescription("Read timeout of the Kubernetes API requests (ISO-8601), the client's default when omitted") @JsonAlias("read-timeout") Optional<Duration> readTimeout,
     @JsonPropertyDescription("Polling interval, the monitor's default when omitted") Period period,
-    @NotNull @Valid @JsonPropertyDescription("Server hardware profile") KubernetesAPIServerProfile profile
-) implements Asset, SecretAware, Monitorable
+    @NotNull @Valid @JsonPropertyDescription("Server hardware profile, inferred from the cluster when omitted") KubernetesAPIServerProfile profile
+) implements PatchableAsset, SecretAware, Monitorable
 {
     public KubernetesAPIAsset
     {
         namespaces = namespaces != null ? Set.copyOf(namespaces) : Set.of();
+        profile = profile != null ? profile : KubernetesAPIInferredProfile.DEFAULT;
     }
 
     @Override
     public AssetType type()
     {
         return KubernetesAPIModule.TYPE;
+    }
+
+    /**
+     * Inferred profiles become the cloud or bare server profile they describe.
+     */
+    @Override
+    public KubernetesAPIAsset withProfile(AssetProfile profile)
+    {
+        KubernetesAPIServerProfile serverProfile = switch (profile)
+        {
+            case KubernetesAPIServerProfile declared -> declared;
+            case CloudServerProfile cloud -> new KubernetesAPICloudProfile(cloud.provider(), cloud.instanceType(), cloud.location(), cloud.lifespan());
+            case BareServerProfile bare -> new KubernetesAPIBareServerProfile(bare.location(), bare.lifespan(), bare.cpu(), bare.ram(), bare.ssd(), bare.hdd(), bare.gpu());
+            default -> throw new IllegalArgumentException("Asset-type " + this.type().name() + " cannot have a " + profile.getClass().getSimpleName() + " profile");
+        };
+        return new KubernetesAPIAsset(this.identity, this.kubeconfigKey, this.namespaces, this.context, this.readTimeout, this.period, serverProfile);
     }
 
     @Override

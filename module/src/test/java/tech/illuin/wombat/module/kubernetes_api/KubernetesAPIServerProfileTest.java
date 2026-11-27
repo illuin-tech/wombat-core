@@ -85,9 +85,22 @@ class KubernetesAPIServerProfileTest
     }
 
     @Test
-    void bothProfilesRoundTripWithTheirType() throws Exception
+    void anInferredProfileOnlyReadsTheFieldsTheUserSets() throws Exception
     {
-        for (KubernetesAPIServerProfile profile : Set.of(cloud(), server(new BareServerProfile.CPU(1, 8, 1, null))))
+        KubernetesAPIInferredProfile bare = assertInstanceOf(KubernetesAPIInferredProfile.class, this.objectMapper.readValue("{\"type\": \"inferred\"}", KubernetesAPIServerProfile.class));
+        KubernetesAPIInferredProfile hinted = assertInstanceOf(KubernetesAPIInferredProfile.class, this.objectMapper.readValue("""
+            {"type": "inferred", "location": "FRA", "lifespan": "6y"}
+            """, KubernetesAPIServerProfile.class));
+
+        assertEquals(KubernetesAPIInferredProfile.DEFAULT, bare);
+        assertEquals(new KubernetesAPIInferredProfile(Country.FRANCE, Lifetime.ofYears(6)), hinted);
+        assertEquals(Set.of(), violations(bare));
+    }
+
+    @Test
+    void everyProfileRoundTripsWithItsType() throws Exception
+    {
+        for (KubernetesAPIServerProfile profile : Set.of(cloud(), server(new BareServerProfile.CPU(1, 8, 1, null)), new KubernetesAPIInferredProfile(Country.FRANCE, null)))
         {
             String json = this.objectMapper.writeValueAsString(profile);
 
