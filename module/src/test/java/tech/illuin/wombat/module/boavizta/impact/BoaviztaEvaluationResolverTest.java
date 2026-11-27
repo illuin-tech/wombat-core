@@ -78,11 +78,12 @@ class BoaviztaEvaluationResolverTest
                 "gwp", new BoaviztaImpactResponse.Impact(
                     "kgCO2eq",
                     "Global Warming Potential",
-                    new BoaviztaImpactResponse.Impact.ImpactItem(100.0f, 90.0f, 110.0f, List.of()),
-                    new BoaviztaImpactResponse.Impact.ImpactItem(20.0f, 18.0f, 22.0f, List.of())
+                    new BoaviztaImpactResponse.Impact.ImpactItem(100.0f, 90.0f, 110.0f),
+                    new BoaviztaImpactResponse.Impact.ImpactItem(20.0f, 18.0f, 22.0f)
                 )
             ),
-            1
+            1,
+            verbose(20.0)
         );
 
         when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaCloudInstanceImpactRequest.class)))
@@ -114,6 +115,10 @@ class BoaviztaEvaluationResolverTest
         assertEquals(0.36, assetImpact.footprint().gwp().totalValue(), 1e-4);
         assertEquals(0.30, assetImpact.footprint().gwp().embedded().value(), 1e-4);
         assertEquals(0.06, assetImpact.footprint().gwp().use().value(), 1e-4);
+        // Energy: 20 W per node over the 1 hour range = 0.02 kWh, then 0.06 kWh on 3 nodes
+        assertEquals("kWh", assetImpact.footprint().energy().unit());
+        assertEquals(0.0, assetImpact.footprint().energy().embedded().value(), 1e-4);
+        assertEquals(0.06, assetImpact.footprint().energy().use().value(), 1e-4);
 
         KubernetesImpact k8sImpact = (KubernetesImpact) assetImpact.serviceImpacts().getFirst();
         assertEquals(50.0, k8sImpact.loadPercent());
@@ -130,7 +135,7 @@ class BoaviztaEvaluationResolverTest
         when(client.getInstanceConfig(eq(BoaviztaServerProvider.aws), eq("c5a.4xlarge")))
             .thenReturn(new BoaviztaInstanceConfigResponse(new BoaviztaInstanceConfigResponse.IntConfigItem(16), null, null, null, null, null));
         when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaCloudInstanceImpactRequest.class)))
-            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
+            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0, null));
 
         TestAsset asset = new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", Country.WORLD, Lifetime.ofHours(1000), 1));
         TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-01T01:00:00Z"), Duration.ofHours(1));
@@ -150,7 +155,7 @@ class BoaviztaEvaluationResolverTest
         when(client.getInstanceConfig(eq(BoaviztaServerProvider.aws), eq("c5a.4xlarge")))
             .thenReturn(new BoaviztaInstanceConfigResponse(new BoaviztaInstanceConfigResponse.IntConfigItem(16), null, null, null, null, null));
         when(client.getInstanceImpact(eq(true), anyInt(), anySet(), any(BoaviztaCloudInstanceImpactRequest.class)))
-            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
+            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0, null));
 
         TestAsset asset = new TestAsset(K8S_TYPE, new TestServerProfile(ServerProvider.aws, "c5a.4xlarge", FRANCE, Lifetime.ofYears(3), 1));
         TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-01T01:00:00Z"), Duration.ofHours(1));
@@ -173,7 +178,7 @@ class BoaviztaEvaluationResolverTest
         BoaviztaEvaluationResolver evalResolver = new BoaviztaEvaluationResolver(client);
 
         when(client.getServerImpact(eq(true), anyInt(), anySet(), any(BoaviztaServerImpactRequest.class)))
-            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
+            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0, null));
 
         TestBareServerProfile profile = bareServer(new BareServerProfile.Disk(2, 960), new BareServerProfile.GPU(1, "NVIDIA A100"));
         TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-01T01:00:00Z"), Duration.ofHours(1));
@@ -202,7 +207,7 @@ class BoaviztaEvaluationResolverTest
         BoaviztaEvaluationResolver evalResolver = new BoaviztaEvaluationResolver(client);
 
         when(client.getServerImpact(eq(true), anyInt(), anySet(), any(BoaviztaServerImpactRequest.class)))
-            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0));
+            .thenReturn(new BoaviztaImpactResponse(Map.of(), 0, null));
 
         TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-01T01:00:00Z"), Duration.ofHours(1));
         AssetImpact impact = (AssetImpact) evalResolver.resolve(
@@ -218,6 +223,39 @@ class BoaviztaEvaluationResolverTest
         assertNull(k8sImpact.serverSpecification().ssdStorage());
         verify(client).getServerImpact(eq(true), anyInt(), anySet(), argThat(request -> request.usage().timeWorkload().getFirst().loadPercentage() == 50.0));
         verifyNoMoreInteractions(client);
+    }
+
+    /** Past one node, Boavizta is asked for a full node and the remainder, whose powers add up. */
+    @Test
+    void resolve_nanocoresOverOneNode_addsTheNodesEnergy() throws Exception
+    {
+        BoaviztaClient client = mock(BoaviztaClient.class);
+        BoaviztaEvaluationResolver evalResolver = new BoaviztaEvaluationResolver(client);
+
+        when(client.getServerImpact(eq(true), anyInt(), anySet(), any(BoaviztaServerImpactRequest.class)))
+            .thenAnswer(invocation -> {
+                BoaviztaServerImpactRequest request = invocation.getArgument(3);
+                double load = request.usage().timeWorkload().getFirst().loadPercentage();
+                /* Service impacts are sorted by GWP, which the response must hold */
+                BoaviztaImpactResponse.Impact.ImpactItem item = new BoaviztaImpactResponse.Impact.ImpactItem(1.0f, 1.0f, 1.0f);
+                return new BoaviztaImpactResponse(Map.of("gwp", new BoaviztaImpactResponse.Impact("kgCO2eq", "GWP", item, item)), 0, verbose(load == 100.0 ? 30.0 : 20.0));
+            });
+
+        TimeRange range = new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-01T02:00:00Z"), Duration.ofHours(1));
+        AssetImpact impact = (AssetImpact) evalResolver.resolve(
+            new TestAsset(K8S_TYPE, bareServer(null, null)),
+            new KubernetesActivityData(ActivityRegime.MEASURED, Set.of("srv-1", "srv-2"), range, CPUUsage.nanocores(144_000_000_000.0), Map.of("srv-1", 0.75, "srv-2", 0.25), Map.of())
+        );
+
+        // 96 vCPU at 144 cores: a full node at 30 W and one at 50% at 20 W, so 50 W over 2 hours = 0.1 kWh
+        assertEquals(0.1, impact.footprint().energy().use().value(), 1e-6);
+        KubernetesImpact srv2 = (KubernetesImpact) impact.serviceImpacts().stream().filter(si -> si.serviceId().equals("srv-2")).findFirst().orElseThrow();
+        assertEquals(0.025, srv2.footprint().energy().use().value(), 1e-6);
+    }
+
+    private static BoaviztaImpactResponse.Verbose verbose(double avgPower)
+    {
+        return new BoaviztaImpactResponse.Verbose(new BoaviztaImpactResponse.Verbose.Value(avgPower), new BoaviztaImpactResponse.Verbose.Value(1.0));
     }
 
     private static TestBareServerProfile bareServer(BareServerProfile.Disk ssd, BareServerProfile.GPU gpu)

@@ -9,14 +9,16 @@ import java.util.function.Function;
 public record GlobalImpact(
     Impact gwp,
     Impact pe,
-    Impact adp
+    Impact adp,
+    Impact energy
 ) {
     public static GlobalImpact from(List<Footprint> footprints)
     {
         return new GlobalImpact(
             combine(footprints, Footprint::gwp),
             combine(footprints, Footprint::pe),
-            combine(footprints, Footprint::adp)
+            combine(footprints, Footprint::adp),
+            combine(footprints, Footprint::energy)
         );
     }
 

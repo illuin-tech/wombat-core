@@ -6,7 +6,7 @@ import feign.Request;
 import feign.Response;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationRequest;
-import tech.illuin.wombat.core.evaluation.impact.llm.EcologitsEstimationResponse;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationResponse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

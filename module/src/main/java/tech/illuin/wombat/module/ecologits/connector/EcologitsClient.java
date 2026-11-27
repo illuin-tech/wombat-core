@@ -3,7 +3,7 @@ package tech.illuin.wombat.module.ecologits.connector;
 import feign.Headers;
 import feign.RequestLine;
 import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationRequest;
-import tech.illuin.wombat.core.evaluation.impact.llm.EcologitsEstimationResponse;
+import tech.illuin.wombat.module.ecologits.connector.model.EcologitsEstimationResponse;
 
 public interface EcologitsClient
 {

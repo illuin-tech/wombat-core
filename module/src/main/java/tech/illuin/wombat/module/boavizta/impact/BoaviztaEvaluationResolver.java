@@ -39,8 +39,6 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     private static final Set<String> CRITERIA = Set.of("gwp", "adp", "pe");
     /** Boavizta's world average, ISO 3166 having no code for the world. */
     private static final String WORLD_LOCATION = "WOR";
-    private static final String rebalanceWarning = "This usage has been rebalanced by the Wombat service, it does not come from the Boavizta API";
-    private static final String timeProrationWarning = "This impact has been prorated to the requested time range by the Wombat service";
 
     private static final Logger logger = LoggerFactory.getLogger(BoaviztaEvaluationResolver.class);
 
@@ -156,7 +154,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             ? this.computeImpactFromRatio(profile, cores / vcpu)
             : this.requestImpactFromPercentage(profile, 0.0);
 
-        return new BoaviztaImpactResponse(impact.impacts(), nodeCount);
+        return new BoaviztaImpactResponse(impact.impacts(), nodeCount, impact.verbose());
     }
 
     private BoaviztaImpactResponse computeImpactFromRatio(ServerProfile profile, double loadRatio)
@@ -219,7 +217,14 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     {
         Map<String, BoaviztaImpactResponse.Impact> scaled = new LinkedHashMap<>();
         response.impacts().forEach((key, impact) -> scaled.put(key, scaleImpact(impact, factor)));
-        return new BoaviztaImpactResponse(scaled, 0);
+        return new BoaviztaImpactResponse(scaled, 0, scaleVerbose(response.verbose(), factor));
+    }
+
+    private static BoaviztaImpactResponse.Verbose scaleVerbose(BoaviztaImpactResponse.Verbose verbose, double factor)
+    {
+        if (verbose == null || verbose.avgPower() == null)
+            return verbose;
+        return new BoaviztaImpactResponse.Verbose(new BoaviztaImpactResponse.Verbose.Value(verbose.avgPower().value() * factor), verbose.useTimeRatio());
     }
 
     private static BoaviztaImpactResponse.Impact scaleImpact(BoaviztaImpactResponse.Impact impact, double factor)
@@ -230,14 +235,24 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     private static BoaviztaImpactResponse.Impact.ImpactItem scaleItem(BoaviztaImpactResponse.Impact.ImpactItem item, double factor)
     {
         if (item == null) return null;
-        return new BoaviztaImpactResponse.Impact.ImpactItem((float) (item.value() * factor), (float) (item.min() * factor), (float) (item.max() * factor), item.warnings());
+        return new BoaviztaImpactResponse.Impact.ImpactItem((float) (item.value() * factor), (float) (item.min() * factor), (float) (item.max() * factor));
     }
 
     private static BoaviztaImpactResponse add(BoaviztaImpactResponse left, BoaviztaImpactResponse right)
     {
         Map<String, BoaviztaImpactResponse.Impact> sum = new LinkedHashMap<>(left.impacts());
         right.impacts().forEach((key, impact) -> sum.merge(key, impact, BoaviztaEvaluationResolver::addImpact));
-        return new BoaviztaImpactResponse(sum, 0);
+        return new BoaviztaImpactResponse(sum, 0, addVerbose(left.verbose(), right.verbose()));
+    }
+
+    /* Both requests share the profile, hence the use time ratio: only the power adds up */
+    private static BoaviztaImpactResponse.Verbose addVerbose(BoaviztaImpactResponse.Verbose left, BoaviztaImpactResponse.Verbose right)
+    {
+        if (left == null || left.avgPower() == null)
+            return right;
+        if (right == null || right.avgPower() == null)
+            return left;
+        return new BoaviztaImpactResponse.Verbose(new BoaviztaImpactResponse.Verbose.Value(left.avgPower().value() + right.avgPower().value()), left.useTimeRatio());
     }
 
     private static BoaviztaImpactResponse.Impact addImpact(BoaviztaImpactResponse.Impact left, BoaviztaImpactResponse.Impact right)
@@ -251,12 +266,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             return right;
         if (right == null)
             return left;
-        List<String> warnings = new ArrayList<>();
-        if (left.warnings() != null)
-            warnings.addAll(left.warnings());
-        if (right.warnings() != null)
-            warnings.addAll(right.warnings());
-        return new BoaviztaImpactResponse.Impact.ImpactItem(left.value() + right.value(), left.min() + right.min(), left.max() + right.max(), warnings);
+        return new BoaviztaImpactResponse.Impact.ImpactItem(left.value() + right.value(), left.min() + right.min(), left.max() + right.max());
     }
 
     public Footprint convert(BoaviztaImpactResponse impact, Double share, TimeRange range, long lifespanHours)
@@ -265,7 +275,8 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         return new Footprint(
             convert(impact.impacts().get("gwp"), share, prorationFactor),
             convert(impact.impacts().get("pe"), share, prorationFactor),
-            convert(impact.impacts().get("adp"), share, prorationFactor)
+            convert(impact.impacts().get("adp"), share, prorationFactor),
+            convert(impact.verbose(), share, range)
         );
     }
 
@@ -273,27 +284,29 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     {
         if (input == null)
             return null;
-        List<String> embeddedWarnings = new ArrayList<>(input.embedded().warnings() == null ? Collections.emptyList() : input.embedded().warnings());
-        List<String> useWarnings = new ArrayList<>(input.use().warnings() == null ? Collections.emptyList() : input.use().warnings());
-        if (share != 1.0d)
-        {
-            embeddedWarnings.add(rebalanceWarning);
-            useWarnings.add(rebalanceWarning);
-        }
-        embeddedWarnings.add(timeProrationWarning);
-        useWarnings.add(timeProrationWarning);
-
         return new Footprint.FootprintImpact(
             input.unit(),
             input.description(),
-            new Footprint.FootprintImpact.FootprintImpactItem(
-                (float) (input.embedded().value() * share * prorationFactor),
-                embeddedWarnings
-            ),
-            new Footprint.FootprintImpact.FootprintImpactItem(
-                (float) (input.use().value() * share * prorationFactor),
-                useWarnings
-            )
+            new Footprint.FootprintImpact.FootprintImpactItem((float) (input.embedded().value() * share * prorationFactor)),
+            new Footprint.FootprintImpact.FootprintImpactItem((float) (input.use().value() * share * prorationFactor))
+        );
+    }
+
+    /*
+     * Boavizta has no energy criterion, but its use-phase impacts are the energy avg_power × duration × use_time_ratio
+     * times the location's factors: over the time range, that energy needs no proration.
+     */
+    private static Footprint.FootprintImpact convert(BoaviztaImpactResponse.Verbose verbose, Double share, TimeRange range)
+    {
+        if (verbose == null || verbose.avgPower() == null)
+            return null;
+        double hours = Duration.between(range.start(), range.end()).toSeconds() / 3600.0;
+
+        return new Footprint.FootprintImpact(
+                "kWh",
+                "Energy consumption",
+                new Footprint.FootprintImpact.FootprintImpactItem(0f),
+                new Footprint.FootprintImpact.FootprintImpactItem((float) (verbose.avgPower().value() / 1000 * hours * verbose.useTimeRatio().value() * share))
         );
     }
 

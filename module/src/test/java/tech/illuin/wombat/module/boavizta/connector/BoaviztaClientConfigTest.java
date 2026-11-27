@@ -27,7 +27,11 @@ class BoaviztaClientConfigTest
           "impacts": {
             "gwp": {"unit": "kgCO2eq", "description": "Total climate change", "embedded": {"value": 0.25, "min": 0.1, "max": 0.4, "warnings": []}, "use": {"value": 1.5, "min": 1.0, "max": 2.0, "warnings": []}}
           },
-          "node_count": 1
+          "node_count": 1,
+          "verbose": {
+            "avg_power": {"value": 12.97, "status": "COMPLETED", "unit": "W", "min": 11.7, "max": 15.6},
+            "use_time_ratio": {"value": 1.0, "status": "ARCHETYPE", "unit": "/1", "min": 1.0, "max": 1.0}
+          }
         }
         """;
 
@@ -71,6 +75,8 @@ class BoaviztaClientConfigTest
 
         assertEquals(0.25f, response.impacts().get("gwp").embedded().value());
         assertEquals(1.5f, response.impacts().get("gwp").use().value());
+        assertEquals(12.97, response.verbose().avgPower().value());
+        assertEquals(1.0, response.verbose().useTimeRatio().value());
     }
 
     @Test

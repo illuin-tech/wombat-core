@@ -48,15 +48,13 @@ class FootprintsTest
     }
 
     @Test
-    void multiplyScalesFootprintImpactItemAndPreservesWarnings()
+    void multiplyScalesFootprintImpactItem()
     {
-        List<String> warnings = List.of("Warning 1", "Warning 2");
-        FootprintImpactItem item = new FootprintImpactItem(10.0f, warnings);
+        FootprintImpactItem item = new FootprintImpactItem(10.0f);
 
         FootprintImpactItem scaled = item.multiply(2.5);
 
         assertEquals(25.0f, scaled.value(), 1e-4);
-        assertEquals(warnings, scaled.warnings());
     }
 
     @Test
@@ -65,8 +63,8 @@ class FootprintsTest
         FootprintImpact impact = new FootprintImpact(
             "kgCO2eq",
             "Carbon emissions",
-            new FootprintImpactItem(4.0f, List.of("emb-warn")),
-            new FootprintImpactItem(6.0f, List.of("use-warn"))
+            new FootprintImpactItem(4.0f),
+            new FootprintImpactItem(6.0f)
         );
 
         FootprintImpact scaled = impact.multiply(1.5);
@@ -74,9 +72,7 @@ class FootprintsTest
         assertEquals("kgCO2eq", scaled.unit());
         assertEquals("Carbon emissions", scaled.description());
         assertEquals(6.0f, scaled.embedded().value(), 1e-4);
-        assertEquals(List.of("emb-warn"), scaled.embedded().warnings());
         assertEquals(9.0f, scaled.use().value(), 1e-4);
-        assertEquals(List.of("use-warn"), scaled.use().warnings());
         assertEquals(15.0f, scaled.totalValue(), 1e-4);
     }
 
@@ -86,7 +82,8 @@ class FootprintsTest
         Footprint footprint = new Footprint(
             impact("kgCO2eq", 1.0f, 2.0f),
             impact("MJ", 10.0f, 20.0f),
-            impact("kgSbeq", 0.1f, 0.2f)
+            impact("kgSbeq", 0.1f, 0.2f),
+            impact("kWh", 0.0f, 5.0f)
         );
 
         Footprint scaled = footprint.multiply(2.0);
@@ -97,6 +94,7 @@ class FootprintsTest
         assertEquals(40.0f, scaled.pe().use().value(), 1e-4);
         assertEquals(0.2f, scaled.adp().embedded().value(), 1e-4);
         assertEquals(0.4f, scaled.adp().use().value(), 1e-4);
+        assertEquals(10.0f, scaled.energy().use().value(), 1e-4);
     }
 
     @Test
@@ -105,7 +103,7 @@ class FootprintsTest
         FootprintImpact partialImpact = new FootprintImpact(
             "kgCO2eq",
             "desc",
-            new FootprintImpactItem(5.0f, List.of()),
+            new FootprintImpactItem(5.0f),
             null
         );
 
@@ -116,6 +114,7 @@ class FootprintsTest
         Footprint partialFootprint = new Footprint(
             scaledImpact,
             null,
+            null,
             null
         );
 
@@ -123,12 +122,13 @@ class FootprintsTest
         assertEquals(30.0f, scaledFootprint.gwp().embedded().value(), 1e-4);
         assertNull(scaledFootprint.pe());
         assertNull(scaledFootprint.adp());
+        assertNull(scaledFootprint.energy());
     }
 
     @Test
     void multiplyByZeroYieldsZeroValues()
     {
-        FootprintImpactItem item = new FootprintImpactItem(15.5f, List.of());
+        FootprintImpactItem item = new FootprintImpactItem(15.5f);
         FootprintImpactItem scaled = item.multiply(0.0);
 
         assertEquals(0.0f, scaled.value(), 1e-4);
@@ -139,8 +139,8 @@ class FootprintsTest
         return new FootprintImpact(
             unit,
             "description",
-            new FootprintImpactItem(embedded, List.of()),
-            new FootprintImpactItem(use, List.of())
+            new FootprintImpactItem(embedded),
+            new FootprintImpactItem(use)
         );
     }
 }

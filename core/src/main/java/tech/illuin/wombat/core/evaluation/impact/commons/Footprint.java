@@ -6,32 +6,35 @@ import java.util.Objects;
 public record Footprint(
     FootprintImpact gwp,
     FootprintImpact pe,
-    FootprintImpact adp
+    FootprintImpact adp,
+    FootprintImpact energy
 ) {
     public Footprint multiply(double factor)
     {
         return new Footprint(
             this.gwp != null ? this.gwp.multiply(factor) : null,
             this.pe != null ? this.pe.multiply(factor) : null,
-            this.adp != null ? this.adp.multiply(factor) : null
+            this.adp != null ? this.adp.multiply(factor) : null,
+            this.energy != null ? this.energy.multiply(factor) : null
         );
     }
 
     public static Footprint sum(List<Footprint> footprints)
     {
         if (footprints.isEmpty())
-            return new Footprint(zero("kgCO2eq"), zero("MJ"), zero("kgSbeq"));
+            return new Footprint(zero("kgCO2eq"), zero("MJ"), zero("kgSbeq"), zero("kWh"));
 
         return new Footprint(
             FootprintImpact.sum(footprints.stream().map(Footprint::gwp).toList()),
             FootprintImpact.sum(footprints.stream().map(Footprint::pe).toList()),
-            FootprintImpact.sum(footprints.stream().map(Footprint::adp).toList())
+            FootprintImpact.sum(footprints.stream().map(Footprint::adp).toList()),
+            FootprintImpact.sum(footprints.stream().map(Footprint::energy).toList())
         );
     }
 
     private static FootprintImpact zero(String unit)
     {
-        return new FootprintImpact(unit, "", new FootprintImpact.FootprintImpactItem(0f, List.of()), new FootprintImpact.FootprintImpactItem(0f, List.of()));
+        return new FootprintImpact(unit, "", new FootprintImpact.FootprintImpactItem(0f), new FootprintImpact.FootprintImpactItem(0f));
     }
 
     public record FootprintImpact(
@@ -71,18 +74,17 @@ public record Footprint(
             return new FootprintImpact(
                 first.unit(),
                 first.description(),
-                new FootprintImpact.FootprintImpactItem(embedded, List.of()),
-                new FootprintImpact.FootprintImpactItem(use, List.of())
+                new FootprintImpact.FootprintImpactItem(embedded),
+                new FootprintImpact.FootprintImpactItem(use)
             );
         }
 
         public record FootprintImpactItem(
-            float value,
-            List<String> warnings
+            float value
         ) {
             public FootprintImpactItem multiply(double factor)
             {
-                return new FootprintImpactItem((float) (this.value * factor), this.warnings);
+                return new FootprintImpactItem((float) (this.value * factor));
             }
         }
     }
