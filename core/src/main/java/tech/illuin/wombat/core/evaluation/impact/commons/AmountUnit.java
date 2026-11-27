@@ -7,7 +7,7 @@ import java.util.Optional;
 public enum AmountUnit
 {
     mj("MJ"),
-    kwh("KWh"),
+    kwh("kWh"),
     kg_co2eq("kgCO2eq"),
     kg_sbeq("kgSbeq"),
     ;
