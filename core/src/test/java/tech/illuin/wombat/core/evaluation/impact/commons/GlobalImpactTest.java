@@ -61,8 +61,8 @@ class GlobalImpactTest
         return new FootprintImpact(
             unit,
             "description",
-            new FootprintImpactItem(embedded, List.of()),
-            new FootprintImpactItem(use, List.of())
+            new FootprintImpactItem(embedded),
+            new FootprintImpactItem(use)
         );
     }
 }

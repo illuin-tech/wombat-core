@@ -48,15 +48,13 @@ class FootprintsTest
     }
 
     @Test
-    void multiplyScalesFootprintImpactItemAndPreservesWarnings()
+    void multiplyScalesFootprintImpactItem()
     {
-        List<String> warnings = List.of("Warning 1", "Warning 2");
-        FootprintImpactItem item = new FootprintImpactItem(10.0f, warnings);
+        FootprintImpactItem item = new FootprintImpactItem(10.0f);
 
         FootprintImpactItem scaled = item.multiply(2.5);
 
         assertEquals(25.0f, scaled.value(), 1e-4);
-        assertEquals(warnings, scaled.warnings());
     }
 
     @Test
@@ -65,8 +63,8 @@ class FootprintsTest
         FootprintImpact impact = new FootprintImpact(
             "kgCO2eq",
             "Carbon emissions",
-            new FootprintImpactItem(4.0f, List.of("emb-warn")),
-            new FootprintImpactItem(6.0f, List.of("use-warn"))
+            new FootprintImpactItem(4.0f),
+            new FootprintImpactItem(6.0f)
         );
 
         FootprintImpact scaled = impact.multiply(1.5);
@@ -74,9 +72,7 @@ class FootprintsTest
         assertEquals("kgCO2eq", scaled.unit());
         assertEquals("Carbon emissions", scaled.description());
         assertEquals(6.0f, scaled.embedded().value(), 1e-4);
-        assertEquals(List.of("emb-warn"), scaled.embedded().warnings());
         assertEquals(9.0f, scaled.use().value(), 1e-4);
-        assertEquals(List.of("use-warn"), scaled.use().warnings());
         assertEquals(15.0f, scaled.totalValue(), 1e-4);
     }
 
@@ -107,7 +103,7 @@ class FootprintsTest
         FootprintImpact partialImpact = new FootprintImpact(
             "kgCO2eq",
             "desc",
-            new FootprintImpactItem(5.0f, List.of()),
+            new FootprintImpactItem(5.0f),
             null
         );
 
@@ -132,7 +128,7 @@ class FootprintsTest
     @Test
     void multiplyByZeroYieldsZeroValues()
     {
-        FootprintImpactItem item = new FootprintImpactItem(15.5f, List.of());
+        FootprintImpactItem item = new FootprintImpactItem(15.5f);
         FootprintImpactItem scaled = item.multiply(0.0);
 
         assertEquals(0.0f, scaled.value(), 1e-4);
@@ -143,8 +139,8 @@ class FootprintsTest
         return new FootprintImpact(
             unit,
             "description",
-            new FootprintImpactItem(embedded, List.of()),
-            new FootprintImpactItem(use, List.of())
+            new FootprintImpactItem(embedded),
+            new FootprintImpactItem(use)
         );
     }
 }

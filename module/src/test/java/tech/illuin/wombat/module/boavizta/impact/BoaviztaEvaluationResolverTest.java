@@ -78,8 +78,8 @@ class BoaviztaEvaluationResolverTest
                 "gwp", new BoaviztaImpactResponse.Impact(
                     "kgCO2eq",
                     "Global Warming Potential",
-                    new BoaviztaImpactResponse.Impact.ImpactItem(100.0f, 90.0f, 110.0f, List.of()),
-                    new BoaviztaImpactResponse.Impact.ImpactItem(20.0f, 18.0f, 22.0f, List.of())
+                    new BoaviztaImpactResponse.Impact.ImpactItem(100.0f, 90.0f, 110.0f),
+                    new BoaviztaImpactResponse.Impact.ImpactItem(20.0f, 18.0f, 22.0f)
                 )
             ),
             1,
@@ -237,7 +237,7 @@ class BoaviztaEvaluationResolverTest
                 BoaviztaServerImpactRequest request = invocation.getArgument(3);
                 double load = request.usage().timeWorkload().getFirst().loadPercentage();
                 /* Service impacts are sorted by GWP, which the response must hold */
-                BoaviztaImpactResponse.Impact.ImpactItem item = new BoaviztaImpactResponse.Impact.ImpactItem(1.0f, 1.0f, 1.0f, List.of());
+                BoaviztaImpactResponse.Impact.ImpactItem item = new BoaviztaImpactResponse.Impact.ImpactItem(1.0f, 1.0f, 1.0f);
                 return new BoaviztaImpactResponse(Map.of("gwp", new BoaviztaImpactResponse.Impact("kgCO2eq", "GWP", item, item)), 0, verbose(load == 100.0 ? 30.0 : 20.0));
             });
 

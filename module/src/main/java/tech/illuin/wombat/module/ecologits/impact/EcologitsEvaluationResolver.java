@@ -170,8 +170,8 @@ public class EcologitsEvaluationResolver implements WombatEvaluationResolver
         return new Footprint.FootprintImpact(
             total.unit(),
             total.name(),
-            new Footprint.FootprintImpact.FootprintImpactItem(emb, List.of()),
-            new Footprint.FootprintImpact.FootprintImpactItem(use, List.of())
+            new Footprint.FootprintImpact.FootprintImpactItem(emb),
+            new Footprint.FootprintImpact.FootprintImpactItem(use)
         );
     }
 

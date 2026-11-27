@@ -34,7 +34,7 @@ public record Footprint(
 
     private static FootprintImpact zero(String unit)
     {
-        return new FootprintImpact(unit, "", new FootprintImpact.FootprintImpactItem(0f, List.of()), new FootprintImpact.FootprintImpactItem(0f, List.of()));
+        return new FootprintImpact(unit, "", new FootprintImpact.FootprintImpactItem(0f), new FootprintImpact.FootprintImpactItem(0f));
     }
 
     public record FootprintImpact(
@@ -74,18 +74,17 @@ public record Footprint(
             return new FootprintImpact(
                 first.unit(),
                 first.description(),
-                new FootprintImpact.FootprintImpactItem(embedded, List.of()),
-                new FootprintImpact.FootprintImpactItem(use, List.of())
+                new FootprintImpact.FootprintImpactItem(embedded),
+                new FootprintImpact.FootprintImpactItem(use)
             );
         }
 
         public record FootprintImpactItem(
-            float value,
-            List<String> warnings
+            float value
         ) {
             public FootprintImpactItem multiply(double factor)
             {
-                return new FootprintImpactItem((float) (this.value * factor), this.warnings);
+                return new FootprintImpactItem((float) (this.value * factor));
             }
         }
     }

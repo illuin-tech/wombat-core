@@ -39,9 +39,6 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     private static final Set<String> CRITERIA = Set.of("gwp", "adp", "pe");
     /** Boavizta's world average, ISO 3166 having no code for the world. */
     private static final String WORLD_LOCATION = "WOR";
-    private static final String rebalanceWarning = "This usage has been rebalanced by the Wombat service, it does not come from the Boavizta API";
-    private static final String timeProrationWarning = "This impact has been prorated to the requested time range by the Wombat service";
-    private static final String energyWarning = "This energy has been derived by the Wombat service from the average power given by the Boavizta API";
 
     private static final Logger logger = LoggerFactory.getLogger(BoaviztaEvaluationResolver.class);
 
@@ -240,7 +237,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     private static BoaviztaImpactResponse.Impact.ImpactItem scaleItem(BoaviztaImpactResponse.Impact.ImpactItem item, double factor)
     {
         if (item == null) return null;
-        return new BoaviztaImpactResponse.Impact.ImpactItem((float) (item.value() * factor), (float) (item.min() * factor), (float) (item.max() * factor), item.warnings());
+        return new BoaviztaImpactResponse.Impact.ImpactItem((float) (item.value() * factor), (float) (item.min() * factor), (float) (item.max() * factor));
     }
 
     private static BoaviztaImpactResponse add(BoaviztaImpactResponse left, BoaviztaImpactResponse right)
@@ -271,12 +268,7 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
             return right;
         if (right == null)
             return left;
-        List<String> warnings = new ArrayList<>();
-        if (left.warnings() != null)
-            warnings.addAll(left.warnings());
-        if (right.warnings() != null)
-            warnings.addAll(right.warnings());
-        return new BoaviztaImpactResponse.Impact.ImpactItem(left.value() + right.value(), left.min() + right.min(), left.max() + right.max(), warnings);
+        return new BoaviztaImpactResponse.Impact.ImpactItem(left.value() + right.value(), left.min() + right.min(), left.max() + right.max());
     }
 
     public Footprint convert(BoaviztaImpactResponse impact, Double share, TimeRange range, long lifespanHours)
@@ -294,27 +286,11 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
     {
         if (input == null)
             return null;
-        List<String> embeddedWarnings = new ArrayList<>(input.embedded().warnings() == null ? Collections.emptyList() : input.embedded().warnings());
-        List<String> useWarnings = new ArrayList<>(input.use().warnings() == null ? Collections.emptyList() : input.use().warnings());
-        if (share != 1.0d)
-        {
-            embeddedWarnings.add(rebalanceWarning);
-            useWarnings.add(rebalanceWarning);
-        }
-        embeddedWarnings.add(timeProrationWarning);
-        useWarnings.add(timeProrationWarning);
-
         return new Footprint.FootprintImpact(
             input.unit(),
             input.description(),
-            new Footprint.FootprintImpact.FootprintImpactItem(
-                (float) (input.embedded().value() * share * prorationFactor),
-                embeddedWarnings
-            ),
-            new Footprint.FootprintImpact.FootprintImpactItem(
-                (float) (input.use().value() * share * prorationFactor),
-                useWarnings
-            )
+            new Footprint.FootprintImpact.FootprintImpactItem((float) (input.embedded().value() * share * prorationFactor)),
+            new Footprint.FootprintImpact.FootprintImpactItem((float) (input.use().value() * share * prorationFactor))
         );
     }
 
@@ -327,18 +303,12 @@ public class BoaviztaEvaluationResolver implements WombatEvaluationResolver
         if (verbose == null || verbose.avgPower() == null)
             return null;
         double hours = Duration.between(range.start(), range.end()).toSeconds() / 3600.0;
-        List<String> useWarnings = new ArrayList<>(List.of(energyWarning));
-        if (share != 1.0d)
-            useWarnings.add(rebalanceWarning);
 
         return new Footprint.FootprintImpact(
                 "kWh",
                 "Energy consumption",
-                new Footprint.FootprintImpact.FootprintImpactItem(0f, List.of()),
-                new Footprint.FootprintImpact.FootprintImpactItem(
-                        (float) (verbose.avgPower().value() / 1000 * hours * verbose.useTimeRatio().value() * share),
-                        useWarnings
-                )
+                new Footprint.FootprintImpact.FootprintImpactItem(0f),
+                new Footprint.FootprintImpact.FootprintImpactItem((float) (verbose.avgPower().value() / 1000 * hours * verbose.useTimeRatio().value() * share))
         );
     }
 

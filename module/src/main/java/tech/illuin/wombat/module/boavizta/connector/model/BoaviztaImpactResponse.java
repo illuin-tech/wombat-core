@@ -2,7 +2,6 @@ package tech.illuin.wombat.module.boavizta.connector.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
 import java.util.Map;
 
 public record BoaviztaImpactResponse(
@@ -19,8 +18,7 @@ public record BoaviztaImpactResponse(
         public record ImpactItem(
             float value,
             float min,
-            float max,
-            List<String> warnings
+            float max
         ) {}
     }
 
