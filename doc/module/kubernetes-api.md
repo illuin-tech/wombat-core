@@ -95,7 +95,7 @@ environment-id: "production" # required - Identifier of the target environment.
 kubeconfig-key: "secrets.kubernetes.prod" # required - Secret holding the kubeconfig contents.
 profile: # optional - Omitting it entirely is the same as `type: inferred` with no other property.
   type: "inferred" # required - Selects the inferred profile.
-  location: "FRA" # optional (default: `WLD`, the world average) - ISO 3166-1 alpha-3 (or alpha-2) country code.
+  location: "FRA" # optional (default: `XXX`, the world average) - ISO 3166-1 alpha-3 (or alpha-2) country code.
   lifespan: "5y" # optional (default: `5y`) - Expected operational lifespan of server hardware.
 ```
 
