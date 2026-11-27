@@ -9,11 +9,12 @@ import java.util.function.Supplier;
 
 /**
  * Hands out a client built from the kubeconfig its secret currently holds: a rotated kubeconfig gets a new client, and
- * the one it replaces is closed.
+ * the one it replaces is closed. An in-cluster client is built once, its token being read on every request.
  */
 public final class KubernetesClientSupplier implements Supplier<KubernetesClient>, AutoCloseable
 {
     private final KubernetesAPIAsset properties;
+    /* null for an in-cluster client */
     private final Secret kubeconfig;
     private String builtFrom;
     private KubernetesClient client;
@@ -26,6 +27,14 @@ public final class KubernetesClientSupplier implements Supplier<KubernetesClient
         this.get();
     }
 
+    /** Hands out {@code client}, an in-cluster one, which never needs rebuilding. */
+    public KubernetesClientSupplier(KubernetesClient client)
+    {
+        this.properties = null;
+        this.kubeconfig = null;
+        this.client = Objects.requireNonNull(client, "client cannot be null");
+    }
+
     /**
      * A rotation that fails is tried again on the next call.
      *
@@ -35,6 +44,8 @@ public final class KubernetesClientSupplier implements Supplier<KubernetesClient
     @Override
     public synchronized KubernetesClient get()
     {
+        if (this.kubeconfig == null)
+            return this.client;
         String kubeconfig = this.kubeconfig.fetch();
         if (!kubeconfig.equals(this.builtFrom))
         {
