@@ -1,12 +1,17 @@
 package tech.illuin.wombat.module.llm_prometheus.source;
 
 import com.fasterxml.jackson.databind.node.TextNode;
+import feign.FeignException;
+import feign.Request;
 import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusModule;
 import tech.illuin.wombat.core.activity.commons.Country;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
+import tech.illuin.wombat.core.secret.MissingSecretException;
+import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.core.source.Period;
+import tech.illuin.wombat.core.source.WombatSourceException;
 import tech.illuin.wombat.core.source.data.LLMData;
 import tech.illuin.wombat.core.source.data.MetricData;
 import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusAsset;
@@ -14,11 +19,15 @@ import tech.illuin.wombat.module.llm_prometheus.LLMPrometheusProfile;
 import tech.illuin.wombat.module.llm_prometheus.connector.PrometheusClient;
 import tech.illuin.wombat.module.llm_prometheus.connector.model.PrometheusQueryResponse;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
@@ -26,7 +35,7 @@ import static tech.illuin.wombat.core.activity.commons.Country.FRANCE;
 class LLMPrometheusSourceTest
 {
     @Test
-    void sample_emitsLLMDataWithProviderModelAndLocation()
+    void sample_emitsLLMDataWithProviderModelAndLocation() throws WombatSourceException
     {
         PrometheusClient client = mock(PrometheusClient.class);
         LLMPrometheusProfile profile = new LLMPrometheusProfile(
@@ -61,5 +70,37 @@ class LLMPrometheusSourceTest
         assertEquals("mistral-large-latest", llmData.model());
         assertEquals(Country.FRANCE, llmData.location());
         assertEquals(420L, llmData.outputTokens());
+    }
+
+    @Test
+    void sample_wrapsAnUnreachablePrometheus()
+    {
+        PrometheusClient client = mock(PrometheusClient.class);
+        Request request = Request.create(Request.HttpMethod.GET, "/", Map.of(), null, StandardCharsets.UTF_8, null);
+        when(client.query("q")).thenThrow(new FeignException.ServiceUnavailable("down", request, null, Map.of()));
+
+        WombatSourceException e = assertThrows(WombatSourceException.class, () -> new LLMPrometheusSource(client).source(Instant.now(), null, asset()));
+
+        assertTrue(e.getMessage().contains("llm-prom"), e.getMessage());
+    }
+
+    @Test
+    void sample_wrapsAnUnboundPassword()
+    {
+        PrometheusClient client = mock(PrometheusClient.class);
+        when(client.query("q")).thenThrow(new MissingSecretException("PROM_PASSWORD"));
+
+        WombatSourceException e = assertThrows(WombatSourceException.class, () -> new LLMPrometheusSource(client).source(Instant.now(), null, asset()));
+
+        assertInstanceOf(MissingSecretException.class, e.getCause());
+    }
+
+    private static LLMPrometheusAsset asset()
+    {
+        return new LLMPrometheusAsset(
+            AssetIdentity.of("llm-prom", "prod", LLMPrometheusModule.TYPE),
+            "http://localhost:9090", null, "user", SecretKey.of("PROM_PASSWORD"), Period.ZERO,
+            new LLMPrometheusProfile(LLMProvider.mistralai, "m", FRANCE, new LLMPrometheusProfile.DynamicProfile("q"))
+        );
     }
 }

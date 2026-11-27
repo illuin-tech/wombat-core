@@ -177,6 +177,17 @@ class LLMVertexAIActivityResolverTest
     }
 
     @Test
+    void wrapsUnusableCredentials()
+    {
+        when(this.client.query(any(), any(), any(), any(), any(), any()))
+            .thenThrow(new IllegalStateException("Unable to obtain a Google access token: no value provided for required secret GOOGLE_SA_KEY"));
+
+        WombatActivityException e = assertThrows(WombatActivityException.class, () -> this.resolver.resolve(this.asset, THREE_HOURS, null));
+
+        assertTrue(e.getMessage().contains("GOOGLE_SA_KEY"), e.getMessage());
+    }
+
+    @Test
     void acceptsOnlyVertexAIAssets()
     {
         assertTrue(this.resolver.accept(this.asset));

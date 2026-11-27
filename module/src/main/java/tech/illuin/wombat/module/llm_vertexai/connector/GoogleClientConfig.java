@@ -3,6 +3,7 @@ package tech.illuin.wombat.module.llm_vertexai.connector;
 import feign.Feign;
 import feign.Client;
 import feign.jackson.JacksonDecoder;
+import tech.illuin.wombat.core.secret.Secret;
 import tech.illuin.wombat.core.secret.SecretResolver;
 import tech.illuin.wombat.module.llm_vertexai.LLMVertexAIAsset;
 
@@ -19,8 +20,8 @@ public class GoogleClientConfig
 
     public static GoogleClient create(LLMVertexAIAsset properties, SecretResolver secrets, Client client)
     {
-        String serviceAccountJson = properties.usesServiceAccountKey()
-            ? secrets.require(properties.credentialsKey().value())
+        Secret serviceAccountKey = properties.usesServiceAccountKey()
+            ? secrets.requireAsync(properties.credentialsKey().value())
             : null;
 
         Proxy proxy = null;
@@ -36,7 +37,7 @@ public class GoogleClientConfig
 
         Feign.Builder builder = Feign.builder()
             .decoder(new JacksonDecoder())
-            .requestInterceptor(new GoogleAuthInterceptor(serviceAccountJson, proxy));
+            .requestInterceptor(new GoogleAuthInterceptor(serviceAccountKey, proxy));
 
         if (client != null)
             builder.client(client);

@@ -14,6 +14,7 @@ import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
 import tech.illuin.wombat.core.asset.Asset;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
 import tech.illuin.wombat.core.asset.type.ActivityRegime;
+import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicProfile;
 import tech.illuin.wombat.module.llm_anthropic.connector.AnthropicAdminClient;
@@ -144,7 +145,7 @@ public class LLMAnthropicActivityResolver implements WombatActivityResolver
             }
             while (page != null);
         }
-        catch (FeignException e) {
+        catch (FeignException | MissingSecretException e) {
             throw new WombatActivityException("Anthropic usage report failed for asset " + assetId + ": " + e.getMessage(), e);
         }
         return usage;

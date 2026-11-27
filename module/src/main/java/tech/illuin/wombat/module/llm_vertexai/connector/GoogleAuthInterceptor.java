@@ -5,6 +5,8 @@ import com.google.auth.http.HttpTransportFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
+import tech.illuin.wombat.core.secret.MissingSecretException;
+import tech.illuin.wombat.core.secret.Secret;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -19,22 +21,31 @@ public class GoogleAuthInterceptor implements RequestInterceptor
 
     private volatile GoogleCredentials credentials;
     private final HttpTransportFactory transportFactory;
+    private final Secret serviceAccountKey;
+    /* The key the credentials were parsed from, so they are parsed again only once the key is rotated. */
+    private String serviceAccountJson;
 
-    public GoogleAuthInterceptor(String serviceAccountJson)
+    /**
+     * @param serviceAccountKey the service-account key, {@code null} to rely on Application Default Credentials
+     */
+    public GoogleAuthInterceptor(Secret serviceAccountKey)
     {
-        this(serviceAccountJson, null);
+        this(serviceAccountKey, null);
     }
 
-    public GoogleAuthInterceptor(String serviceAccountJson, Proxy proxy)
+    public GoogleAuthInterceptor(Secret serviceAccountKey, Proxy proxy)
     {
         this.transportFactory = proxy == null ? NetHttpTransport::new : () -> new NetHttpTransport.Builder().setProxy(proxy).build();
-        if (serviceAccountJson != null && !serviceAccountJson.isBlank())
-            this.credentials = this.fromJson(serviceAccountJson);
+        this.serviceAccountKey = serviceAccountKey;
+        /* Parsed upfront, so a malformed key fails the component's creation rather than its first request. */
+        if (serviceAccountKey != null)
+            this.serviceAccountCredentials();
     }
 
     GoogleAuthInterceptor(GoogleCredentials credentials)
     {
         this.transportFactory = NetHttpTransport::new;
+        this.serviceAccountKey = null;
         this.credentials = credentials;
     }
 
@@ -46,13 +57,17 @@ public class GoogleAuthInterceptor implements RequestInterceptor
             current.refreshIfExpired();
             template.header(AUTHORIZATION, "Bearer " + current.getAccessToken().getTokenValue());
         }
-        catch (IOException e) {
+        catch (IOException | MissingSecretException e) {
             throw new IllegalStateException("Unable to obtain a Google access token: " + e.getMessage(), e);
         }
     }
 
-    private GoogleCredentials credentials() throws IOException
+    /* Package-private so tests can tell whether the credentials were parsed again. */
+    GoogleCredentials credentials() throws IOException
     {
+        if (this.serviceAccountKey != null)
+            return this.serviceAccountCredentials();
+
         GoogleCredentials current = this.credentials;
         if (current == null)
         {
@@ -67,6 +82,17 @@ public class GoogleAuthInterceptor implements RequestInterceptor
             }
         }
         return current;
+    }
+
+    private synchronized GoogleCredentials serviceAccountCredentials()
+    {
+        String json = this.serviceAccountKey.fetch();
+        if (!json.equals(this.serviceAccountJson))
+        {
+            this.credentials = this.fromJson(json);
+            this.serviceAccountJson = json;
+        }
+        return this.credentials;
     }
 
     private GoogleCredentials fromJson(String json)

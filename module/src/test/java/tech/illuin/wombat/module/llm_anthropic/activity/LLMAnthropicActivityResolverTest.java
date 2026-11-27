@@ -9,6 +9,7 @@ import tech.illuin.wombat.core.activity.llm.LLMActivityData;
 import tech.illuin.wombat.core.activity.llm.LLMServiceActivity;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.asset.profile.LLMProvider;
+import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicProfile;
@@ -117,6 +118,17 @@ class LLMAnthropicActivityResolverTest
         when(this.client.usageReport(any(), any(), any(), anyInt(), any(), any(), any(), any())).thenReturn(new AnthropicUsageReport(List.of(new Bucket(H0, H1, List.of())), false, null));
 
         assertTrue(this.resolver.resolve(this.asset, new TimeRange(START, START.plusSeconds(60)), null).isEmpty());
+    }
+
+    @Test
+    void wrapsAnUnboundAdminKey()
+    {
+        when(this.client.usageReport(any(), any(), any(), anyInt(), any(), any(), any(), any()))
+            .thenThrow(new MissingSecretException("ANTHROPIC_ADMIN_KEY"));
+
+        WombatActivityException e = assertThrows(WombatActivityException.class, () -> this.resolver.resolve(this.asset, THREE_HOURS, null));
+
+        assertInstanceOf(MissingSecretException.class, e.getCause());
     }
 
     private void stubTwoPages()

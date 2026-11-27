@@ -22,7 +22,7 @@ The module registers the asset type `tech.illuin.wombat-module.kubernetes-api` (
 
 For cross-cutting data formats such as `Period`, `Duration`, `Lifetime`, `Country`, `ServerProvider` and `SecretKey`, refer to the [Generic Type Glossary](../type-glossary.md).
 
-The secret referenced by `kubeconfig-key` must resolve to the full YAML content of a kubeconfig. It is parsed in memory, with no file behind it: certificates and keys must be inlined (`certificate-authority-data`, `client-certificate-data`, `client-key-data`), since relative file references have nothing to resolve against.
+The secret referenced by `kubeconfig-key` must resolve to the full YAML content of a kubeconfig. It is parsed in memory, with no file behind it: certificates and keys must be inlined (`certificate-authority-data`, `client-certificate-data`, `client-key-data`), since relative file references have nothing to resolve against. The secret is read again on every poll and every profile inference: a rotated kubeconfig is used from the next one on, and one that cannot be used fails them until it is fixed.
 
 With an empty `namespaces` whitelist, pod metrics are listed cluster-wide: the kubeconfig needs cluster-scoped read access to `pods.metrics.k8s.io`, and the namespace of its context is not used. For a kubeconfig restricted to some namespaces, list them in `namespaces`. A whitelisted namespace whose metrics cannot be listed, e.g. one the kubeconfig cannot read, is skipped with a warning while the others are still polled.
 

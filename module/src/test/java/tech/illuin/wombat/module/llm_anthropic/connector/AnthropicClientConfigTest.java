@@ -6,12 +6,14 @@ import org.junit.jupiter.api.Test;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicModule;
 import tech.illuin.wombat.core.asset.AssetIdentity;
 import tech.illuin.wombat.core.secret.EnvironmentSecretResolver;
+import tech.illuin.wombat.core.secret.MissingSecretException;
 import tech.illuin.wombat.core.secret.SecretKey;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicAsset;
 import tech.illuin.wombat.module.llm_anthropic.LLMAnthropicProfile;
 import tech.illuin.wombat.module.llm_anthropic.connector.model.AnthropicUsageReport;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -85,5 +87,61 @@ class AnthropicClientConfigTest
 
         assertEquals(500, report.data().getFirst().results().getFirst().outputTokens());
         assertFalse(report.hasMore());
+    }
+
+    @Test
+    void sendsARotatedAdminKeyOnTheNextRequest()
+    {
+        AtomicReference<Request> captured = new AtomicReference<>();
+        Map<String, String> environment = new HashMap<>(Map.of(EnvironmentSecretResolver.PREFIX + "ANTHROPIC_ADMIN_KEY", "sk-ant-admin-first"));
+        AnthropicAdminClient client = AnthropicClientConfig.create(asset(), new EnvironmentSecretResolver(environment::get), http(captured));
+
+        usageReport(client);
+        assertEquals(List.of("sk-ant-admin-first"), List.copyOf(captured.get().headers().get("x-api-key")));
+
+        environment.put(EnvironmentSecretResolver.PREFIX + "ANTHROPIC_ADMIN_KEY", "sk-ant-admin-rotated");
+        usageReport(client);
+        assertEquals(List.of("sk-ant-admin-rotated"), List.copyOf(captured.get().headers().get("x-api-key")));
+    }
+
+    @Test
+    void failsTheRequestOnceTheAdminKeyIsUnbound()
+    {
+        AtomicReference<Request> captured = new AtomicReference<>();
+        Map<String, String> environment = new HashMap<>(Map.of(EnvironmentSecretResolver.PREFIX + "ANTHROPIC_ADMIN_KEY", "sk-ant-admin-first"));
+        AnthropicAdminClient client = AnthropicClientConfig.create(asset(), new EnvironmentSecretResolver(environment::get), http(captured));
+
+        environment.clear();
+
+        /* Feign runs interceptors before sending, without wrapping what they throw: the resolver catches it as is. */
+        MissingSecretException e = assertThrows(MissingSecretException.class, () -> usageReport(client));
+        assertEquals("ANTHROPIC_ADMIN_KEY", e.key());
+        assertNull(captured.get());
+    }
+
+    private static AnthropicUsageReport usageReport(AnthropicAdminClient client)
+    {
+        return client.usageReport("2026-10-01T00:00:00Z", "2026-10-01T01:00:00Z", "1m", 1440, null, null, null, null);
+    }
+
+    private static feign.Client http(AtomicReference<Request> captured)
+    {
+        return (request, options) -> {
+            captured.set(request);
+            return Response.builder()
+                .request(request)
+                .status(200)
+                .headers(Map.of())
+                .body(BODY, StandardCharsets.UTF_8)
+                .build();
+        };
+    }
+
+    private static LLMAnthropicAsset asset()
+    {
+        return new LLMAnthropicAsset(
+            AssetIdentity.of("claude", "prod", LLMAnthropicModule.TYPE), null, null, SecretKey.of("ANTHROPIC_ADMIN_KEY"),
+            new LLMAnthropicProfile(FRANCE, 500, null, null, null)
+        );
     }
 }

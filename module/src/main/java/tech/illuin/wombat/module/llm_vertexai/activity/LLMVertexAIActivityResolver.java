@@ -107,7 +107,8 @@ public class LLMVertexAIActivityResolver implements WombatActivityResolver
             }
             while (pageToken != null && !pageToken.isBlank());
         }
-        catch (FeignException e) {
+        /* IllegalStateException is how the auth interceptor reports a credential it cannot use. */
+        catch (FeignException | IllegalStateException e) {
             throw new WombatActivityException("Google usage query failed for asset " + assetId + ": " + e.getMessage(), e);
         }
         return usage;

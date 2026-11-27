@@ -26,10 +26,10 @@ public class PrometheusClientConfig
             builder.client(new Client.Proxied(null, null, new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxy.getHost(), proxy.getPort()))));
         }
 
-        // require() rather than find(): a basic-auth asset whose variable is unset must fail, not silently
+        // requireAsync() rather than async(): a basic-auth asset whose variable is unset must fail, not silently
         // authenticate with a blank password.
         if (properties.usesBasicAuth())
-            builder.requestInterceptor(new BasicAuthInterceptor(properties.username(), secrets.require(properties.passwordKey().value())));
+            builder.requestInterceptor(new BasicAuthInterceptor(properties.username(), secrets.requireAsync(properties.passwordKey().value())));
 
         return builder.target(PrometheusClient.class, properties.prometheusUrl());
     }
