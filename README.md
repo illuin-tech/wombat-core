@@ -2,8 +2,8 @@
 
 [![Maven Build](https://github.com/illuin-tech/wombat-core/actions/workflows/maven-build.yml/badge.svg?branch=master)](https://github.com/illuin-tech/wombat-core/actions/workflows/maven-build.yml)
 [![Maven Central Version](https://img.shields.io/maven-central/v/tech.illuin/wombat-core)](https://central.sonatype.com/artifact/tech.illuin/wombat-core)
-[![javadoc](https://javadoc.io/badge2/tech.illuin/wombat-core/javadoc-core.svg)](https://javadoc.io/doc/tech.illuin/wombat-core)
-[![javadoc](https://javadoc.io/badge2/tech.illuin/wombat-core-module/javadoc-modules.svg)](https://javadoc.io/doc/tech.illuin/wombat-core-module)
+[![javadoc](https://javadoc.io/badge2/tech.illuin/wombat-core/javadoc:core.svg)](https://javadoc.io/doc/tech.illuin/wombat-core)
+[![javadoc](https://javadoc.io/badge2/tech.illuin/wombat-core-module/javadoc:modules.svg)](https://javadoc.io/doc/tech.illuin/wombat-core-module)
 [![codecov](https://codecov.io/gh/illuin-tech/wombat-core/graph/badge.svg?token=T141JE2VMY)](https://codecov.io/gh/illuin-tech/wombat-core)
 ![GitHub](https://img.shields.io/github/license/illuin-tech/wombat-core)
 
